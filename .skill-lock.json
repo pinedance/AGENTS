@@ -1,15 +1,6 @@
 {
   "version": 3,
   "skills": {
-    "microsoft-foundry": {
-      "source": "microsoft/azure-skills",
-      "sourceType": "github",
-      "sourceUrl": "https://github.com/microsoft/azure-skills.git",
-      "skillPath": ".github/plugins/azure-skills/skills/microsoft-foundry/SKILL.md",
-      "skillFolderHash": "71ae7808acf73c852dd87b1da2e3077ff7fc42ac",
-      "installedAt": "2026-03-24T05:34:26.693Z",
-      "updatedAt": "2026-06-01T02:30:37.352Z"
-    },
     "karpathy-guidelines": {
       "source": "multica-ai/andrej-karpathy-skills",
       "sourceType": "github",
@@ -169,9 +160,9 @@
       "sourceType": "github",
       "sourceUrl": "https://github.com/Lum1104/Understand-Anything.git",
       "skillPath": "understand-anything-plugin/skills/understand/SKILL.md",
-      "skillFolderHash": "61cced8dc752c68d89fc37dd6d59c73d4da26d42",
+      "skillFolderHash": "3e15ea07b1afb0ac82af16ed390ab24fc00ed0bc",
       "installedAt": "2026-06-01T03:29:46.274Z",
-      "updatedAt": "2026-06-01T03:29:46.274Z"
+      "updatedAt": "2026-06-02T05:06:16.453Z"
     },
     "understand-chat": {
       "source": "Lum1104/Understand-Anything",
@@ -244,25 +235,27 @@
       "skillFolderHash": "a0d216202f9793a78da44cf96aabe48f42e627ac",
       "pluginName": "document-skills",
       "installedAt": "2026-06-01T03:30:43.490Z",
-      "updatedAt": "2026-06-02T03:27:13.857Z"
+      "updatedAt": "2026-06-02T05:12:03.653Z"
     },
     "pdf": {
-      "source": "K-Dense-AI/scientific-agent-skills",
+      "source": "anthropics/skills",
       "sourceType": "github",
-      "sourceUrl": "https://github.com/K-Dense-AI/scientific-agent-skills.git",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
       "skillPath": "skills/pdf/SKILL.md",
-      "skillFolderHash": "48752409146899464318935e46f1558841f0b291",
+      "skillFolderHash": "6369f4649de69bd6857c9bc3b058a77206009238",
+      "pluginName": "document-skills",
       "installedAt": "2026-06-01T03:30:43.492Z",
-      "updatedAt": "2026-06-02T05:02:22.027Z"
+      "updatedAt": "2026-06-02T05:12:03.656Z"
     },
     "pptx": {
-      "source": "K-Dense-AI/scientific-agent-skills",
+      "source": "anthropics/skills",
       "sourceType": "github",
-      "sourceUrl": "https://github.com/K-Dense-AI/scientific-agent-skills.git",
+      "sourceUrl": "https://github.com/anthropics/skills.git",
       "skillPath": "skills/pptx/SKILL.md",
-      "skillFolderHash": "ffcf9b0273eb4b895b37e0502e6f42c29ba91e94",
+      "skillFolderHash": "10b3d70962e489867ddfee7da92f7da6b0eccc4f",
+      "pluginName": "document-skills",
       "installedAt": "2026-06-01T03:30:43.493Z",
-      "updatedAt": "2026-06-02T05:02:22.029Z"
+      "updatedAt": "2026-06-02T05:12:03.657Z"
     },
     "xlsx": {
       "source": "anthropics/skills",
@@ -272,7 +265,7 @@
       "skillFolderHash": "f5fb1cdb7993b2feee8367e983e9d4d58d2eedd4",
       "pluginName": "document-skills",
       "installedAt": "2026-06-01T03:30:43.494Z",
-      "updatedAt": "2026-06-02T03:27:13.879Z"
+      "updatedAt": "2026-06-02T05:12:03.658Z"
     },
     "algorithmic-art": {
       "source": "anthropics/skills",
@@ -282,7 +275,7 @@
       "skillFolderHash": "4aef6bcad51d058ec32b1acb9da436851863e56e",
       "pluginName": "example-skills",
       "installedAt": "2026-06-01T03:30:43.495Z",
-      "updatedAt": "2026-06-01T03:30:43.495Z"
+      "updatedAt": "2026-06-02T05:12:03.659Z"
     },
     "brand-guidelines": {
       "source": "anthropics/skills",
@@ -302,7 +295,7 @@
       "skillFolderHash": "95095faaee2ea943e85a5d1d562fde06841e835e",
       "pluginName": "example-skills",
       "installedAt": "2026-06-01T03:30:43.498Z",
-      "updatedAt": "2026-06-01T03:30:43.498Z"
+      "updatedAt": "2026-06-02T05:12:03.660Z"
     },
     "doc-coauthoring": {
       "source": "anthropics/skills",
@@ -322,7 +315,7 @@
       "skillFolderHash": "928950704df8a8b885c03de5da626331e6f29cf8",
       "pluginName": "example-skills",
       "installedAt": "2026-06-01T03:30:43.500Z",
-      "updatedAt": "2026-06-02T03:27:13.883Z"
+      "updatedAt": "2026-06-02T05:12:03.661Z"
     },
     "internal-comms": {
       "source": "anthropics/skills",
@@ -352,7 +345,7 @@
       "skillFolderHash": "3cf9a8db32597ba3e24b584a3d696f4e11c7d7b6",
       "pluginName": "example-skills",
       "installedAt": "2026-06-01T03:30:43.503Z",
-      "updatedAt": "2026-06-02T03:27:13.887Z"
+      "updatedAt": "2026-06-02T05:12:03.663Z"
     },
     "slack-gif-creator": {
       "source": "anthropics/skills",
