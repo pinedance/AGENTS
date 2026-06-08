@@ -1,2 +1,9 @@
+
+# DEV
+.dev/
+.agents/
+.gemini/
+.claude/
+
 .omc/
 .skills-repos
