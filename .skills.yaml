@@ -1,0 +1,102 @@
+# Sync Logic
+# Remote Repo ---|pull|---> Local Repo(`.skills-repos/`) ---|copy|---> skills archive(`skills-archive/`, only skills)
+
+# .skills-repo: ( path: `.skills-repo/<repoId>` )
+# e.g. [.skills-repo/vercel-labs/skills/, .skills-repo/obra/superpowers/, ..., .skills-repo/bradautomates/claude-video/]
+
+# skills-archive: ( path: `skills-archive/<repoId>/<skill-name(skill-parent-dir)>/SKILL.md` )
+# 만약 skill-parent-dir가 repo-root와 같다면, repoId가 skill-name이 됨. e.g. 'claude-video' (skills-archive/bradautomates/claude-video/)
+# e.g. [skills-archive/vercel-labs/find-skills/, skills-archive/obra/superpowers/brainstorming/, skills-archive/obra/superpowers/dispatching-parallel-agents/, ..., skills-archive/anthropics/skills/pdf/, ... , skills-archive/bradautomates/claude-video/]
+
+# skillDirPaths: `**/SKILL.md``
+
+archive:
+- repoId: vercel-labs/skills
+  repoType: github
+  repoUrl: https://github.com/vercel-labs/skills.git
+  skills:
+    - name: find-skills
+      path: skills/find-skills/SKILL.md
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  skills:
+    - name: brainstorming
+      path: skills/brainstorming/SKILL.md
+    - name: dispatching-parallel-agents
+      path: skills/dispatching-parallel-agents/SKILL.md
+    - name: executing-plans
+      path: skills/executing-plans/SKILL.md
+    - name: finishing-a-development-branch
+      path: skills/finishing-a-development-branch/SKILL.md
+    - name: receiving-code-review
+      path: skills/receiving-code-review/SKILL.md
+    - name: requesting-code-review
+      path: skills/requesting-code-review/SKILL.md
+    - name: subagent-driven-development
+      path: skills/subagent-driven-development/SKILL.md
+    - name: systematic-debugging
+      path: skills/systematic-debugging/SKILL.md
+    - name: test-driven-development
+      path: skills/test-driven-development/SKILL.md
+    - name: using-git-worktrees
+      path: skills/using-git-worktrees/SKILL.md
+    - name: using-superpowers
+      path: skills/using-superpowers/SKILL.md
+    - name: verification-before-completion
+      path: skills/verification-before-completion/SKILL.md
+    - name: writing-plans
+      path: skills/writing-plans/SKILL.md
+    - name: writing-skills
+      path: skills/writing-skills/SKILL.md
+- repoId: anthropics/skills,
+  repoType: github
+  repoUrl: https://github.com/anthropics/skills.git
+  skills:
+    - name: pdf
+      path: skills/pdf/SKILL.md
+    - name: docx
+      path: skills/docx/SKILL.md
+    - name: pptx
+      path: skills/pptx/SKILL.md
+    - name: xlsx
+      path: skills/xlsx/SKILL.md
+- repoId: Lum1104/Understand-Anything
+  repoType: github
+  repoUrl: https://github.com/Lum1104/Understand-Anything.git
+  skills:
+    - name: understand-chat
+      path: understand-anything-plugin/skills/understand-chat/SKILL.md
+    - name: understand-dashboard
+      path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
+- repoId: bradautomates/claude-video
+  repoType: github
+  repoUrl: https://github.com/bradautomates/claude-video.git
+  skills:
+    - name: claude-video
+      path: SKILL.md
+
+# skills archive(`skills-archive/`, only skills) ---[symbolic link (절대 경로)]---> skills used(`skills/`)
+# e.g. [skills/obra/superpowers/brainstorming, skills/obra/superpowers/executing-plans, skills/anthropics/skills/pdf]
+# target: <repoId>/<skill-name>
+inbox:
+- repoId: obra/superpowers
+  skills: 
+  - name: brainstorming 
+    source: obra/superpowers/skills/brainstorming
+    target: obra/superpowers/brainstorming 
+  - name: executing-plans
+    source: obra/superpowers/skills/executing-plans
+    target: obra/superpowers/executing-plans
+- repoId: anthropics/skills,
+  skills: 
+  - name: pdf
+    source: anthropics/skills/skills/pdf
+    target: anthropics/skills/pdf
+- repoId: bradautomates/claude-video
+  skills:
+  - name: claude-video
+    source: bradautomates/claude-video
+    target: bradautomates/claude-video
+
+
