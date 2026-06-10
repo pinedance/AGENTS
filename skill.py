@@ -578,16 +578,10 @@ def mine_remove(skill_name: str, config_path: Path, root_path: Path):
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
-    root = root_path or PROJECT_ROOT
-    cfg = config_path or (root / ".skills.yaml")
-    
-    # Perform migration renaming if needed
-    old_archive = root / "skills-archive"
-    new_library = root / "skills-library"
-    if old_archive.exists() and not new_library.exists():
-        old_archive.rename(new_library)
-        
     parser = argparse.ArgumentParser(description="Skill Manager CLI")
+    parser.add_argument("--config", help="Path to config file", default=None)
+    parser.add_argument("--root", help="Path to project root", default=None)
+    
     subparsers = parser.add_subparsers(dest="command", required=True)
     
     # sync
@@ -621,6 +615,21 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     
     args = parser.parse_args()
     
+    cli_root = Path(args.root) if args.root else None
+    root = cli_root or root_path or PROJECT_ROOT
+    
+    cli_cfg = Path(args.config) if args.config else None
+    cfg = cli_cfg or config_path or (root / ".skills.yaml")
+    
+    # Perform migration renaming if needed
+    old_archive = root / "skills-archive"
+    new_library = root / "skills-library"
+    if old_archive.exists() and not new_library.exists():
+        try:
+            old_archive.rename(new_library)
+        except OSError as e:
+            print(f"Warning: Failed to migrate skills-archive: {e}", file=sys.stderr)
+    
     if args.command == "sync":
         sync(cfg, root)
     elif args.command == "library":
@@ -638,6 +647,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
             mine_add(args.skill_name, args.name, cfg, root)
         elif args.subcommand == "remove":
             mine_remove(args.skill_name, cfg, root)
+
 
 if __name__ == "__main__":
     main()

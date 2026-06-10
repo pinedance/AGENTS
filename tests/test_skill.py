@@ -988,3 +988,46 @@ def test_cli_migration_and_other_subcommands(temp_env):
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_mine_rem.assert_called_once_with("brainstorming", yaml_path, temp_env)
+
+
+def test_cli_config_root_overrides(temp_env):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    
+    custom_root = temp_env / "custom-root"
+    custom_root.mkdir(parents=True, exist_ok=True)
+    custom_cfg = custom_root / "custom-config.yaml"
+    custom_cfg.write_text("library: []\nworkspace: []\nmine: []\n")
+    
+    with patch("skill.sync") as mock_sync:
+        sys_args = [
+            "skill.py",
+            "--config", str(custom_cfg),
+            "--root", str(custom_root),
+            "sync"
+        ]
+        with patch("sys.argv", sys_args):
+            skill.main()
+            mock_sync.assert_called_once_with(custom_cfg, custom_root)
+
+
+def test_cli_migration_oserror_warning(temp_env, capsys):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Create the old archive directory
+    archive_dir = temp_env / "skills-archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Mock rename to raise OSError
+    with patch("pathlib.Path.rename", side_effect=OSError("Permission denied")):
+        sys_args = ["skill.py", "sync"]
+        with patch("sys.argv", sys_args):
+            with patch("skill.sync") as mock_sync:
+                skill.main(config_path=yaml_path, root_path=temp_env)
+                mock_sync.assert_called_once_with(yaml_path, temp_env)
+                
+    captured = capsys.readouterr()
+    assert "Warning: Failed to migrate skills-archive: Permission denied" in captured.err
+
