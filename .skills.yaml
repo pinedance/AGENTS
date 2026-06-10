@@ -1,22 +1,18 @@
 # Sync Logic
-# Remote Repo ---|pull|---> Local Repo(`.skills-repos/`) ---|copy|---> skills archive(`skills-archive/`, only skills)
+# Remote Repo ---|pull|---> Local Repo(`.skills-repos/`) ---|copy|---> skills library(`skills-library/`, only skills)
 
-# .skills-repo: ( path: `.skills-repo/<repoId>` )
-# e.g. [.skills-repo/vercel-labs/skills/, .skills-repo/obra/superpowers/, ..., .skills-repo/bradautomates/claude-video/]
+# .skills-repos: ( path: `.skills-repos/<repoId>.zip` )
+# e.g. [.skills-repos/vercel-labs/skills.zip, .skills-repos/obra/superpowers.zip]
 
-# skills-archive: ( path: `skills-archive/<repoId>/<skill-name(skill-parent-dir)>/SKILL.md` )
-# 만약 skill-parent-dir가 repo-root와 같다면, repoId가 skill-name이 됨. e.g. 'claude-video' (skills-archive/bradautomates/claude-video/)
-# e.g. [skills-archive/vercel-labs/find-skills/, skills-archive/obra/superpowers/brainstorming/, skills-archive/obra/superpowers/dispatching-parallel-agents/, ..., skills-archive/anthropics/skills/pdf/, ... , skills-archive/bradautomates/claude-video/]
+# skills-library: ( path: `skills-library/<repoId>/<skill-path-parent>` )
+# e.g. [skills-library/obra/superpowers/skills/brainstorming/, skills-library/anthropics/skills/pdf/]
 
-# skillDirPaths: `**/SKILL.md``
+# skills-mine: ( path: `skills-mine/<repoId>/<skill-path-parent>` )
+# e.g. [skills-mine/obra/superpowers/skills/systematic-debugging/]
 
-archive:
-- repoId: vercel-labs/skills
-  repoType: github
-  repoUrl: https://github.com/vercel-labs/skills.git
-  skills:
-    - name: find-skills
-      path: skills/find-skills/SKILL.md
+# skillDirPaths: `**/SKILL.md`
+
+library:
 - repoId: obra/superpowers
   repoType: github
   repoUrl: https://github.com/obra/superpowers.git
@@ -76,27 +72,29 @@ archive:
     - name: claude-video
       path: SKILL.md
 
-# skills archive(`skills-archive/`, only skills) ---[symbolic link (절대 경로)]---> skills used(`skills/`)
-# e.g. [skills/obra/superpowers/brainstorming, skills/obra/superpowers/executing-plans, skills/anthropics/skills/pdf]
-# target: <repoId>/<skill-name>
-inbox:
+# skills library (`skills-library/`) & mine (`skills-mine/`) ---[absolute symbolic link]---> active workspace (`skills/`)
+# e.g. [skills/sp-brainstorming -> skills-library/obra/superpowers/skills/brainstorming, skills/my-writing-plan -> skills-mine/obra/superpowers/skills/writing-plan]
+workspace:
 - repoId: obra/superpowers
   skills: 
   - name: brainstorming 
     source: obra/superpowers/skills/brainstorming
-    target: obra/superpowers/brainstorming 
+    target: sp-brainstorming 
   - name: executing-plans
     source: obra/superpowers/skills/executing-plans
-    target: obra/superpowers/executing-plans
+    target: sp-executing-plans
 - repoId: anthropics/skills,
   skills: 
   - name: pdf
     source: anthropics/skills/skills/pdf
-    target: anthropics/skills/pdf
+    target: anthropics-pdf
 - repoId: bradautomates/claude-video
   skills:
   - name: claude-video
     source: bradautomates/claude-video
-    target: bradautomates/claude-video
+    target: claude-video
 
-
+mine:
+  - name: writing-plan
+    source: obra/superpowers/skills/writing-plan   # skills-mine/obra/superpowers/skills/writing-plan
+    target: my-writing-plan                        # skills/my-writing-plan 
