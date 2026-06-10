@@ -613,4 +613,208 @@ def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, tem
     assert "Operation canceled." in captured.out
 
 
+@patch("skill.download_repo_zip")
+@patch("builtins.input", side_effect=["my-brainstorming"])
+def test_mine_add_and_remove(mock_input, mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library, workspace and directory
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "repoType": "github",
+        "repoUrl": "https://github.com/obra/superpowers.git",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    config["workspace"] = [{
+        "repoId": "obra/superpowers",
+        "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    # 1. Test Mine Add
+    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check removed from workspace
+    assert not any(w["skills"] for w in config.get("workspace", []))
+    # Check added in mine
+    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
+    # Check folder physical copy exists in skills-mine
+    assert (temp_env / "skills-mine/obra/superpowers/skills/brainstorming/SKILL.md").exists()
+    # Check symlink exists
+    assert (temp_env / "skills/my-brainstorming").is_symlink()
+    
+    # 2. Test Mine Remove
+    skill.mine_remove("brainstorming", yaml_path, temp_env)
+    config = skill.load_config(yaml_path)
+    assert not any(m["name"] == "brainstorming" for m in config.get("mine", []))
+    assert not (temp_env / "skills/my-brainstorming").exists()
+
+
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_mine_add_interactive_and_multiple(mock_input, mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library with two repos with same skill name
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create the library dir for the second one
+    skill_dir = temp_env / "skills-library/other/superpowers/skills/brainstorming"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("# Brainstorming Other")
+    
+    # Mock input: "2" for other/superpowers, and "" for default target name "my-brainstorming"
+    mock_input.side_effect = ["2", ""]
+    
+    skill.mine_add("brainstorming", None, yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check added in mine with source 'other/superpowers/skills/brainstorming'
+    mine_entry = next(m for m in config.get("mine", []) if m["name"] == "brainstorming")
+    assert mine_entry["source"] == "other/superpowers/skills/brainstorming"
+    assert mine_entry["target"] == "my-brainstorming"
+    
+    assert (temp_env / "skills-mine/other/superpowers/skills/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills/my-brainstorming").is_symlink()
+
+
+@patch("builtins.input")
+def test_mine_remove_multiple(mock_input, temp_env):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Seed mine config with two entries for "brainstorming" but different targets
+    config = skill.load_config(yaml_path)
+    config["mine"] = [
+        {"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "my-brainstorming"},
+        {"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "other-brainstorming"}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create the physical folders in skills-mine
+    for source in ["obra/superpowers/skills/brainstorming", "other/superpowers/skills/brainstorming"]:
+        (temp_env / "skills-mine" / source).mkdir(parents=True, exist_ok=True)
+        (temp_env / "skills-mine" / source / "SKILL.md").write_text("# Brainstorming")
+        
+    skill.sync(yaml_path, temp_env)
+    assert (temp_env / "skills/my-brainstorming").is_symlink()
+    assert (temp_env / "skills/other-brainstorming").is_symlink()
+    
+    # Mock input: "2" to remove other-brainstorming
+    mock_input.side_effect = ["2"]
+    
+    skill.mine_remove("brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check other-brainstorming was removed, but my-brainstorming remains
+    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
+    assert not any(m["target"] == "other-brainstorming" for m in config.get("mine", []))
+    
+    assert (temp_env / "skills/my-brainstorming").exists()
+    assert not (temp_env / "skills/other-brainstorming").exists()
+
+
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_mine_add_and_remove_cancel(mock_input, mock_download, temp_env, capsys):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config with two repos containing the same skill name
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]},
+        {"repoId": "other/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # 1. Test KeyboardInterrupt on mine_add select repo
+    mock_input.side_effect = KeyboardInterrupt
+    skill.mine_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 2. Test manual cancel 'q' on mine_add select repo
+    mock_input.side_effect = ["q"]
+    skill.mine_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 3. Test EOFError on mine_add enter target name
+    # Reset config to one repo so it skips select repo prompt, but prompt for target name is shown
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    mock_input.side_effect = EOFError
+    skill.mine_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 4. Test manual cancel 'cancel' on mine_remove
+    # Seed mine config with multiple items
+    config = skill.load_config(yaml_path)
+    config["mine"] = [
+        {"name": "brainstorming", "source": "src1", "target": "my-brainstorming"},
+        {"name": "brainstorming", "source": "src2", "target": "other-brainstorming"}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    mock_input.side_effect = ["cancel"]
+    skill.mine_remove("brainstorming", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+
+
+
+
 

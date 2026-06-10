@@ -417,5 +417,143 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
     sync(config_path, root_path)
 
 
+def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    
+    # Pre-sync: Find matching skill in library
+    candidates = []
+    for repo in config.get("library", []):
+        repo_id = repo["repoId"]
+        for skill_item in repo.get("skills", []):
+            if skill_item["name"] == skill_name:
+                candidates.append((repo_id, skill_item))
+                
+    if not candidates:
+        print(f"Skill '{skill_name}' not found in library.", file=sys.stderr)
+        return
+        
+    selected_repo_id, selected_skill = None, None
+    if len(candidates) > 1:
+        print("Multiple matches found:")
+        for idx, (repo_id, skill_item) in enumerate(candidates, 1):
+            print(f" [{idx}] {repo_id} ({skill_item['path']})")
+        while True:
+            try:
+                raw_val = input(f"Select repo (1-{len(candidates)}): ").strip()
+                if raw_val.lower() in ("q", "0", "cancel"):
+                    print("Operation canceled.")
+                    return
+                choice = int(raw_val)
+                if 1 <= choice <= len(candidates):
+                    selected_repo_id, selected_skill = candidates[choice - 1]
+                    break
+            except ValueError:
+                pass
+            except (KeyboardInterrupt, EOFError):
+                print("Operation canceled.")
+                return
+    else:
+        selected_repo_id, selected_skill = candidates[0]
+        
+    target_name = new_name
+    if not target_name:
+        try:
+            raw_val = input(f"Enter target symlink name (default 'my-{skill_name}'): ").strip()
+            if raw_val.lower() in ("q", "0", "cancel"):
+                print("Operation canceled.")
+                return
+            if not raw_val:
+                target_name = f"my-{skill_name}"
+            else:
+                target_name = raw_val
+        except (KeyboardInterrupt, EOFError):
+            print("Operation canceled.")
+            return
+            
+    # Source path relative to library/mine
+    skill_parent_dir_rel = Path(selected_skill["path"]).parent
+    source_path = f"{selected_repo_id}/{skill_parent_dir_rel}"
+    
+    # Physical copy from skills-library to skills-mine
+    src_dir = root_path / "skills-library" / source_path
+    dest_dir = root_path / "skills-mine" / source_path
+    
+    if not src_dir.exists():
+        print(f"Source files missing at {src_dir}. Please sync first.", file=sys.stderr)
+        return
+        
+    if dest_dir.exists():
+        shutil.rmtree(dest_dir)
+    dest_dir.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src_dir, dest_dir)
+    
+    # Update YAML config
+    # 1. Remove from workspace list if it exists there
+    for rw in config.get("workspace", []):
+        rw["skills"] = [s for s in rw.get("skills", []) if s["source"] != source_path]
+    config["workspace"] = [rw for rw in config.get("workspace", []) if rw.get("skills")]
+    
+    # 2. Add to mine list
+    if "mine" not in config:
+        config["mine"] = []
+    # Avoid duplicates
+    config["mine"] = [m for m in config["mine"] if m["target"] != target_name]
+    config["mine"].append({
+        "name": skill_name,
+        "source": source_path,
+        "target": target_name
+    })
+    
+    save_config(config, config_path)
+    
+    # Sync
+    sync(config_path, root_path)
+
+
+def mine_remove(skill_name: str, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    
+    # Find matching mine entries
+    candidates = []
+    for m in config.get("mine", []):
+        if m["name"] == skill_name:
+            candidates.append(m)
+            
+    if not candidates:
+        print(f"Skill '{skill_name}' not active in mine list.", file=sys.stderr)
+        return
+        
+    selected_skill = None
+    if len(candidates) > 1:
+        print("Multiple matching mine skills found:")
+        for idx, m in enumerate(candidates, 1):
+            print(f" [{idx}] {m['target']} ({m['source']})")
+        while True:
+            try:
+                raw_val = input(f"Select skill to remove (1-{len(candidates)}): ").strip()
+                if raw_val.lower() in ("q", "0", "cancel"):
+                    print("Operation canceled.")
+                    return
+                choice = int(raw_val)
+                if 1 <= choice <= len(candidates):
+                    selected_skill = candidates[choice - 1]
+                    break
+            except ValueError:
+                pass
+            except (KeyboardInterrupt, EOFError):
+                print("Operation canceled.")
+                return
+    else:
+        selected_skill = candidates[0]
+        
+    # Update YAML
+    config["mine"].remove(selected_skill)
+    save_config(config, config_path)
+    
+    # Sync
+    sync(config_path, root_path)
+
+
+
 
 
