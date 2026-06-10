@@ -205,4 +205,35 @@ def test_sync_zip_slip_prevention(mock_download, temp_env):
         skill.sync(temp_env / ".skills.yaml", temp_env)
 
 
+@patch("skill.download_repo_zip")
+def test_library_add_and_remove(mock_download, temp_env):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        import zipfile
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+    mock_download.side_effect = side_effect
+    
+    # 1. Test Library Add
+    yaml_path = temp_env / ".skills.yaml"
+    skill.library_add("obra/superpowers", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check added in YAML
+    assert any(r["repoId"] == "obra/superpowers" for r in config["library"])
+    # Check library dir contains files
+    assert (temp_env / "skills-library/obra/superpowers/skills/brainstorming/SKILL.md").exists()
+    
+    # 2. Test Library Remove
+    skill.library_remove("obra/superpowers", yaml_path, temp_env)
+    config = skill.load_config(yaml_path)
+    assert not any(r["repoId"] == "obra/superpowers" for r in config["library"])
+    assert not (temp_env / "skills-library/obra/superpowers").exists()
+
+
+
 

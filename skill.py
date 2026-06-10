@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import shutil
+import sys
 import urllib.error
 import urllib.request
 import zipfile
@@ -199,4 +200,80 @@ def sync(config_path: Path, root_path: Path):
         link_path = skills_dir / target
         if not link_path.exists() and not link_path.is_symlink():
             os.symlink(source_abs, link_path)
+
+
+def library_add(repo_id: str, config_path: Path, root_path: Path):
+    # Pre-sync: download and find SKILL.md paths
+    temp_zip = root_path / ".skills-repos" / f"temp_{repo_id.replace('/', '_')}.zip"
+    temp_zip.parent.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        download_repo_zip(repo_id, temp_zip)
+    except Exception as e:
+        print(f"Error downloading {repo_id}: {e}", file=sys.stderr)
+        return
+        
+    skills_found = []
+    with zipfile.ZipFile(temp_zip, 'r') as zf:
+        for m in zf.namelist():
+            if m.endswith("/SKILL.md"):
+                # Extract skill path relative to repo root (excluding zipball root hash folder)
+                parts = m.split('/')
+                skill_path = "/".join(parts[1:])
+                # Name is parent folder
+                skill_name = parts[-2]
+                skills_found.append({"name": skill_name, "path": skill_path})
+            elif m.endswith("SKILL.md") and "/" not in m:
+                # Skill at root
+                skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
+                
+    if temp_zip.exists():
+        temp_zip.unlink()
+        
+    if not skills_found:
+        print(f"No SKILL.md files found in repo {repo_id}.", file=sys.stderr)
+        return
+
+    # Update YAML config
+    config = load_config(config_path)
+    if "library" not in config:
+        config["library"] = []
+        
+    # Find or update existing repoId
+    found = False
+    for r in config["library"]:
+        if r["repoId"] == repo_id:
+            r["skills"] = skills_found
+            found = True
+            break
+    if not found:
+        config["library"].append({
+            "repoId": repo_id,
+            "repoType": "github",
+            "repoUrl": f"https://github.com/{repo_id}.git",
+            "skills": skills_found
+        })
+        
+    save_config(config, config_path)
+    
+    # Sync to finish the process
+    sync(config_path, root_path)
+
+
+def library_remove(repo_id: str, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    
+    # Update YAML: remove from library
+    if "library" in config:
+        config["library"] = [r for r in config["library"] if r["repoId"] != repo_id]
+        
+    # Remove from workspace
+    if "workspace" in config:
+        config["workspace"] = [r for r in config["workspace"] if r["repoId"] != repo_id]
+        
+    save_config(config, config_path)
+    
+    # Sync
+    sync(config_path, root_path)
+
 
