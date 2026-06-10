@@ -1,5 +1,5 @@
-skills/*/
-!skills/my-*/
+skills/
+skills-library/
 
 # DEV
 .dev/
