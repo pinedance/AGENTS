@@ -815,6 +815,110 @@ def test_mine_add_and_remove_cancel(mock_input, mock_download, temp_env, capsys)
     assert "Operation canceled." in captured.out
 
 
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_mine_add_existing_folder_abort_and_overwrite(mock_input, mock_download, temp_env, capsys):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    # Library folder (source)
+    src_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "SKILL.md").write_text("Library Brainstorming")
+    
+    # Existing Mine folder (target)
+    dest_dir = temp_env / "skills-mine/obra/superpowers/skills/brainstorming"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    (dest_dir / "SKILL.md").write_text("Existing Custom Brainstorming")
+    
+    # 1. Test decline overwrite
+    mock_input.side_effect = ["n"]
+    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled. Existing custom skill preserved." in captured.out
+    assert (dest_dir / "SKILL.md").read_text() == "Existing Custom Brainstorming"
+    
+    # 2. Test cancel/KeyboardInterrupt on overwrite prompt
+    mock_input.side_effect = KeyboardInterrupt
+    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled. Existing custom skill preserved." in captured.out
+    assert (dest_dir / "SKILL.md").read_text() == "Existing Custom Brainstorming"
+    
+    # 3. Test confirm overwrite
+    mock_input.side_effect = ["y"]
+    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
+    assert (dest_dir / "SKILL.md").read_text() == "Library Brainstorming"
+    
+    # Check YAML config updated
+    config = skill.load_config(yaml_path)
+    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
+
+
+@patch("skill.download_repo_zip")
+def test_mine_add_cleans_workspace_target_globally(mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config and workspace config
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    # Workspace has two entries matching target 'my-brainstorming'
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "my-brainstorming"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "skills": [{"name": "other-skill", "source": "other/superpowers/skills/other", "target": "my-brainstorming"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create source directory
+    src_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    # Add skill to mine
+    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check that workspace is completely empty because all matching targets were cleaned up
+    assert not any(w["skills"] for w in config.get("workspace", []))
+
+
+
 
 
 

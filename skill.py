@@ -483,14 +483,28 @@ def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path
         return
         
     if dest_dir.exists():
+        try:
+            rel_path = dest_dir.relative_to(root_path).as_posix()
+        except ValueError:
+            rel_path = dest_dir.as_posix()
+            
+        try:
+            overwrite_val = input(f"Custom folder already exists at {rel_path}. Overwrite? (y/N): ").strip().lower()
+            if overwrite_val not in ("y", "yes"):
+                print("Operation canceled. Existing custom skill preserved.")
+                return
+        except (KeyboardInterrupt, EOFError):
+            print("Operation canceled. Existing custom skill preserved.")
+            return
         shutil.rmtree(dest_dir)
+        
     dest_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(src_dir, dest_dir)
     
     # Update YAML config
-    # 1. Remove from workspace list if it exists there
+    # 1. Remove from workspace list if it exists there by source OR target matching new target name
     for rw in config.get("workspace", []):
-        rw["skills"] = [s for s in rw.get("skills", []) if s["source"] != source_path]
+        rw["skills"] = [s for s in rw.get("skills", []) if s["source"] != source_path and s["target"] != target_name]
     config["workspace"] = [rw for rw in config.get("workspace", []) if rw.get("skills")]
     
     # 2. Add to mine list
@@ -552,6 +566,14 @@ def mine_remove(skill_name: str, config_path: Path, root_path: Path):
     
     # Sync
     sync(config_path, root_path)
+    
+    # Notify user that local files were preserved
+    try:
+        dest_dir = root_path / "skills-mine" / selected_skill["source"]
+        rel_path = dest_dir.relative_to(root_path).as_posix()
+    except Exception:
+        rel_path = f"skills-mine/{selected_skill['source']}"
+    print(f"Custom skill folder preserved at {rel_path}.")
 
 
 
