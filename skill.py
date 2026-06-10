@@ -207,32 +207,30 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
     temp_zip = root_path / ".skills-repos" / f"temp_{repo_id.replace('/', '_')}.zip"
     temp_zip.parent.mkdir(parents=True, exist_ok=True)
     
+    skills_found = []
     try:
         download_repo_zip(repo_id, temp_zip)
-    except Exception as e:
-        print(f"Error downloading {repo_id}: {e}", file=sys.stderr)
-        return
-        
-    skills_found = []
-    with zipfile.ZipFile(temp_zip, 'r') as zf:
-        for m in zf.namelist():
-            if m.endswith("/SKILL.md"):
-                # Extract skill path relative to repo root (excluding zipball root hash folder)
-                parts = m.split('/')
-                skill_path = "/".join(parts[1:])
-                # Name is parent folder
-                skill_name = parts[-2]
-                skills_found.append({"name": skill_name, "path": skill_path})
-            elif m.endswith("SKILL.md") and "/" not in m:
-                # Skill at root
-                skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
-                
-    if temp_zip.exists():
-        temp_zip.unlink()
+        with zipfile.ZipFile(temp_zip, 'r') as zf:
+            for m in zf.namelist():
+                if m.endswith("/SKILL.md"):
+                    # Extract skill path relative to repo root (excluding zipball root hash folder)
+                    parts = m.split('/')
+                    skill_path = "/".join(parts[1:])
+                    # Name is parent folder
+                    if len(parts) == 2:
+                        skill_name = repo_id.split('/')[-1]
+                    else:
+                        skill_name = parts[-2]
+                    skills_found.append({"name": skill_name, "path": skill_path})
+                elif m.endswith("SKILL.md") and "/" not in m:
+                    # Skill at root
+                    skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
+    finally:
+        if temp_zip.exists():
+            temp_zip.unlink()
         
     if not skills_found:
-        print(f"No SKILL.md files found in repo {repo_id}.", file=sys.stderr)
-        return
+        raise ValueError(f"No SKILL.md files found in repo {repo_id}.")
 
     # Update YAML config
     config = load_config(config_path)

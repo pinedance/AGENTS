@@ -216,6 +216,7 @@ def test_library_add_and_remove(mock_download, temp_env):
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(dest_path, "w") as zf:
             zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+            zf.writestr("superpowers-main/SKILL.md", "# Root Skill")
     mock_download.side_effect = side_effect
     
     # 1. Test Library Add
@@ -224,15 +225,57 @@ def test_library_add_and_remove(mock_download, temp_env):
     
     config = skill.load_config(yaml_path)
     # Check added in YAML
-    assert any(r["repoId"] == "obra/superpowers" for r in config["library"])
+    repo_entry = next(r for r in config["library"] if r["repoId"] == "obra/superpowers")
+    skills = repo_entry["skills"]
+    assert any(s["name"] == "brainstorming" and s["path"] == "skills/brainstorming/SKILL.md" for s in skills)
+    assert any(s["name"] == "superpowers" and s["path"] == "SKILL.md" for s in skills)
+    
     # Check library dir contains files
     assert (temp_env / "skills-library/obra/superpowers/skills/brainstorming/SKILL.md").exists()
     
     # 2. Test Library Remove
+    # First ensure we have workspace entries for obra/superpowers
+    assert any(r["repoId"] == "obra/superpowers" for r in config.get("workspace", []))
+    
     skill.library_remove("obra/superpowers", yaml_path, temp_env)
     config = skill.load_config(yaml_path)
     assert not any(r["repoId"] == "obra/superpowers" for r in config["library"])
+    assert not any(r["repoId"] == "obra/superpowers" for r in config.get("workspace", []))
     assert not (temp_env / "skills-library/obra/superpowers").exists()
+
+
+@patch("skill.download_repo_zip")
+def test_library_add_no_skills(mock_download, temp_env):
+    import skill
+    import pytest
+    skill.PROJECT_ROOT = temp_env
+    
+    def side_effect(repo_id, dest_path):
+        import zipfile
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            zf.writestr("superpowers-main/random.txt", "hello")
+    mock_download.side_effect = side_effect
+    
+    yaml_path = temp_env / ".skills.yaml"
+    with pytest.raises(ValueError, match="No SKILL.md files found in repo"):
+        skill.library_add("obra/superpowers", yaml_path, temp_env)
+
+
+@patch("skill.download_repo_zip")
+def test_library_add_download_fails(mock_download, temp_env):
+    import skill
+    import urllib.error
+    import pytest
+    skill.PROJECT_ROOT = temp_env
+    
+    mock_download.side_effect = urllib.error.URLError("Connection refused")
+    
+    yaml_path = temp_env / ".skills.yaml"
+    with pytest.raises(urllib.error.URLError, match="Connection refused"):
+        skill.library_add("obra/superpowers", yaml_path, temp_env)
+
+
 
 
 
