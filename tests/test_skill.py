@@ -276,7 +276,187 @@ def test_library_add_download_fails(mock_download, temp_env):
         skill.library_add("obra/superpowers", yaml_path, temp_env)
 
 
+@patch("skill.download_repo_zip")
+@patch("builtins.input", side_effect=[""])  # Simulates pressing Enter for prompt
+def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config and library dir
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "repoType": "github",
+        "repoUrl": "https://github.com/obra/superpowers.git",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    # 1. Test Workspace Add
+    skill.workspace_add("brainstorming", "sp-brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    assert any(w["repoId"] == "obra/superpowers" for w in config["workspace"])
+    assert (temp_env / "skills/sp-brainstorming").is_symlink()
+    
+    # 2. Test Workspace Remove
+    skill.workspace_remove("brainstorming", yaml_path, temp_env)
+    config = skill.load_config(yaml_path)
+    assert not any(w["skills"] for w in config.get("workspace", []))
+    assert not (temp_env / "skills/sp-brainstorming").exists()
 
 
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_download, temp_env):
+    import skill
+    import os
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config with two repos containing the same skill name
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {
+            "repoId": "obra/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/obra/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/other/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create library folders
+    for repo_id in ["obra/superpowers", "other/superpowers"]:
+        skill_dir = temp_env / f"skills-library/{repo_id}/skills/brainstorming"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text("# Brainstorming")
+
+    # Mock input:
+    # 1. "2" to select the second repo (other/superpowers)
+    # 2. "custom-target" to name the target
+    mock_input.side_effect = ["2", "custom-target"]
+    
+    skill.workspace_add("brainstorming", None, yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Verify the selected repo workspace has the skill
+    other_workspace = next(w for w in config["workspace"] if w["repoId"] == "other/superpowers")
+    assert any(s["target"] == "custom-target" for s in other_workspace["skills"])
+    assert (temp_env / "skills/custom-target").is_symlink()
+
+
+def test_workspace_add_not_found(temp_env, capsys):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    skill.workspace_add("nonexistent", "some-target", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "not found in library" in captured.err
+
+
+def test_workspace_remove_not_active(temp_env, capsys):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    skill.workspace_remove("nonexistent", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "not active in workspace" in captured.err
+
+
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
+    import skill
+    import os
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library and active workspace config
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {
+            "repoId": "obra/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/obra/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/other/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        }
+    ]
+    # Both active in workspace
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "skills": [{"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "other-brainstorming"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create library folders and symlinks
+    for repo_id, target in [("obra/superpowers", "sp-brainstorming"), ("other/superpowers", "other-brainstorming")]:
+        skill_dir = temp_env / f"skills-library/{repo_id}/skills/brainstorming"
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text("# Brainstorming")
+        
+        # Link in skills/
+        link_path = temp_env / f"skills/{target}"
+        link_path.parent.mkdir(parents=True, exist_ok=True)
+        if not link_path.exists():
+            os.symlink(skill_dir, link_path)
+            
+    # Mock input: "1" to remove the first candidate (obra/superpowers)
+    mock_input.side_effect = ["1"]
+    
+    skill.workspace_remove("brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # obra/superpowers workspace entry should be removed or cleaned up
+    assert not any(w["repoId"] == "obra/superpowers" for w in config.get("workspace", []))
+    assert any(w["repoId"] == "other/superpowers" for w in config.get("workspace", []))
+    assert not (temp_env / "skills/sp-brainstorming").exists()
+    assert (temp_env / "skills/other-brainstorming").exists()
 
 

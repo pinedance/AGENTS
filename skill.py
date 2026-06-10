@@ -275,3 +275,115 @@ def library_remove(repo_id: str, config_path: Path, root_path: Path):
     sync(config_path, root_path)
 
 
+def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    
+    # Pre-sync: find matching skills in library
+    candidates = []
+    for repo in config.get("library", []):
+        repo_id = repo["repoId"]
+        for skill_item in repo.get("skills", []):
+            if skill_item["name"] == skill_name:
+                candidates.append((repo_id, skill_item))
+                
+    if not candidates:
+        print(f"Skill '{skill_name}' not found in library. Run 'library add' first.", file=sys.stderr)
+        return
+        
+    selected_repo_id, selected_skill = None, None
+    if len(candidates) > 1:
+        print("Multiple matches found:")
+        for idx, (repo_id, skill_item) in enumerate(candidates, 1):
+            print(f" [{idx}] {repo_id} ({skill_item['path']})")
+        while True:
+            try:
+                choice = int(input(f"Select repo (1-{len(candidates)}): "))
+                if 1 <= choice <= len(candidates):
+                    selected_repo_id, selected_skill = candidates[choice - 1]
+                    break
+            except ValueError:
+                pass
+    else:
+        selected_repo_id, selected_skill = candidates[0]
+        
+    target_name = new_name
+    if not target_name:
+        target_name = input(f"Enter target symlink name (default '{skill_name}'): ").strip()
+        if not target_name:
+            target_name = skill_name
+            
+    # Update YAML: add to workspace
+    if "workspace" not in config:
+        config["workspace"] = []
+        
+    repo_workspace = None
+    for rw in config["workspace"]:
+        if rw["repoId"] == selected_repo_id:
+            repo_workspace = rw
+            break
+            
+    if not repo_workspace:
+        repo_workspace = {"repoId": selected_repo_id, "skills": []}
+        config["workspace"].append(repo_workspace)
+        
+    # Avoid duplicate target in workspace config
+    repo_workspace["skills"] = [s for s in repo_workspace["skills"] if s["target"] != target_name]
+    
+    # Source is repoId + skill_parent_dir_rel
+    skill_parent_dir_rel = Path(selected_skill["path"]).parent
+    source_path = f"{selected_repo_id}/{skill_parent_dir_rel}"
+    
+    repo_workspace["skills"].append({
+        "name": skill_name,
+        "source": source_path,
+        "target": target_name
+    })
+    
+    save_config(config, config_path)
+    
+    # Sync
+    sync(config_path, root_path)
+
+
+def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    
+    # Find active workspace skills matching skill_name
+    candidates = []
+    for rw in config.get("workspace", []):
+        for s in rw.get("skills", []):
+            if s["name"] == skill_name:
+                candidates.append((rw, s))
+                
+    if not candidates:
+        print(f"Skill '{skill_name}' not active in workspace.", file=sys.stderr)
+        return
+        
+    selected_rw, selected_skill = None, None
+    if len(candidates) > 1:
+        print("Multiple active skills found:")
+        for idx, (rw, s) in enumerate(candidates, 1):
+            print(f" [{idx}] {s['target']} (from {rw['repoId']})")
+        while True:
+            try:
+                choice = int(input(f"Select skill to remove (1-{len(candidates)}): "))
+                if 1 <= choice <= len(candidates):
+                    selected_rw, selected_skill = candidates[choice - 1]
+                    break
+            except ValueError:
+                pass
+    else:
+        selected_rw, selected_skill = candidates[0]
+        
+    # Update YAML
+    selected_rw["skills"].remove(selected_skill)
+    # Clean up empty repo blocks
+    config["workspace"] = [rw for rw in config["workspace"] if rw.get("skills")]
+    
+    save_config(config, config_path)
+    
+    # Sync
+    sync(config_path, root_path)
+
+
+
