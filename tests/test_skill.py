@@ -1,8 +1,6 @@
-import os
-import shutil
 from pathlib import Path
 import pytest
-from ruamel.yaml import YAML
+import skill
 
 @pytest.fixture
 def temp_env(tmp_path):
@@ -31,7 +29,6 @@ mine:
     return tmp_path
 
 def test_load_save_config_preserves_comments(temp_env):
-    import skill
     yaml_path = temp_env / ".skills.yaml"
     config = skill.load_config(yaml_path)
     assert "library" in config
@@ -45,3 +42,15 @@ def test_load_save_config_preserves_comments(temp_env):
     saved_content = yaml_path.read_text()
     assert "# Test comments" in saved_content
     assert "test-tgt" in saved_content
+
+def test_load_empty_config(tmp_path):
+    yaml_path = tmp_path / ".skills.yaml"
+    yaml_path.write_text("")
+    config = skill.load_config(yaml_path)
+    assert config == {"library": [], "workspace": [], "mine": []}
+
+def test_load_only_comments_config(tmp_path):
+    yaml_path = tmp_path / ".skills.yaml"
+    yaml_path.write_text("# Only comments here\n")
+    config = skill.load_config(yaml_path)
+    assert config == {"library": [], "workspace": [], "mine": []}
