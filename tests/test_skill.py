@@ -918,7 +918,73 @@ def test_mine_add_cleans_workspace_target_globally(mock_download, temp_env):
     assert not any(w["skills"] for w in config.get("workspace", []))
 
 
+def test_cli_arg_parsing(temp_env):
+    import skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Test argparse parsing with library add
+    with patch("skill.library_add") as mock_add:
+        sys_args = ["skill.py", "library", "add", "obra/superpowers"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_add.assert_called_once_with("obra/superpowers", yaml_path, temp_env)
 
 
+def test_cli_migration_and_other_subcommands(temp_env):
+    import skill
+    import shutil
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Test migration of skills-archive to skills-library
+    archive_dir = temp_env / "skills-archive"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    # The new directory should not exist beforehand
+    library_dir = temp_env / "skills-library"
+    if library_dir.exists():
+        shutil.rmtree(library_dir)
+        
+    with patch("skill.sync") as mock_sync:
+        sys_args = ["skill.py", "sync"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_sync.assert_called_once_with(yaml_path, temp_env)
+            
+    assert not archive_dir.exists()
+    assert library_dir.exists()
+    
+    # Test library remove subcommand
+    with patch("skill.library_remove") as mock_lib_rem:
+        sys_args = ["skill.py", "library", "remove", "obra/superpowers"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_lib_rem.assert_called_once_with("obra/superpowers", yaml_path, temp_env)
 
+    # Test workspace add subcommand
+    with patch("skill.workspace_add") as mock_work_add:
+        sys_args = ["skill.py", "workspace", "add", "brainstorming", "--name", "custom-brain"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_work_add.assert_called_once_with("brainstorming", "custom-brain", yaml_path, temp_env)
 
+    # Test workspace remove subcommand
+    with patch("skill.workspace_remove") as mock_work_rem:
+        sys_args = ["skill.py", "workspace", "remove", "brainstorming"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_work_rem.assert_called_once_with("brainstorming", yaml_path, temp_env)
+
+    # Test mine add subcommand
+    with patch("skill.mine_add") as mock_mine_add:
+        sys_args = ["skill.py", "mine", "add", "brainstorming", "--name", "my-brain"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_mine_add.assert_called_once_with("brainstorming", "my-brain", yaml_path, temp_env)
+
+    # Test mine remove subcommand
+    with patch("skill.mine_remove") as mock_mine_rem:
+        sys_args = ["skill.py", "mine", "remove", "brainstorming"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_mine_rem.assert_called_once_with("brainstorming", yaml_path, temp_env)

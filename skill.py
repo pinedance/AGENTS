@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 import os
 import shutil
 import sys
@@ -574,6 +575,73 @@ def mine_remove(skill_name: str, config_path: Path, root_path: Path):
     except Exception:
         rel_path = f"skills-mine/{selected_skill['source']}"
     print(f"Custom skill folder preserved at {rel_path}.")
+
+
+def main(config_path: Path | None = None, root_path: Path | None = None):
+    root = root_path or PROJECT_ROOT
+    cfg = config_path or (root / ".skills.yaml")
+    
+    # Perform migration renaming if needed
+    old_archive = root / "skills-archive"
+    new_library = root / "skills-library"
+    if old_archive.exists() and not new_library.exists():
+        old_archive.rename(new_library)
+        
+    parser = argparse.ArgumentParser(description="Skill Manager CLI")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    
+    # sync
+    subparsers.add_parser("sync", help="Sync local file system with .skills.yaml")
+    
+    # library
+    lib_parser = subparsers.add_parser("library", help="Manage skill library")
+    lib_sub = lib_parser.add_subparsers(dest="subcommand", required=True)
+    lib_add = lib_sub.add_parser("add", help="Add remote repo to library")
+    lib_add.add_argument("repoId", help="GitHub repository identifier, e.g. obra/superpowers")
+    lib_rem = lib_sub.add_parser("remove", help="Remove repo from library")
+    lib_rem.add_argument("repoId", help="GitHub repository identifier")
+    
+    # workspace
+    work_parser = subparsers.add_parser("workspace", help="Manage active workspace skills")
+    work_sub = work_parser.add_subparsers(dest="subcommand", required=True)
+    work_add = work_sub.add_parser("add", help="Add skill from library to active workspace")
+    work_add.add_argument("skill_name", help="Name of skill to add")
+    work_add.add_argument("--name", help="Custom name for the symlink", default=None)
+    work_rem = work_sub.add_parser("remove", help="Remove active workspace skill")
+    work_rem.add_argument("skill_name", help="Name of skill to remove")
+    
+    # mine
+    mine_parser = subparsers.add_parser("mine", help="Manage custom skills")
+    mine_sub = mine_parser.add_subparsers(dest="subcommand", required=True)
+    mine_add_cmd = mine_sub.add_parser("add", help="Customize a library skill to local mine folder")
+    mine_add_cmd.add_argument("skill_name", help="Name of skill to customize")
+    mine_add_cmd.add_argument("--name", help="Custom name for the symlink", default=None)
+    mine_rem = mine_sub.add_parser("remove", help="Remove active custom mine skill")
+    mine_rem.add_argument("skill_name", help="Name of skill to remove")
+    
+    args = parser.parse_args()
+    
+    if args.command == "sync":
+        sync(cfg, root)
+    elif args.command == "library":
+        if args.subcommand == "add":
+            library_add(args.repoId, cfg, root)
+        elif args.subcommand == "remove":
+            library_remove(args.repoId, cfg, root)
+    elif args.command == "workspace":
+        if args.subcommand == "add":
+            workspace_add(args.skill_name, args.name, cfg, root)
+        elif args.subcommand == "remove":
+            workspace_remove(args.skill_name, cfg, root)
+    elif args.command == "mine":
+        if args.subcommand == "add":
+            mine_add(args.skill_name, args.name, cfg, root)
+        elif args.subcommand == "remove":
+            mine_remove(args.skill_name, cfg, root)
+
+if __name__ == "__main__":
+    main()
+
 
 
 
