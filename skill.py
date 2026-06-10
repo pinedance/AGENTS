@@ -297,22 +297,49 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
             print(f" [{idx}] {repo_id} ({skill_item['path']})")
         while True:
             try:
-                choice = int(input(f"Select repo (1-{len(candidates)}): "))
+                raw_val = input(f"Select repo (1-{len(candidates)}): ").strip()
+                if raw_val.lower() in ("q", "0", "cancel"):
+                    print("Operation canceled.")
+                    return
+                choice = int(raw_val)
                 if 1 <= choice <= len(candidates):
                     selected_repo_id, selected_skill = candidates[choice - 1]
                     break
             except ValueError:
                 pass
+            except (KeyboardInterrupt, EOFError):
+                print("Operation canceled.")
+                return
     else:
         selected_repo_id, selected_skill = candidates[0]
         
     target_name = new_name
     if not target_name:
-        target_name = input(f"Enter target symlink name (default '{skill_name}'): ").strip()
-        if not target_name:
-            target_name = skill_name
+        try:
+            raw_val = input(f"Enter target symlink name (default '{skill_name}'): ").strip()
+            if raw_val.lower() in ("q", "0", "cancel"):
+                print("Operation canceled.")
+                return
+            if not raw_val:
+                target_name = skill_name
+            else:
+                target_name = raw_val
+        except (KeyboardInterrupt, EOFError):
+            print("Operation canceled.")
+            return
             
     # Update YAML: add to workspace
+    # 1. Globally remove any skill across all workspace repo blocks with the same target name
+    if "workspace" in config:
+        for rw in config["workspace"]:
+            rw["skills"] = [s for s in rw.get("skills", []) if s["target"] != target_name]
+        # Clean up empty repo blocks
+        config["workspace"] = [rw for rw in config["workspace"] if rw.get("skills")]
+        
+    # 2. Also check the mine list and remove any custom skill with the same target name
+    if "mine" in config:
+        config["mine"] = [m for m in config["mine"] if m.get("target") != target_name]
+        
     if "workspace" not in config:
         config["workspace"] = []
         
@@ -326,9 +353,6 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         repo_workspace = {"repoId": selected_repo_id, "skills": []}
         config["workspace"].append(repo_workspace)
         
-    # Avoid duplicate target in workspace config
-    repo_workspace["skills"] = [s for s in repo_workspace["skills"] if s["target"] != target_name]
-    
     # Source is repoId + skill_parent_dir_rel
     skill_parent_dir_rel = Path(selected_skill["path"]).parent
     source_path = f"{selected_repo_id}/{skill_parent_dir_rel}"
@@ -366,12 +390,19 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
             print(f" [{idx}] {s['target']} (from {rw['repoId']})")
         while True:
             try:
-                choice = int(input(f"Select skill to remove (1-{len(candidates)}): "))
+                raw_val = input(f"Select skill to remove (1-{len(candidates)}): ").strip()
+                if raw_val.lower() in ("q", "0", "cancel"):
+                    print("Operation canceled.")
+                    return
+                choice = int(raw_val)
                 if 1 <= choice <= len(candidates):
                     selected_rw, selected_skill = candidates[choice - 1]
                     break
             except ValueError:
                 pass
+            except (KeyboardInterrupt, EOFError):
+                print("Operation canceled.")
+                return
     else:
         selected_rw, selected_skill = candidates[0]
         
@@ -384,6 +415,7 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
     
     # Sync
     sync(config_path, root_path)
+
 
 
 

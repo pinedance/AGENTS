@@ -460,3 +460,157 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     assert (temp_env / "skills/other-brainstorming").exists()
 
 
+@patch("skill.download_repo_zip")
+@patch("builtins.input", side_effect=["1"])
+def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed config with another workspace block containing the same target 'sp-brainstorming'
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {
+            "repoId": "obra/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/obra/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        },
+        {
+            "repoId": "other/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/other/superpowers.git",
+            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+        }
+    ]
+    config["workspace"] = [
+        {
+            "repoId": "other/superpowers",
+            "skills": [{"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Create library directory
+    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    # Add from obra/superpowers with target 'sp-brainstorming'
+    skill.workspace_add("brainstorming", "sp-brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check that other/superpowers repo block is cleaned up (since its only skill was removed)
+    assert not any(w["repoId"] == "other/superpowers" for w in config.get("workspace", []))
+    # Check that the new skill is registered under obra/superpowers
+    assert any(w["repoId"] == "obra/superpowers" for w in config.get("workspace", []))
+
+
+@patch("skill.download_repo_zip")
+@patch("builtins.input", side_effect=[""])
+def test_workspace_add_removes_mine_conflicts(mock_input, mock_download, temp_env):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # Seed library config and mine config with target 'sp-brainstorming'
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "repoType": "github",
+        "repoUrl": "https://github.com/obra/superpowers.git",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    config["mine"] = [{"name": "some-mine-skill", "source": "local/mine", "target": "sp-brainstorming"}]
+    skill.save_config(config, yaml_path)
+    
+    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    # Add from obra/superpowers with target 'sp-brainstorming'
+    skill.workspace_add("brainstorming", "sp-brainstorming", yaml_path, temp_env)
+    
+    config = skill.load_config(yaml_path)
+    # Check that mine entry was removed
+    assert not any(m["target"] == "sp-brainstorming" for m in config.get("mine", []))
+    # Check that the workspace has the skill
+    assert any(w["repoId"] == "obra/superpowers" for w in config["workspace"])
+
+
+@patch("skill.download_repo_zip")
+@patch("builtins.input")
+def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, temp_env, capsys):
+    import skill
+    import zipfile
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            pass
+    mock_download.side_effect = side_effect
+    
+    # 1. Test KeyboardInterrupt on workspace_add (select repo)
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]},
+        {"repoId": "other/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    mock_input.side_effect = KeyboardInterrupt
+    skill.workspace_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 2. Test manual cancel 'q' on workspace_add (select repo)
+    mock_input.side_effect = ["q"]
+    skill.workspace_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 3. Test EOFError on workspace_add (enter target name)
+    # Reset config to one repo so it skips select repo prompt, but prompt for target name is shown
+    config = skill.load_config(yaml_path)
+    config["library"] = [
+        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    mock_input.side_effect = EOFError
+    skill.workspace_add("brainstorming", None, yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+    
+    # 4. Test manual cancel 'cancel' on workspace_remove
+    # Seed active workspace with multiple items
+    config = skill.load_config(yaml_path)
+    config["workspace"] = [
+        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "source": "src1", "target": "sp-brainstorming"}]},
+        {"repoId": "other/superpowers", "skills": [{"name": "brainstorming", "source": "src2", "target": "other-brainstorming"}]}
+    ]
+    skill.save_config(config, yaml_path)
+    
+    mock_input.side_effect = ["cancel"]
+    skill.workspace_remove("brainstorming", yaml_path, temp_env)
+    captured = capsys.readouterr()
+    assert "Operation canceled." in captured.out
+
+
+

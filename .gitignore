@@ -1,3 +1,5 @@
+.omc/
+.skills-repos
 skills/
 skills-library/
 
@@ -7,5 +9,8 @@ skills-library/
 .gemini/
 .claude/
 
-.omc/
-.skills-repos
+# python
+.venv/
+.pytest_cache/
+
+
