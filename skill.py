@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import shutil
+import urllib.error
 import urllib.request
 import zipfile
 from ruamel.yaml import YAML
@@ -29,14 +30,29 @@ def save_config(config: dict, path: Path):
 
 def download_repo_zip(repo_id: str, dest_path: Path):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
-    # Use github default zip url
-    url = f"https://api.github.com/repos/{repo_id}/zipball"
-    req = urllib.request.Request(
-        url,
-        headers={"User-Agent": "SkillManagerAgent"}
-    )
-    with urllib.request.urlopen(req) as response, open(dest_path, "wb") as out_file:
-        out_file.write(response.read())
+    # Avoid api.github.com due to strict rate limits.
+    # Try downloading from main branch first, then fallback to master branch.
+    urls = [
+        f"https://github.com/{repo_id}/archive/refs/heads/main.zip",
+        f"https://github.com/{repo_id}/archive/refs/heads/master.zip"
+    ]
+    
+    last_err = None
+    for url in urls:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "SkillManagerAgent"}
+            )
+            with urllib.request.urlopen(req) as response, open(dest_path, "wb") as out_file:
+                out_file.write(response.read())
+            return
+        except urllib.error.URLError as e:
+            last_err = e
+            
+    if last_err:
+        raise last_err
+
 
 def sync(config_path: Path, root_path: Path):
     config = load_config(config_path)
@@ -88,7 +104,7 @@ def sync(config_path: Path, root_path: Path):
                     if not prefix:
                         # Fallback for SKILL.md directly at root
                         for m in members:
-                            if m.endswith("SKILL.md") and "/" not in m[m.find("SKILL.md")-5:m.find("SKILL.md")]:
+                            if m.endswith("/SKILL.md") and m.count('/') == 1:
                                 prefix = m[:-len("SKILL.md")]
                                 break
                     
@@ -98,12 +114,19 @@ def sync(config_path: Path, root_path: Path):
                         if m.startswith(target_zip_dir_prefix):
                             relative_member = m[len(prefix):]
                             dest_file = library_dir / repo_id / relative_member
+                            
+                            # Zip Slip Prevention
+                            dest_base = (library_dir / repo_id).resolve()
+                            if not dest_file.resolve().is_relative_to(dest_base):
+                                raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
+                            
                             if m.endswith('/'):
                                 dest_file.mkdir(parents=True, exist_ok=True)
                             else:
                                 dest_file.parent.mkdir(parents=True, exist_ok=True)
                                 with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
                                     shutil.copyfileobj(source_f, target_f)
+
 
     # 2. Prune obsolete zips
     for root, dirs, files in os.walk(repos_dir):
@@ -141,11 +164,11 @@ def sync(config_path: Path, root_path: Path):
     
     # External workspace skills
     for repo in config.get("workspace", []):
-        repo_id = repo["repoId"]
         for skill_item in repo.get("skills", []):
             source = skill_item["source"] # 'obra/superpowers/skills/brainstorming'
             target = skill_item["target"] # 'sp-brainstorming'
             target_links[target] = (library_dir / source).resolve()
+
             
     # Local mine skills
     for mine_item in config.get("mine", []):

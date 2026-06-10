@@ -143,3 +143,66 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     assert (temp_env / "skills/sp-brainstorming").is_symlink()
 
 
+@patch("urllib.request.urlopen")
+def test_download_repo_zip_fallback(mock_urlopen, tmp_path):
+    import urllib.error
+    import skill
+    from unittest.mock import MagicMock
+    
+    response_mock = MagicMock()
+    response_mock.__enter__.return_value = response_mock
+    response_mock.read.return_value = b"zip-content"
+    
+    calls = []
+    def urlopen_side_effect(req, *args, **kwargs):
+        url = req.full_url
+        calls.append(url)
+        if "main.zip" in url:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        return response_mock
+        
+    mock_urlopen.side_effect = urlopen_side_effect
+    
+    dest = tmp_path / "repo.zip"
+    skill.download_repo_zip("obra/superpowers", dest)
+    
+    assert dest.exists()
+    assert dest.read_bytes() == b"zip-content"
+    assert len(calls) == 2
+    assert "main.zip" in calls[0]
+    assert "master.zip" in calls[1]
+
+
+@patch("urllib.request.urlopen")
+def test_download_repo_zip_fails_both(mock_urlopen, tmp_path):
+    import urllib.error
+    import skill
+    
+    def urlopen_side_effect(req, *args, **kwargs):
+        raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+        
+    mock_urlopen.side_effect = urlopen_side_effect
+    
+    dest = tmp_path / "repo.zip"
+    with pytest.raises(urllib.error.HTTPError):
+        skill.download_repo_zip("obra/superpowers", dest)
+
+
+@patch("skill.download_repo_zip")
+def test_sync_zip_slip_prevention(mock_download, temp_env):
+    import skill
+    import pytest
+    
+    def side_effect(repo_id, dest_path):
+        import zipfile
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+            zf.writestr("superpowers-main/skills/brainstorming/../../../traversal.txt", "evil")
+    mock_download.side_effect = side_effect
+
+    with pytest.raises(ValueError, match="Path traversal detected"):
+        skill.sync(temp_env / ".skills.yaml", temp_env)
+
+
+
