@@ -1031,3 +1031,125 @@ def test_cli_migration_oserror_warning(temp_env, capsys):
     captured = capsys.readouterr()
     assert "Warning: Failed to migrate skills-archive: Permission denied" in captured.err
 
+
+def test_library_add_invalid_repo_id(temp_env):
+    import skill
+    import pytest
+    yaml_path = temp_env / ".skills.yaml"
+    
+    invalid_repo_ids = [
+        "invalid_id",          # No slash
+        "owner/repo/sub",      # Too many slashes
+        "owner/",              # Missing repo
+        "/repo",               # Missing owner
+        "owner/repo$",         # Invalid character
+    ]
+    for repo_id in invalid_repo_ids:
+        with pytest.raises(ValueError, match="Invalid repo_id format"):
+            skill.library_add(repo_id, yaml_path, temp_env)
+
+
+def test_workspace_mine_add_invalid_target(temp_env):
+    import skill
+    import pytest
+    from unittest.mock import patch
+    yaml_path = temp_env / ".skills.yaml"
+    
+    invalid_targets = [
+        "a/b",
+        "a\\b",
+        ".",
+        "..",
+        ""
+    ]
+    
+    # Mock download to avoid network calls during library_add or workspace_add
+    with patch("skill.download_repo_zip") as mock_download:
+        def side_effect(repo_id, dest_path):
+            import zipfile
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(dest_path, "w") as zf:
+                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+        mock_download.side_effect = side_effect
+        
+        # Add to library first
+        skill.library_add("obra/superpowers", yaml_path, temp_env)
+        
+        for target in invalid_targets:
+            with pytest.raises(ValueError, match="Invalid target name"):
+                skill.workspace_add("brainstorming", target, yaml_path, temp_env)
+            with pytest.raises(ValueError, match="Invalid target name"):
+                skill.mine_add("brainstorming", target, yaml_path, temp_env)
+
+
+def test_sync_symlink_target_verification(temp_env):
+    import skill
+    import pytest
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Set workspace and mine entries with malicious/outside paths
+    config = skill.load_config(yaml_path)
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [{"name": "brainstorming", "source": "../../outside-path", "target": "bad-workspace"}]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    with pytest.raises(ValueError, match="is not strictly inside"):
+        skill.sync(yaml_path, temp_env)
+
+
+def test_atomic_download_and_bad_zip_handling(temp_env):
+    import skill
+    import pytest
+    import zipfile
+    from unittest.mock import patch
+    
+    yaml_path = temp_env / ".skills.yaml"
+    zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # 1. Test bad zip recovery: write corrupted content to zip file
+    zip_path.write_text("corrupted content")
+    assert zip_path.exists()
+    
+    # In sync, we mock download_repo_zip to raise if called, but since zip exists, sync tries to unzip it first.
+    # BadZipFile should be raised, and corrupted file must be deleted.
+    with patch("skill.download_repo_zip") as mock_download:
+        with pytest.raises(zipfile.BadZipFile):
+            skill.sync(yaml_path, temp_env)
+        # Corrupt file must be deleted immediately
+        assert not zip_path.exists()
+
+    # 2. Test atomic download: when downloading, it writes to a .tmp file first.
+    # Mock urllib.request.urlopen to check if temp file is written and renamed.
+    from unittest.mock import MagicMock
+    response_mock = MagicMock()
+    response_mock.__enter__.return_value = response_mock
+    response_mock.read.return_value = b"some zip content"
+    
+    # We patch open to see if the tmp file is created
+    original_open = open
+    tmp_file_created = False
+    
+    def mock_open(file, mode="r", *args, **kwargs):
+        nonlocal tmp_file_created
+        from pathlib import Path
+        if isinstance(file, Path) and file.suffix == ".tmp":
+            tmp_file_created = True
+        return original_open(file, mode, *args, **kwargs)
+        
+    with patch("urllib.request.urlopen", return_value=response_mock), \
+         patch("builtins.open", mock_open):
+        skill.download_repo_zip("obra/superpowers", zip_path)
+        
+    assert tmp_file_created
+    assert zip_path.exists()
+    assert zip_path.read_bytes() == b"some zip content"
+
+
+
+
+

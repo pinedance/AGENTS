@@ -39,6 +39,7 @@ def download_repo_zip(repo_id: str, dest_path: Path):
         f"https://github.com/{repo_id}/archive/refs/heads/master.zip"
     ]
     
+    temp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
     last_err = None
     for url in urls:
         try:
@@ -46,11 +47,18 @@ def download_repo_zip(repo_id: str, dest_path: Path):
                 url,
                 headers={"User-Agent": "SkillManagerAgent"}
             )
-            with urllib.request.urlopen(req) as response, open(dest_path, "wb") as out_file:
+            with urllib.request.urlopen(req) as response, open(temp_path, "wb") as out_file:
                 out_file.write(response.read())
+            temp_path.replace(dest_path)
             return
         except urllib.error.URLError as e:
             last_err = e
+        finally:
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
             
     if last_err:
         raise last_err
@@ -85,6 +93,7 @@ def sync(config_path: Path, root_path: Path):
         for skill_item in repo.get("skills", []):
             skill_path = skill_item["path"]  # e.g., 'skills/brainstorming/SKILL.md'
             skill_parent_dir_rel = Path(skill_path).parent # 'skills/brainstorming'
+            skill_parent_dir_rel_posix = skill_parent_dir_rel.as_posix()
             
             # Destination path inside skills-library
             dest_skill_dir = library_dir / repo_id / skill_parent_dir_rel
@@ -93,41 +102,49 @@ def sync(config_path: Path, root_path: Path):
             # Extract if not exists
             if not dest_skill_dir.exists():
                 dest_skill_dir.parent.mkdir(parents=True, exist_ok=True)
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    # Find matching file in zip (GitHub zipballs prefix folders with hashes)
-                    members = zf.namelist()
-                    # We look for the folder structure ending in the skill_parent_dir_rel
-                    prefix = ""
-                    for m in members:
-                        if m.endswith(str(skill_parent_dir_rel) + "/SKILL.md"):
-                            prefix = m[:-len(str(skill_parent_dir_rel) + "/SKILL.md")]
-                            break
-                    
-                    if not prefix:
-                        # Fallback for SKILL.md directly at root
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zf:
+                        # Find matching file in zip (GitHub zipballs prefix folders with hashes)
+                        members = zf.namelist()
+                        # We look for the folder structure ending in the skill_parent_dir_rel
+                        prefix = ""
                         for m in members:
-                            if m.endswith("/SKILL.md") and m.count('/') == 1:
-                                prefix = m[:-len("SKILL.md")]
+                            if m.endswith(skill_parent_dir_rel_posix + "/SKILL.md"):
+                                prefix = m[:-len(skill_parent_dir_rel_posix + "/SKILL.md")]
                                 break
-                    
-                    # Extract files belonging to this skill directory
-                    target_zip_dir_prefix = prefix + str(skill_parent_dir_rel) + "/"
-                    for m in members:
-                        if m.startswith(target_zip_dir_prefix):
-                            relative_member = m[len(prefix):]
-                            dest_file = library_dir / repo_id / relative_member
-                            
-                            # Zip Slip Prevention
-                            dest_base = (library_dir / repo_id).resolve()
-                            if not dest_file.resolve().is_relative_to(dest_base):
-                                raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
-                            
-                            if m.endswith('/'):
-                                dest_file.mkdir(parents=True, exist_ok=True)
-                            else:
-                                dest_file.parent.mkdir(parents=True, exist_ok=True)
-                                with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
-                                    shutil.copyfileobj(source_f, target_f)
+                        
+                        if not prefix:
+                            # Fallback for SKILL.md directly at root
+                            for m in members:
+                                if m.endswith("/SKILL.md") and m.count('/') == 1:
+                                    prefix = m[:-len("SKILL.md")]
+                                    break
+                        
+                        # Extract files belonging to this skill directory
+                        target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
+                        for m in members:
+                            if m.startswith(target_zip_dir_prefix):
+                                relative_member = m[len(prefix):]
+                                dest_file = library_dir / repo_id / relative_member
+                                
+                                # Zip Slip Prevention
+                                dest_base = (library_dir / repo_id).resolve()
+                                if not dest_file.resolve().is_relative_to(dest_base):
+                                    raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
+                                
+                                if m.endswith('/'):
+                                    dest_file.mkdir(parents=True, exist_ok=True)
+                                else:
+                                    dest_file.parent.mkdir(parents=True, exist_ok=True)
+                                    with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
+                                        shutil.copyfileobj(source_f, target_f)
+                except zipfile.BadZipFile:
+                    if zip_path.exists():
+                        try:
+                            zip_path.unlink()
+                        except OSError:
+                            pass
+                    raise
 
 
     # 2. Prune obsolete zips
@@ -179,6 +196,14 @@ def sync(config_path: Path, root_path: Path):
         target_links[target] = (mine_dir / source).resolve()
         
     # Rebuild symlinks in skills/
+    # Validate all target links point strictly inside library_dir or mine_dir
+    resolved_lib = library_dir.resolve()
+    resolved_mine = mine_dir.resolve()
+    for target, source_abs in target_links.items():
+        resolved_src = source_abs.resolve()
+        if not (resolved_src.is_relative_to(resolved_lib) or resolved_src.is_relative_to(resolved_mine)) or resolved_src == resolved_lib or resolved_src == resolved_mine:
+            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib} or {resolved_mine}")
+
     # Delete stale links/files in skills/
     for item in os.listdir(skills_dir):
         item_path = skills_dir / item
@@ -204,6 +229,10 @@ def sync(config_path: Path, root_path: Path):
 
 
 def library_add(repo_id: str, config_path: Path, root_path: Path):
+    import re
+    if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
+        raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
+
     # Pre-sync: download and find SKILL.md paths
     temp_zip = root_path / ".skills-repos" / f"temp_{repo_id.replace('/', '_')}.zip"
     temp_zip.parent.mkdir(parents=True, exist_ok=True)
@@ -211,21 +240,29 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
     skills_found = []
     try:
         download_repo_zip(repo_id, temp_zip)
-        with zipfile.ZipFile(temp_zip, 'r') as zf:
-            for m in zf.namelist():
-                if m.endswith("/SKILL.md"):
-                    # Extract skill path relative to repo root (excluding zipball root hash folder)
-                    parts = m.split('/')
-                    skill_path = "/".join(parts[1:])
-                    # Name is parent folder
-                    if len(parts) == 2:
-                        skill_name = repo_id.split('/')[-1]
-                    else:
-                        skill_name = parts[-2]
-                    skills_found.append({"name": skill_name, "path": skill_path})
-                elif m.endswith("SKILL.md") and "/" not in m:
-                    # Skill at root
-                    skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
+        try:
+            with zipfile.ZipFile(temp_zip, 'r') as zf:
+                for m in zf.namelist():
+                    if m.endswith("/SKILL.md"):
+                        # Extract skill path relative to repo root (excluding zipball root hash folder)
+                        parts = m.split('/')
+                        skill_path = "/".join(parts[1:])
+                        # Name is parent folder
+                        if len(parts) == 2:
+                            skill_name = repo_id.split('/')[-1]
+                        else:
+                            skill_name = parts[-2]
+                        skills_found.append({"name": skill_name, "path": skill_path})
+                    elif m.endswith("SKILL.md") and "/" not in m:
+                        # Skill at root
+                        skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
+        except zipfile.BadZipFile:
+            if temp_zip.exists():
+                try:
+                    temp_zip.unlink()
+                except OSError:
+                    pass
+            raise
     finally:
         if temp_zip.exists():
             temp_zip.unlink()
@@ -315,7 +352,7 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         selected_repo_id, selected_skill = candidates[0]
         
     target_name = new_name
-    if not target_name:
+    if target_name is None:
         try:
             raw_val = input(f"Enter target symlink name (default '{skill_name}'): ").strip()
             if raw_val.lower() in ("q", "0", "cancel"):
@@ -328,6 +365,10 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         except (KeyboardInterrupt, EOFError):
             print("Operation canceled.")
             return
+
+    if not target_name or "/" in target_name or "\\" in target_name or target_name in (".", ".."):
+        raise ValueError(f"Invalid target name: {target_name}")
+
             
     # Update YAML: add to workspace
     # 1. Globally remove any skill across all workspace repo blocks with the same target name
@@ -457,7 +498,7 @@ def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path
         selected_repo_id, selected_skill = candidates[0]
         
     target_name = new_name
-    if not target_name:
+    if target_name is None:
         try:
             raw_val = input(f"Enter target symlink name (default 'my-{skill_name}'): ").strip()
             if raw_val.lower() in ("q", "0", "cancel"):
@@ -470,6 +511,10 @@ def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path
         except (KeyboardInterrupt, EOFError):
             print("Operation canceled.")
             return
+
+    if not target_name or "/" in target_name or "\\" in target_name or target_name in (".", ".."):
+        raise ValueError(f"Invalid target name: {target_name}")
+
             
     # Source path relative to library/mine
     skill_parent_dir_rel = Path(selected_skill["path"]).parent
