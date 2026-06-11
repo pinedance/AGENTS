@@ -78,23 +78,23 @@ workspace:
 - repoId: obra/superpowers
   skills: 
   - name: brainstorming 
-    source: obra/superpowers/skills/brainstorming
+    source: obra/superpowers/brainstorming
     target: sp-brainstorming 
   - name: executing-plans
-    source: obra/superpowers/skills/executing-plans
+    source: obra/superpowers/executing-plans
     target: sp-executing-plans
 - repoId: anthropics/skills
   skills: 
   - name: pdf
-    source: anthropics/skills/skills/pdf
+    source: anthropics/skills/pdf
     target: anthropics-pdf
 - repoId: bradautomates/claude-video
   skills:
   - name: claude-video
-    source: bradautomates/claude-video
+    source: bradautomates/claude-video/claude-video
     target: claude-video
 
 mine:
   - name: writing-plan
-    source: obra/superpowers/skills/writing-plan   # skills-mine/obra/superpowers/skills/writing-plan
-    target: my-writing-plan                        # skills/my-writing-plan 
+    source: obra/superpowers/writing-plan
+    target: my-writing-plan 
