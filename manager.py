@@ -10,9 +10,22 @@ from ruamel.yaml import YAML
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
+DEFAULT_SKILLS_DIR = "~/.agents/skills"
+DEFAULT_CONFIG_NAME = ".skills.yaml"
+REPOS_DIR_NAME = ".skills-repos"
+LIBRARY_DIR_NAME = "skills-library"
+SKILLS_DIR_ENV_VAR = "SKILLS_DIR"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+GITHUB_ZIP_URL_TEMPLATES = [
+    "https://github.com/{repo_id}/archive/refs/heads/main.zip",
+    "https://github.com/{repo_id}/archive/refs/heads/master.zip"
+]
+GITHUB_REPO_URL_TEMPLATE = "https://github.com/{repo_id}.git"
+
 def get_yaml_parser():
     yaml = YAML()
     yaml.preserve_quotes = True
+    yaml.indent(mapping=2, sequence=2, offset=0)
     return yaml
 
 def load_config(path: Path) -> dict:
@@ -46,10 +59,7 @@ def download_repo_zip(repo_id: str, dest_path: Path):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     # Avoid api.github.com due to strict rate limits.
     # Try downloading from main branch first, then fallback to master branch.
-    urls = [
-        f"https://github.com/{repo_id}/archive/refs/heads/main.zip",
-        f"https://github.com/{repo_id}/archive/refs/heads/master.zip"
-    ]
+    urls = [tpl.format(repo_id=repo_id) for tpl in GITHUB_ZIP_URL_TEMPLATES]
     
     temp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
     last_err = None
@@ -57,7 +67,7 @@ def download_repo_zip(repo_id: str, dest_path: Path):
         try:
             req = urllib.request.Request(
                 url,
-                headers={"User-Agent": "SkillManagerAgent"}
+                headers={"User-Agent": USER_AGENT}
             )
             with urllib.request.urlopen(req) as response, open(temp_path, "wb") as out_file:
                 out_file.write(response.read())
@@ -78,9 +88,9 @@ def download_repo_zip(repo_id: str, dest_path: Path):
 
 def sync(config_path: Path, root_path: Path):
     config = load_config(config_path)
-    repos_dir = root_path / ".skills-repos"
-    library_dir = root_path / "skills-library"
-    skills_dir = Path(os.environ.get("SKILLS_DIR", "~/.agents/skills")).expanduser()
+    repos_dir = root_path / REPOS_DIR_NAME
+    library_dir = root_path / LIBRARY_DIR_NAME
+    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
     
     repos_dir.mkdir(parents=True, exist_ok=True)
     library_dir.mkdir(parents=True, exist_ok=True)
@@ -88,6 +98,7 @@ def sync(config_path: Path, root_path: Path):
     
     active_zips = set()
     active_libs = set()
+    config_changed = False
     
     # 1. Sync library (Downloads & Extractions)
     for repo in config.get("library", []):
@@ -103,7 +114,11 @@ def sync(config_path: Path, root_path: Path):
         if not commit_hash and zip_path.exists():
             try:
                 with zipfile.ZipFile(zip_path, 'r') as zf:
-                    commit_hash = zf.comment.decode("utf-8").strip()
+                    extracted_hash = zf.comment.decode("utf-8").strip()
+                    if extracted_hash:
+                        commit_hash = extracted_hash
+                        repo["commit"] = commit_hash
+                        config_changed = True
             except Exception:
                 pass
 
@@ -188,6 +203,8 @@ def sync(config_path: Path, root_path: Path):
                             pass
                     raise
 
+    if config_changed:
+        save_config(config, config_path)
 
     # 2. Prune obsolete zips
     for root, dirs, files in os.walk(repos_dir):
@@ -287,7 +304,7 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
 
     config = load_config(config_path)
-    zip_path = root_path / ".skills-repos" / f"{repo_id}.zip"
+    zip_path = root_path / REPOS_DIR_NAME / f"{repo_id}.zip"
     
     # "add: 이미 있으면 다운로드 하지 않음"
     repo_in_config = any(r["repoId"] == repo_id for r in config.get("library", []))
@@ -296,7 +313,7 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
         return
 
     # Pre-sync: download and find SKILL.md paths
-    temp_zip = root_path / ".skills-repos" / f"temp_{repo_id.replace('/', '_')}.zip"
+    temp_zip = root_path / REPOS_DIR_NAME / f"temp_{repo_id.replace('/', '_')}.zip"
     temp_zip.parent.mkdir(parents=True, exist_ok=True)
     
     skills_found = []
@@ -359,7 +376,7 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
         config["library"].append({
             "repoId": repo_id,
             "repoType": "github",
-            "repoUrl": f"https://github.com/{repo_id}.git",
+            "repoUrl": GITHUB_REPO_URL_TEMPLATE.format(repo_id=repo_id),
             "commit": commit_hash,
             "skills": skills_found
         })
@@ -374,12 +391,18 @@ def library_remove(repo_id: str, config_path: Path, root_path: Path):
     config = load_config(config_path)
     
     # Update YAML: remove from library
-    if "library" in config:
-        config["library"] = [r for r in config["library"] if r["repoId"] != repo_id]
+    if "library" in config and isinstance(config["library"], list):
+        lib = config["library"]
+        for i in range(len(lib) - 1, -1, -1):
+            if lib[i]["repoId"] == repo_id:
+                del lib[i]
         
     # Remove from workspace
-    if "workspace" in config:
-        config["workspace"] = [r for r in config["workspace"] if r["repoId"] != repo_id]
+    if "workspace" in config and isinstance(config["workspace"], list):
+        work = config["workspace"]
+        for i in range(len(work) - 1, -1, -1):
+            if work[i]["repoId"] == repo_id:
+                del work[i]
         
     save_config(config, config_path)
     
@@ -397,7 +420,7 @@ def library_update(repo_id: str | None, config_path: Path, root_path: Path):
     else:
         repos_to_update = config.get("library", [])
         
-    repos_dir = root_path / ".skills-repos"
+    repos_dir = root_path / REPOS_DIR_NAME
     for r in repos_to_update:
         r_id = r["repoId"]
         zip_path = repos_dir / f"{r_id}.zip"
@@ -468,11 +491,18 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
             
     # Update YAML: add to workspace
     # 1. Globally remove any skill across all workspace repo blocks with the same target name
-    if "workspace" in config:
-        for rw in config["workspace"]:
-            rw["skills"] = [s for s in rw.get("skills", []) if s["target"] != target_name]
-        # Clean up empty repo blocks
-        config["workspace"] = [rw for rw in config["workspace"] if rw.get("skills")]
+    if "workspace" in config and isinstance(config["workspace"], list):
+        work = config["workspace"]
+        for rw in work:
+            if "skills" in rw and isinstance(rw["skills"], list):
+                skills = rw["skills"]
+                for i in range(len(skills) - 1, -1, -1):
+                    if skills[i]["target"] == target_name:
+                        del skills[i]
+        # Clean up empty repo blocks in-place
+        for i in range(len(work) - 1, -1, -1):
+            if not work[i].get("skills"):
+                del work[i]
         
     if "workspace" not in config:
         config["workspace"] = []
@@ -541,8 +571,12 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
         
     # Update YAML
     selected_rw["skills"].remove(selected_skill)
-    # Clean up empty repo blocks
-    config["workspace"] = [rw for rw in config["workspace"] if rw.get("skills")]
+    # Clean up empty repo blocks in-place
+    if "workspace" in config and isinstance(config["workspace"], list):
+        work = config["workspace"]
+        for i in range(len(work) - 1, -1, -1):
+            if not work[i].get("skills"):
+                del work[i]
     
     save_config(config, config_path)
     
@@ -560,7 +594,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     subparsers = parser.add_subparsers(dest="command", required=True)
     
     # sync
-    subparsers.add_parser("sync", help="Sync local file system with .skills.yaml")
+    subparsers.add_parser("sync", help=f"Sync local file system with {DEFAULT_CONFIG_NAME}")
     
     # library
     lib_parser = subparsers.add_parser("library", help="Manage skill library")
@@ -589,16 +623,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     root = cli_root or root_path or PROJECT_ROOT
     
     cli_cfg = Path(args.config) if args.config else None
-    cfg = cli_cfg or config_path or (root / ".skills.yaml")
-    
-    # Perform migration renaming if needed
-    old_archive = root / "skills-archive"
-    new_library = root / "skills-library"
-    if old_archive.exists() and not new_library.exists():
-        try:
-            old_archive.rename(new_library)
-        except OSError as e:
-            print(f"Warning: Failed to migrate skills-archive: {e}", file=sys.stderr)
+    cfg = cli_cfg or config_path or (root / DEFAULT_CONFIG_NAME)
     
     if args.command == "sync":
         sync(cfg, root)

@@ -627,29 +627,17 @@ def test_cli_arg_parsing(temp_env):
             mock_add.assert_called_once_with("obra/superpowers", yaml_path, temp_env)
 
 
-def test_cli_migration_and_other_subcommands(temp_env):
+def test_cli_subcommands(temp_env):
     import manager as skill
-    import shutil
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    # Test migration of skills-archive to skills-library
-    archive_dir = temp_env / "skills-archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    # The new directory should not exist beforehand
-    library_dir = temp_env / "skills-library"
-    if library_dir.exists():
-        shutil.rmtree(library_dir)
-        
     with patch("manager.sync") as mock_sync:
         sys_args = ["manager.py", "sync"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_sync.assert_called_once_with(yaml_path, temp_env)
             
-    assert not archive_dir.exists()
-    assert library_dir.exists()
-    
     # Test library remove subcommand
     with patch("manager.library_remove") as mock_lib_rem:
         sys_args = ["manager.py", "library", "remove", "obra/superpowers"]
@@ -692,26 +680,6 @@ def test_cli_config_root_overrides(temp_env):
             skill.main()
             mock_sync.assert_called_once_with(custom_cfg, custom_root)
 
-
-def test_cli_migration_oserror_warning(temp_env, capsys):
-    import manager as skill
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Create the old archive directory
-    archive_dir = temp_env / "skills-archive"
-    archive_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Mock rename to raise OSError
-    with patch("pathlib.Path.rename", side_effect=OSError("Permission denied")):
-        sys_args = ["manager.py", "sync"]
-        with patch("sys.argv", sys_args):
-            with patch("manager.sync") as mock_sync:
-                skill.main(config_path=yaml_path, root_path=temp_env)
-                mock_sync.assert_called_once_with(yaml_path, temp_env)
-                
-    captured = capsys.readouterr()
-    assert "Warning: Failed to migrate skills-archive: Permission denied" in captured.err
 
 
 def test_library_add_invalid_repo_id(temp_env):
@@ -1052,6 +1020,42 @@ def test_sync_unmanaged_broken_symlink_pruned(temp_env):
     
     assert not unmanaged_broken.exists()
     assert not unmanaged_broken.is_symlink()
+
+
+@patch("manager.download_repo_zip")
+def test_sync_saves_commit_from_zip_comment(mock_download, temp_env):
+    import manager as skill
+    import zipfile
+    
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_content = """
+library:
+- repoId: dummy/repo
+  repoType: github
+  repoUrl: https://github.com/dummy/repo.git
+  skills:
+    - name: dummy-skill
+      path: dummy-skill/SKILL.md
+workspace: []
+"""
+    yaml_path.write_text(yaml_content)
+    
+    def side_effect(repo_id, dest_path):
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            zf.writestr("dummy-repo-main/dummy-skill/SKILL.md", "# Dummy Skill")
+            zf.comment = b"a1b2c3d4e5f67890"
+            
+    mock_download.side_effect = side_effect
+    
+    skill.PROJECT_ROOT = temp_env
+    skill.sync(yaml_path, temp_env)
+    
+    assert (temp_env / ".skills-repos/dummy/repo.zip").exists()
+    
+    config = skill.load_config(yaml_path)
+    assert config["library"][0]["commit"] == "a1b2c3d4e5f67890"
+
 
 
 

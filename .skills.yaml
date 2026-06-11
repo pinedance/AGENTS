@@ -1,90 +1,131 @@
-# Sync Logic
-# Remote Repo ---|pull|---> Local Repo(`.skills-repos/`) ---|copy|---> skills library(`skills-library/`, only skills)
-
-# .skills-repos: ( path: `.skills-repos/<repoId>.zip` )
-# e.g. [.skills-repos/vercel-labs/skills.zip, .skills-repos/obra/superpowers.zip]
-
-# skills-library: ( path: `skills-library/<repoId>/<skill-path-parent>` )
-# e.g. [skills-library/obra/superpowers/skills/brainstorming/, skills-library/anthropics/skills/pdf/]
-
-# skills-mine: ( path: `skills-mine/<repoId>/<skill-path-parent>` )
-# e.g. [skills-mine/obra/superpowers/skills/systematic-debugging/]
-
-# skillDirPaths: `**/SKILL.md`
-
 library:
 - repoId: obra/superpowers
   repoType: github
   repoUrl: https://github.com/obra/superpowers.git
   skills:
-    - name: brainstorming
-      path: skills/brainstorming/SKILL.md
-    - name: dispatching-parallel-agents
-      path: skills/dispatching-parallel-agents/SKILL.md
-    - name: executing-plans
-      path: skills/executing-plans/SKILL.md
-    - name: finishing-a-development-branch
-      path: skills/finishing-a-development-branch/SKILL.md
-    - name: receiving-code-review
-      path: skills/receiving-code-review/SKILL.md
-    - name: requesting-code-review
-      path: skills/requesting-code-review/SKILL.md
-    - name: subagent-driven-development
-      path: skills/subagent-driven-development/SKILL.md
-    - name: systematic-debugging
-      path: skills/systematic-debugging/SKILL.md
-    - name: test-driven-development
-      path: skills/test-driven-development/SKILL.md
-    - name: using-git-worktrees
-      path: skills/using-git-worktrees/SKILL.md
-    - name: using-superpowers
-      path: skills/using-superpowers/SKILL.md
-    - name: verification-before-completion
-      path: skills/verification-before-completion/SKILL.md
-    - name: writing-plans
-      path: skills/writing-plans/SKILL.md
-    - name: writing-skills
-      path: skills/writing-skills/SKILL.md
+  - name: brainstorming
+    path: skills/brainstorming/SKILL.md
+  - name: dispatching-parallel-agents
+    path: skills/dispatching-parallel-agents/SKILL.md
+  - name: executing-plans
+    path: skills/executing-plans/SKILL.md
+  - name: finishing-a-development-branch
+    path: skills/finishing-a-development-branch/SKILL.md
+  - name: receiving-code-review
+    path: skills/receiving-code-review/SKILL.md
+  - name: requesting-code-review
+    path: skills/requesting-code-review/SKILL.md
+  - name: subagent-driven-development
+    path: skills/subagent-driven-development/SKILL.md
+  - name: systematic-debugging
+    path: skills/systematic-debugging/SKILL.md
+  - name: test-driven-development
+    path: skills/test-driven-development/SKILL.md
+  - name: using-git-worktrees
+    path: skills/using-git-worktrees/SKILL.md
+  - name: using-superpowers
+    path: skills/using-superpowers/SKILL.md
+  - name: verification-before-completion
+    path: skills/verification-before-completion/SKILL.md
+  - name: writing-plans
+    path: skills/writing-plans/SKILL.md
+  - name: writing-skills
+    path: skills/writing-skills/SKILL.md
+  commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
 - repoId: anthropics/skills
   repoType: github
   repoUrl: https://github.com/anthropics/skills.git
   skills:
-    - name: pdf
-      path: skills/pdf/SKILL.md
-    - name: docx
-      path: skills/docx/SKILL.md
-    - name: pptx
-      path: skills/pptx/SKILL.md
-    - name: xlsx
-      path: skills/xlsx/SKILL.md
+  - name: pdf
+    path: skills/pdf/SKILL.md
+  - name: docx
+    path: skills/docx/SKILL.md
+  - name: pptx
+    path: skills/pptx/SKILL.md
+  - name: xlsx
+    path: skills/xlsx/SKILL.md
+  commit: 57546260929473d4e0d1c1bb75297be2fdfa1949
 - repoId: Lum1104/Understand-Anything
   repoType: github
   repoUrl: https://github.com/Lum1104/Understand-Anything.git
   skills:
-    - name: understand-chat
-      path: understand-anything-plugin/skills/understand-chat/SKILL.md
-    - name: understand-dashboard
-      path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
+  - name: understand-chat
+    path: understand-anything-plugin/skills/understand-chat/SKILL.md
+  - name: understand-dashboard
+    path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
+  commit: fb1356ae321d7fab987108616ec4e105fb973af3
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
   skills:
-    - name: claude-video
-      path: SKILL.md
-
-# skills library (`skills-library/`) & mine (`skills-mine/`) ---[absolute symbolic link]---> active workspace (`skills/`)
-# e.g. [skills/sp-brainstorming -> skills-library/obra/superpowers/skills/brainstorming, skills/my-writing-plan -> skills-mine/obra/superpowers/skills/writing-plan]
-workspace:
-- repoId: obra/superpowers
-  skills: 
-  - name: brainstorming 
-    source: obra/superpowers/brainstorming
-    target: brainstorming 
+  - name: claude-video
+    path: SKILL.md
+  commit: c333c2289e57bf040b32846f18d669e3f8edad9b
+- repoId: pinedance/AGENTS
+  repoType: github
+  repoUrl: https://github.com/pinedance/AGENTS.git
+  commit: 2cd197f8bbb06517ed98ba781fe49702ccacc63b
+  skills:
+  - name: brainstorming
+    path: skills/brainstorming/SKILL.md
+  - name: caveman
+    path: skills/caveman/SKILL.md
   - name: executing-plans
-    source: obra/superpowers/executing-plans
+    path: skills/executing-plans/SKILL.md
+  - name: finishing-a-development-branch
+    path: skills/finishing-a-development-branch/SKILL.md
+  - name: receiving-code-review
+    path: skills/receiving-code-review/SKILL.md
+  - name: requesting-code-review
+    path: skills/requesting-code-review/SKILL.md
+  - name: skill-creator
+    path: skills/skill-creator/SKILL.md
+  - name: subagent-driven-development
+    path: skills/subagent-driven-development/SKILL.md
+  - name: systematic-debugging
+    path: skills/systematic-debugging/SKILL.md
+  - name: test-driven-development
+    path: skills/test-driven-development/SKILL.md
+  - name: writing-plans
+    path: skills/writing-plans/SKILL.md
+workspace:
+- repoId: pinedance/AGENTS
+  skills:
+  - name: caveman
+    source: pinedance/AGENTS/caveman
+    target: caveman
+  - name: brainstorming
+    source: pinedance/AGENTS/brainstorming
+    target: brainstorming
+  - name: executing-plans
+    source: pinedance/AGENTS/executing-plans
     target: executing-plans
+  - name: finishing-a-development-branch
+    source: pinedance/AGENTS/finishing-a-development-branch
+    target: finishing-a-development-branch
+  - name: receiving-code-review
+    source: pinedance/AGENTS/receiving-code-review
+    target: receiving-code-review
+  - name: requesting-code-review
+    source: pinedance/AGENTS/requesting-code-review
+    target: requesting-code-review
+  - name: skill-creator
+    source: pinedance/AGENTS/skill-creator
+    target: skill-creator
+  - name: subagent-driven-development
+    source: pinedance/AGENTS/subagent-driven-development
+    target: subagent-driven-development
+  - name: systematic-debugging
+    source: pinedance/AGENTS/systematic-debugging
+    target: systematic-debugging
+  - name: test-driven-development
+    source: pinedance/AGENTS/test-driven-development
+    target: test-driven-development
+  - name: writing-plans
+    source: pinedance/AGENTS/writing-plans
+    target: writing-plans
 - repoId: anthropics/skills
-  skills: 
+  skills:
   - name: pdf
     source: anthropics/skills/pdf
     target: anthropics-pdf
