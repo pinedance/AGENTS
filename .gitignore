@@ -12,5 +12,4 @@ skills-library/
 # python
 .venv/
 .pytest_cache/
-
-
+**/__pycache__/
