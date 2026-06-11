@@ -124,6 +124,9 @@ workspace:
   - name: writing-plans
     source: pinedance/AGENTS/writing-plans
     target: writing-plans
+  - name: my-code-review
+    source: pinedance/AGENTS/my-code-review
+    target: my-code-review
 - repoId: anthropics/skills
   skills:
   - name: pdf
