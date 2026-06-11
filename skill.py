@@ -410,9 +410,8 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         repo_workspace = {"repoId": selected_repo_id, "skills": []}
         config["workspace"].append(repo_workspace)
         
-    # Source is repoId + skill_parent_dir_rel
-    skill_parent_dir_rel = Path(selected_skill["path"]).parent
-    source_path = f"{selected_repo_id}/{skill_parent_dir_rel}"
+    # Source is repoId + skill_name
+    source_path = f"{selected_repo_id}/{skill_name}"
     
     repo_workspace["skills"].append({
         "name": skill_name,
@@ -532,8 +531,7 @@ def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path
 
             
     # Source path relative to library/mine
-    skill_parent_dir_rel = Path(selected_skill["path"]).parent
-    source_path = f"{selected_repo_id}/{skill_parent_dir_rel}"
+    source_path = f"{selected_repo_id}/{skill_name}"
     
     # Physical copy from skills-library to skills-mine
     src_dir = root_path / "skills-library" / source_path
