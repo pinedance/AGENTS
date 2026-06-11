@@ -6,9 +6,75 @@ A utility for efficiently managing and synchronizing common Skills that can be i
 
 ## ⚙️ Architecture & Workflow
 
-1. **Remote Repository Download**: Download repository zip files from GitHub to `.skills-repos/`.
-2. **Library Extraction**: Extract directories containing `SKILL.md` from the downloaded zip files to the local cache directory `skills-library/`.
-3. **Global Symlink Connection**: Create symbolic links for workspace-enabled skills in the system default agent directory `~/.agents/skills/`. This allows agent tools across all projects to reference them.
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────┐
+│  [Remote]  GitHub Repository                        │
+│            https://github.com/<owner>/<repo>        │
+└─────────────────────────────────────────────────────┘
+                          │
+                Remote Repository Download
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────┐
+│  [Local]   .skills-repos/                          │
+│            └── <owner>/<repo>.zip                   │
+└─────────────────────────────────────────────────────┘
+                          │
+                  Library Extraction
+            "library add" / "library remove"
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────┐
+│  [Local]   skills-library/                         │
+│            └── <owner>/<repo>/                      │
+│                └── <skill-name>/                    │
+│                    ├── SKILL.md                     │
+│                    └── ...                          │
+└─────────────────────────────────────────────────────┘
+                          │
+              Global Symlink Connection
+            "workspace add" / "workspace remove"
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────┐
+│  [Local]   ~/.agents/skills/                       │
+│            └── <skill-name>  ──▶  (symlink)        │
+└─────────────────────────────────────────────────────┘
+```
+
+### CLI Commands
+
+```
+manager.py
+├── sync
+├── library
+│   ├── add <owner/repo>
+│   ├── remove <owner/repo>
+│   └── update [owner/repo]
+└── workspace
+    ├── add <skill_name> [--name <alias>]
+    └── remove <skill_name>
+```
+
+### `sync` Pipeline
+
+```
+.skills.yaml
+      │
+      ▼
+[1] Download ──→ .skills-repos/*.zip            (skip if commit unchanged)
+      │
+      ▼
+[2] Extract  ──→ skills-library/<repo>/<skill>  (skip if commit unchanged)
+      │
+      ▼
+[3] Prune        stale zips · stale library dirs · broken symlinks
+      │
+      ▼
+[4] Symlink  ──→ ~/.agents/skills/<skill>       (collision check · safe prune)
+```
 
 ---
 
