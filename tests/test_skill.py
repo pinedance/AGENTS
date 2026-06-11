@@ -1,9 +1,11 @@
 from pathlib import Path
 import pytest
-import skill
+import manager as skill
 
 @pytest.fixture
-def temp_env(tmp_path):
+def temp_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("SKILLS_DIR", str(tmp_path / "skills"))
     # Setup temporary directory structure mirroring project
     yaml_content = """# Test comments
 library:
@@ -33,27 +35,26 @@ def test_load_save_config_preserves_comments(temp_env):
     config = skill.load_config(yaml_path)
     assert "library" in config
     assert "workspace" in config
-    assert "mine" in config
     
     # Modify config and save
-    config["mine"].append({"name": "test", "source": "test-src", "target": "test-tgt"})
+    config["library"].append({"repoId": "test-repo", "skills": []})
     skill.save_config(config, yaml_path)
     
     saved_content = yaml_path.read_text()
     assert "# Test comments" in saved_content
-    assert "test-tgt" in saved_content
+    assert "test-repo" in saved_content
 
 def test_load_empty_config(tmp_path):
     yaml_path = tmp_path / ".skills.yaml"
     yaml_path.write_text("")
     config = skill.load_config(yaml_path)
-    assert config == {"library": [], "workspace": [], "mine": []}
+    assert config == {"library": [], "workspace": []}
 
 def test_load_only_comments_config(tmp_path):
     yaml_path = tmp_path / ".skills.yaml"
     yaml_path.write_text("# Only comments here\n")
     config = skill.load_config(yaml_path)
-    assert config == {"library": [], "workspace": [], "mine": []}
+    assert config == {"library": [], "workspace": []}
 
 def test_load_config_sanitizes_repo_id(tmp_path):
     yaml_path = tmp_path / ".skills.yaml"
@@ -76,9 +77,9 @@ workspace:
 
 from unittest.mock import patch
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_sync_rebuilds_links_and_library(mock_download, temp_env):
-    import skill
+    import manager as skill
     
     # Mock download to write a dummy zip with a SKILL.md
     def side_effect(repo_id, dest_path):
@@ -106,9 +107,9 @@ def test_sync_rebuilds_links_and_library(mock_download, temp_env):
     assert link_path.resolve() == (temp_env / "skills-library/obra/superpowers/brainstorming").resolve()
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
-    import skill
+    import manager as skill
     import shutil
     
     # 1. Prepare Zip
@@ -131,12 +132,24 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     (stale_lib_skill / "SKILL.md").write_text("# Obsolete Skill")
     (stale_lib_skill / "helper.py").write_text("print('stale')")
     
-    # A stale symlink or dir in skills/
-    stale_link = temp_env / "skills/stale-link"
-    stale_link.mkdir(parents=True, exist_ok=True) # as a directory
-    
-    stale_link_file = temp_env / "skills/stale-link-file"
-    stale_link_file.write_text("file content") # as a file
+    # A stale symlink pointing inside this project's skills-library
+    stale_link_managed = temp_env / "skills/stale-link-managed"
+    stale_link_managed.parent.mkdir(parents=True, exist_ok=True)
+    import os
+    os.symlink(temp_env / "skills-library/obra/superpowers/stale", stale_link_managed)
+
+    # A stale symlink pointing outside (unmanaged / other project)
+    stale_link_unmanaged = temp_env / "skills/stale-link-unmanaged"
+    (temp_env / "other-library/some-path").mkdir(parents=True, exist_ok=True)
+    os.symlink(temp_env / "other-library/some-path", stale_link_unmanaged)
+
+    # A stale directory
+    stale_dir = temp_env / "skills/stale-dir"
+    stale_dir.mkdir(parents=True, exist_ok=True)
+
+    # A stale file
+    stale_file = temp_env / "skills/stale-file"
+    stale_file.write_text("file content")
     
     # Run sync
     skill.sync(temp_env / ".skills.yaml", temp_env)
@@ -149,9 +162,11 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").exists()
     assert not stale_lib_skill.exists()
     
-    # Verify stale links inside skills/ are removed, and new ones exist
-    assert not stale_link.exists()
-    assert not stale_link_file.exists()
+    # Verify stale links are handled according to safe pruning
+    assert not stale_link_managed.exists() and not stale_link_managed.is_symlink()
+    assert stale_link_unmanaged.is_symlink()
+    assert stale_dir.exists()
+    assert stale_file.exists()
     assert (temp_env / "skills/sp-brainstorming").is_symlink()
     
     # Call sync again to verify idempotency (it shouldn't download or break anything)
@@ -164,7 +179,7 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
 @patch("urllib.request.urlopen")
 def test_download_repo_zip_fallback(mock_urlopen, tmp_path):
     import urllib.error
-    import skill
+    import manager as skill
     from unittest.mock import MagicMock
     
     response_mock = MagicMock()
@@ -194,7 +209,7 @@ def test_download_repo_zip_fallback(mock_urlopen, tmp_path):
 @patch("urllib.request.urlopen")
 def test_download_repo_zip_fails_both(mock_urlopen, tmp_path):
     import urllib.error
-    import skill
+    import manager as skill
     
     def urlopen_side_effect(req, *args, **kwargs):
         raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
@@ -206,9 +221,9 @@ def test_download_repo_zip_fails_both(mock_urlopen, tmp_path):
         skill.download_repo_zip("obra/superpowers", dest)
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_sync_zip_slip_prevention(mock_download, temp_env):
-    import skill
+    import manager as skill
     import pytest
     
     def side_effect(repo_id, dest_path):
@@ -223,9 +238,9 @@ def test_sync_zip_slip_prevention(mock_download, temp_env):
         skill.sync(temp_env / ".skills.yaml", temp_env)
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_library_add_and_remove(mock_download, temp_env):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     
     # Mock download to write dummy zip
@@ -263,9 +278,9 @@ def test_library_add_and_remove(mock_download, temp_env):
     assert not (temp_env / "skills-library/obra/superpowers").exists()
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_library_add_no_skills(mock_download, temp_env):
-    import skill
+    import manager as skill
     import pytest
     skill.PROJECT_ROOT = temp_env
     
@@ -281,9 +296,9 @@ def test_library_add_no_skills(mock_download, temp_env):
         skill.library_add("obra/superpowers", yaml_path, temp_env)
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 def test_library_add_download_fails(mock_download, temp_env):
-    import skill
+    import manager as skill
     import urllib.error
     import pytest
     skill.PROJECT_ROOT = temp_env
@@ -295,10 +310,10 @@ def test_library_add_download_fails(mock_download, temp_env):
         skill.library_add("obra/superpowers", yaml_path, temp_env)
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 @patch("builtins.input", side_effect=[""])  # Simulates pressing Enter for prompt
 def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
-    import skill
+    import manager as skill
     import zipfile
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
@@ -337,10 +352,10 @@ def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
     assert not (temp_env / "skills/sp-brainstorming").exists()
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 @patch("builtins.input")
 def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_download, temp_env):
-    import skill
+    import manager as skill
     import os
     import zipfile
     skill.PROJECT_ROOT = temp_env
@@ -391,7 +406,7 @@ def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_downloa
 
 
 def test_workspace_add_not_found(temp_env, capsys):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
@@ -401,7 +416,7 @@ def test_workspace_add_not_found(temp_env, capsys):
 
 
 def test_workspace_remove_not_active(temp_env, capsys):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
@@ -410,10 +425,10 @@ def test_workspace_remove_not_active(temp_env, capsys):
     assert "not active in workspace" in captured.err
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 @patch("builtins.input")
 def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
-    import skill
+    import manager as skill
     import os
     import zipfile
     skill.PROJECT_ROOT = temp_env
@@ -422,7 +437,7 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     def side_effect(repo_id, dest_path):
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
+            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
     mock_download.side_effect = side_effect
     
     # Seed library and active workspace config
@@ -479,10 +494,10 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     assert (temp_env / "skills/other-brainstorming").exists()
 
 
-@patch("skill.download_repo_zip")
+@patch("manager.download_repo_zip")
 @patch("builtins.input", side_effect=["1"])
 def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_download, temp_env):
-    import skill
+    import manager as skill
     import zipfile
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
@@ -532,49 +547,13 @@ def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_down
     assert any(w["repoId"] == "obra/superpowers" for w in config.get("workspace", []))
 
 
-@patch("skill.download_repo_zip")
-@patch("builtins.input", side_effect=[""])
-def test_workspace_add_removes_mine_conflicts(mock_input, mock_download, temp_env):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library config and mine config with target 'sp-brainstorming'
-    config = skill.load_config(yaml_path)
-    config["library"] = [{
-        "repoId": "obra/superpowers",
-        "repoType": "github",
-        "repoUrl": "https://github.com/obra/superpowers.git",
-        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-    }]
-    config["mine"] = [{"name": "some-mine-skill", "source": "local/mine", "target": "sp-brainstorming"}]
-    skill.save_config(config, yaml_path)
-    
-    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "SKILL.md").write_text("# Brainstorming")
-    
-    # Add from obra/superpowers with target 'sp-brainstorming'
-    skill.workspace_add("brainstorming", "sp-brainstorming", yaml_path, temp_env)
-    
-    config = skill.load_config(yaml_path)
-    # Check that mine entry was removed
-    assert not any(m["target"] == "sp-brainstorming" for m in config.get("mine", []))
-    # Check that the workspace has the skill
-    assert any(w["repoId"] == "obra/superpowers" for w in config["workspace"])
 
 
-@patch("skill.download_repo_zip")
+
+@patch("manager.download_repo_zip")
 @patch("builtins.input")
 def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, temp_env, capsys):
-    import skill
+    import manager as skill
     import zipfile
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
@@ -632,326 +611,24 @@ def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, tem
     assert "Operation canceled." in captured.out
 
 
-@patch("skill.download_repo_zip")
-@patch("builtins.input", side_effect=["my-brainstorming"])
-def test_mine_add_and_remove(mock_input, mock_download, temp_env):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library, workspace and directory
-    config = skill.load_config(yaml_path)
-    config["library"] = [{
-        "repoId": "obra/superpowers",
-        "repoType": "github",
-        "repoUrl": "https://github.com/obra/superpowers.git",
-        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-    }]
-    config["workspace"] = [{
-        "repoId": "obra/superpowers",
-        "skills": [{"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "sp-brainstorming"}]
-    }]
-    skill.save_config(config, yaml_path)
-    
-    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "SKILL.md").write_text("# Brainstorming")
-    
-    # 1. Test Mine Add
-    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
-    
-    config = skill.load_config(yaml_path)
-    # Check removed from workspace
-    assert not any(w["skills"] for w in config.get("workspace", []))
-    # Check added in mine
-    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
-    # Check folder physical copy exists in skills-mine
-    assert (temp_env / "skills-mine/obra/superpowers/brainstorming/SKILL.md").exists()
-    # Check symlink exists
-    assert (temp_env / "skills/my-brainstorming").is_symlink()
-    
-    # 2. Test Mine Remove
-    skill.mine_remove("brainstorming", yaml_path, temp_env)
-    config = skill.load_config(yaml_path)
-    assert not any(m["name"] == "brainstorming" for m in config.get("mine", []))
-    assert not (temp_env / "skills/my-brainstorming").exists()
 
-
-@patch("skill.download_repo_zip")
-@patch("builtins.input")
-def test_mine_add_interactive_and_multiple(mock_input, mock_download, temp_env):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library with two repos with same skill name
-    config = skill.load_config(yaml_path)
-    config["library"] = [
-        {
-            "repoId": "obra/superpowers",
-            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-        },
-        {
-            "repoId": "other/superpowers",
-            "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-        }
-    ]
-    skill.save_config(config, yaml_path)
-    
-    # Create the library dir for the second one
-    skill_dir = temp_env / "skills-library/other/superpowers/brainstorming"
-    skill_dir.mkdir(parents=True, exist_ok=True)
-    (skill_dir / "SKILL.md").write_text("# Brainstorming Other")
-    
-    # Mock input: "2" for other/superpowers, and "" for default target name "my-brainstorming"
-    mock_input.side_effect = ["2", ""]
-    
-    skill.mine_add("brainstorming", None, yaml_path, temp_env)
-    
-    config = skill.load_config(yaml_path)
-    # Check added in mine with source 'other/superpowers/brainstorming'
-    mine_entry = next(m for m in config.get("mine", []) if m["name"] == "brainstorming")
-    assert mine_entry["source"] == "other/superpowers/brainstorming"
-    assert mine_entry["target"] == "my-brainstorming"
-    
-    assert (temp_env / "skills-mine/other/superpowers/brainstorming/SKILL.md").exists()
-    assert (temp_env / "skills/my-brainstorming").is_symlink()
-
-
-@patch("builtins.input")
-def test_mine_remove_multiple(mock_input, temp_env):
-    import skill
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Seed mine config with two entries for "brainstorming" but different targets
-    config = skill.load_config(yaml_path)
-    config["mine"] = [
-        {"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "my-brainstorming"},
-        {"name": "brainstorming", "source": "other/superpowers/brainstorming", "target": "other-brainstorming"}
-    ]
-    skill.save_config(config, yaml_path)
-    
-    # Create the physical folders in skills-mine
-    for source in ["obra/superpowers/brainstorming", "other/superpowers/brainstorming"]:
-        (temp_env / "skills-mine" / source).mkdir(parents=True, exist_ok=True)
-        (temp_env / "skills-mine" / source / "SKILL.md").write_text("# Brainstorming")
-        
-    skill.sync(yaml_path, temp_env)
-    assert (temp_env / "skills/my-brainstorming").is_symlink()
-    assert (temp_env / "skills/other-brainstorming").is_symlink()
-    
-    # Mock input: "2" to remove other-brainstorming
-    mock_input.side_effect = ["2"]
-    
-    skill.mine_remove("brainstorming", yaml_path, temp_env)
-    
-    config = skill.load_config(yaml_path)
-    # Check other-brainstorming was removed, but my-brainstorming remains
-    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
-    assert not any(m["target"] == "other-brainstorming" for m in config.get("mine", []))
-    
-    assert (temp_env / "skills/my-brainstorming").exists()
-    assert not (temp_env / "skills/other-brainstorming").exists()
-
-
-@patch("skill.download_repo_zip")
-@patch("builtins.input")
-def test_mine_add_and_remove_cancel(mock_input, mock_download, temp_env, capsys):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library config with two repos containing the same skill name
-    config = skill.load_config(yaml_path)
-    config["library"] = [
-        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]},
-        {"repoId": "other/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
-    ]
-    skill.save_config(config, yaml_path)
-    
-    # 1. Test KeyboardInterrupt on mine_add select repo
-    mock_input.side_effect = KeyboardInterrupt
-    skill.mine_add("brainstorming", None, yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled." in captured.out
-    
-    # 2. Test manual cancel 'q' on mine_add select repo
-    mock_input.side_effect = ["q"]
-    skill.mine_add("brainstorming", None, yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled." in captured.out
-    
-    # 3. Test EOFError on mine_add enter target name
-    # Reset config to one repo so it skips select repo prompt, but prompt for target name is shown
-    config = skill.load_config(yaml_path)
-    config["library"] = [
-        {"repoId": "obra/superpowers", "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]}
-    ]
-    skill.save_config(config, yaml_path)
-    
-    mock_input.side_effect = EOFError
-    skill.mine_add("brainstorming", None, yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled." in captured.out
-    
-    # 4. Test manual cancel 'cancel' on mine_remove
-    # Seed mine config with multiple items
-    config = skill.load_config(yaml_path)
-    config["mine"] = [
-        {"name": "brainstorming", "source": "src1", "target": "my-brainstorming"},
-        {"name": "brainstorming", "source": "src2", "target": "other-brainstorming"}
-    ]
-    skill.save_config(config, yaml_path)
-    
-    mock_input.side_effect = ["cancel"]
-    skill.mine_remove("brainstorming", yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled." in captured.out
-
-
-@patch("skill.download_repo_zip")
-@patch("builtins.input")
-def test_mine_add_existing_folder_abort_and_overwrite(mock_input, mock_download, temp_env, capsys):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library config
-    config = skill.load_config(yaml_path)
-    config["library"] = [{
-        "repoId": "obra/superpowers",
-        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-    }]
-    skill.save_config(config, yaml_path)
-    
-    # Library folder (source)
-    src_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
-    src_dir.mkdir(parents=True, exist_ok=True)
-    (src_dir / "SKILL.md").write_text("Library Brainstorming")
-    
-    # Existing Mine folder (target)
-    dest_dir = temp_env / "skills-mine/obra/superpowers/brainstorming"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    (dest_dir / "SKILL.md").write_text("Existing Custom Brainstorming")
-    
-    # 1. Test decline overwrite
-    mock_input.side_effect = ["n"]
-    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled. Existing custom skill preserved." in captured.out
-    assert (dest_dir / "SKILL.md").read_text() == "Existing Custom Brainstorming"
-    
-    # 2. Test cancel/KeyboardInterrupt on overwrite prompt
-    mock_input.side_effect = KeyboardInterrupt
-    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
-    captured = capsys.readouterr()
-    assert "Operation canceled. Existing custom skill preserved." in captured.out
-    assert (dest_dir / "SKILL.md").read_text() == "Existing Custom Brainstorming"
-    
-    # 3. Test confirm overwrite
-    mock_input.side_effect = ["y"]
-    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
-    assert (dest_dir / "SKILL.md").read_text() == "Library Brainstorming"
-    
-    # Check YAML config updated
-    config = skill.load_config(yaml_path)
-    assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
-
-
-@patch("skill.download_repo_zip")
-def test_mine_add_cleans_workspace_target_globally(mock_download, temp_env):
-    import skill
-    import zipfile
-    skill.PROJECT_ROOT = temp_env
-    yaml_path = temp_env / ".skills.yaml"
-    
-    # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
-    mock_download.side_effect = side_effect
-    
-    # Seed library config and workspace config
-    config = skill.load_config(yaml_path)
-    config["library"] = [{
-        "repoId": "obra/superpowers",
-        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
-    }]
-    # Workspace has two entries matching target 'my-brainstorming'
-    config["workspace"] = [
-        {
-            "repoId": "obra/superpowers",
-            "skills": [{"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "my-brainstorming"}]
-        },
-        {
-            "repoId": "other/superpowers",
-            "skills": [{"name": "other-skill", "source": "other/superpowers/other", "target": "my-brainstorming"}]
-        }
-    ]
-    skill.save_config(config, yaml_path)
-    
-    # Create source directory
-    src_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
-    src_dir.mkdir(parents=True, exist_ok=True)
-    (src_dir / "SKILL.md").write_text("# Brainstorming")
-    
-    # Add skill to mine
-    skill.mine_add("brainstorming", "my-brainstorming", yaml_path, temp_env)
-    
-    config = skill.load_config(yaml_path)
-    # Check that workspace is completely empty because all matching targets were cleaned up
-    assert not any(w["skills"] for w in config.get("workspace", []))
 
 
 def test_cli_arg_parsing(temp_env):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     # Test argparse parsing with library add
-    with patch("skill.library_add") as mock_add:
-        sys_args = ["skill.py", "library", "add", "obra/superpowers"]
+    with patch("manager.library_add") as mock_add:
+        sys_args = ["manager.py", "library", "add", "obra/superpowers"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_add.assert_called_once_with("obra/superpowers", yaml_path, temp_env)
 
 
 def test_cli_migration_and_other_subcommands(temp_env):
-    import skill
+    import manager as skill
     import shutil
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
@@ -964,8 +641,8 @@ def test_cli_migration_and_other_subcommands(temp_env):
     if library_dir.exists():
         shutil.rmtree(library_dir)
         
-    with patch("skill.sync") as mock_sync:
-        sys_args = ["skill.py", "sync"]
+    with patch("manager.sync") as mock_sync:
+        sys_args = ["manager.py", "sync"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_sync.assert_called_once_with(yaml_path, temp_env)
@@ -974,51 +651,37 @@ def test_cli_migration_and_other_subcommands(temp_env):
     assert library_dir.exists()
     
     # Test library remove subcommand
-    with patch("skill.library_remove") as mock_lib_rem:
-        sys_args = ["skill.py", "library", "remove", "obra/superpowers"]
+    with patch("manager.library_remove") as mock_lib_rem:
+        sys_args = ["manager.py", "library", "remove", "obra/superpowers"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_lib_rem.assert_called_once_with("obra/superpowers", yaml_path, temp_env)
 
     # Test workspace add subcommand
-    with patch("skill.workspace_add") as mock_work_add:
-        sys_args = ["skill.py", "workspace", "add", "brainstorming", "--name", "custom-brain"]
+    with patch("manager.workspace_add") as mock_work_add:
+        sys_args = ["manager.py", "workspace", "add", "brainstorming", "--name", "custom-brain"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_work_add.assert_called_once_with("brainstorming", "custom-brain", yaml_path, temp_env)
 
     # Test workspace remove subcommand
-    with patch("skill.workspace_remove") as mock_work_rem:
-        sys_args = ["skill.py", "workspace", "remove", "brainstorming"]
+    with patch("manager.workspace_remove") as mock_work_rem:
+        sys_args = ["manager.py", "workspace", "remove", "brainstorming"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
             mock_work_rem.assert_called_once_with("brainstorming", yaml_path, temp_env)
 
-    # Test mine add subcommand
-    with patch("skill.mine_add") as mock_mine_add:
-        sys_args = ["skill.py", "mine", "add", "brainstorming", "--name", "my-brain"]
-        with patch("sys.argv", sys_args):
-            skill.main(config_path=yaml_path, root_path=temp_env)
-            mock_mine_add.assert_called_once_with("brainstorming", "my-brain", yaml_path, temp_env)
-
-    # Test mine remove subcommand
-    with patch("skill.mine_remove") as mock_mine_rem:
-        sys_args = ["skill.py", "mine", "remove", "brainstorming"]
-        with patch("sys.argv", sys_args):
-            skill.main(config_path=yaml_path, root_path=temp_env)
-            mock_mine_rem.assert_called_once_with("brainstorming", yaml_path, temp_env)
-
 
 def test_cli_config_root_overrides(temp_env):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     
     custom_root = temp_env / "custom-root"
     custom_root.mkdir(parents=True, exist_ok=True)
     custom_cfg = custom_root / "custom-config.yaml"
-    custom_cfg.write_text("library: []\nworkspace: []\nmine: []\n")
+    custom_cfg.write_text("library: []\nworkspace: []\n")
     
-    with patch("skill.sync") as mock_sync:
+    with patch("manager.sync") as mock_sync:
         sys_args = [
             "skill.py",
             "--config", str(custom_cfg),
@@ -1031,7 +694,7 @@ def test_cli_config_root_overrides(temp_env):
 
 
 def test_cli_migration_oserror_warning(temp_env, capsys):
-    import skill
+    import manager as skill
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
@@ -1041,9 +704,9 @@ def test_cli_migration_oserror_warning(temp_env, capsys):
     
     # Mock rename to raise OSError
     with patch("pathlib.Path.rename", side_effect=OSError("Permission denied")):
-        sys_args = ["skill.py", "sync"]
+        sys_args = ["manager.py", "sync"]
         with patch("sys.argv", sys_args):
-            with patch("skill.sync") as mock_sync:
+            with patch("manager.sync") as mock_sync:
                 skill.main(config_path=yaml_path, root_path=temp_env)
                 mock_sync.assert_called_once_with(yaml_path, temp_env)
                 
@@ -1052,7 +715,7 @@ def test_cli_migration_oserror_warning(temp_env, capsys):
 
 
 def test_library_add_invalid_repo_id(temp_env):
-    import skill
+    import manager as skill
     import pytest
     yaml_path = temp_env / ".skills.yaml"
     
@@ -1068,8 +731,8 @@ def test_library_add_invalid_repo_id(temp_env):
             skill.library_add(repo_id, yaml_path, temp_env)
 
 
-def test_workspace_mine_add_invalid_target(temp_env):
-    import skill
+def test_workspace_add_invalid_target(temp_env):
+    import manager as skill
     import pytest
     from unittest.mock import patch
     yaml_path = temp_env / ".skills.yaml"
@@ -1083,7 +746,7 @@ def test_workspace_mine_add_invalid_target(temp_env):
     ]
     
     # Mock download to avoid network calls during library_add or workspace_add
-    with patch("skill.download_repo_zip") as mock_download:
+    with patch("manager.download_repo_zip") as mock_download:
         def side_effect(repo_id, dest_path):
             import zipfile
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1097,12 +760,10 @@ def test_workspace_mine_add_invalid_target(temp_env):
         for target in invalid_targets:
             with pytest.raises(ValueError, match="Invalid target name"):
                 skill.workspace_add("brainstorming", target, yaml_path, temp_env)
-            with pytest.raises(ValueError, match="Invalid target name"):
-                skill.mine_add("brainstorming", target, yaml_path, temp_env)
 
 
 def test_sync_symlink_target_verification(temp_env):
-    import skill
+    import manager as skill
     import pytest
     yaml_path = temp_env / ".skills.yaml"
     
@@ -1121,7 +782,7 @@ def test_sync_symlink_target_verification(temp_env):
 
 
 def test_atomic_download_and_bad_zip_handling(temp_env):
-    import skill
+    import manager as skill
     import pytest
     import zipfile
     from unittest.mock import patch
@@ -1136,7 +797,7 @@ def test_atomic_download_and_bad_zip_handling(temp_env):
     
     # In sync, we mock download_repo_zip to raise if called, but since zip exists, sync tries to unzip it first.
     # BadZipFile should be raised, and corrupted file must be deleted.
-    with patch("skill.download_repo_zip") as mock_download:
+    with patch("manager.download_repo_zip") as mock_download:
         with pytest.raises(zipfile.BadZipFile):
             skill.sync(yaml_path, temp_env)
         # Corrupt file must be deleted immediately
@@ -1167,6 +828,234 @@ def test_atomic_download_and_bad_zip_handling(temp_env):
     assert tmp_file_created
     assert zip_path.exists()
     assert zip_path.read_bytes() == b"some zip content"
+
+
+def test_workspace_collision_detection_internal(temp_env):
+    import manager as skill
+    import pytest
+    yaml_path = temp_env / ".skills.yaml"
+    config = skill.load_config(yaml_path)
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [
+                {"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "conflict-name"},
+                {"name": "executing-plans", "source": "obra/superpowers/executing-plans", "target": "conflict-name"}
+            ]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    with pytest.raises(ValueError, match="Duplicate target name: conflict-name in workspace configuration"):
+        skill.sync(yaml_path, temp_env)
+
+
+def test_workspace_collision_detection_external(temp_env):
+    import manager as skill
+    import pytest
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # 1. Create a plain file at conflict target
+    conflict_path = temp_env / "skills/conflict-name"
+    conflict_path.parent.mkdir(parents=True, exist_ok=True)
+    conflict_path.write_text("plain file")
+    
+    config = skill.load_config(yaml_path)
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [
+                {"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "conflict-name"}
+            ]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    with pytest.raises(ValueError, match="Collision: Target 'conflict-name' already exists and is not a symlink"):
+        skill.sync(yaml_path, temp_env)
+        
+    # 2. Change to symlink pointing to a different folder
+    conflict_path.unlink()
+    import os
+    diff_dir = temp_env / "different-folder"
+    diff_dir.mkdir(parents=True, exist_ok=True)
+    os.symlink(diff_dir, conflict_path)
+    
+    with pytest.raises(ValueError, match="Collision: Symlink 'conflict-name' already exists and points to different source"):
+        skill.sync(yaml_path, temp_env)
+
+
+def test_library_add_commit_hash(temp_env):
+    import manager as skill
+    import zipfile
+    yaml_path = temp_env / ".skills.yaml"
+    
+    with patch("manager.download_repo_zip") as mock_download:
+        def side_effect(repo_id, dest_path):
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(dest_path, "w") as zf:
+                zf.comment = b"test-commit-hash-1234"
+                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+        mock_download.side_effect = side_effect
+        
+        skill.library_add("obra/superpowers", yaml_path, temp_env)
+        
+    config = skill.load_config(yaml_path)
+    repo_entry = next(r for r in config["library"] if r["repoId"] == "obra/superpowers")
+    assert repo_entry["commit"] == "test-commit-hash-1234"
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/.commit").read_text(encoding="utf-8").strip() == "test-commit-hash-1234"
+
+
+def test_sync_commit_hash_cache(temp_env):
+    import manager as skill
+    import zipfile
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Pre-extract skill with .commit file
+    dest_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    (dest_dir / "SKILL.md").write_text("Old Brainstorming")
+    (dest_dir / ".commit").write_text("test-commit-hash-1234", encoding="utf-8")
+    
+    # Pre-create the zip file
+    zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.comment = b"test-commit-hash-1234"
+        zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Old Brainstorming")
+        
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "commit": "test-commit-hash-1234",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    # Mock download_repo_zip which should NOT be called if it is up to date and zip exists
+    with patch("manager.download_repo_zip") as mock_download:
+        skill.sync(yaml_path, temp_env)
+        assert mock_download.call_count == 0
+        
+    # Content should be preserved (not deleted or overwritten)
+    assert (dest_dir / "SKILL.md").read_text() == "Old Brainstorming"
+    
+    # Change config commit hash to simulate outdated cache, and delete zip file
+    config["library"][0]["commit"] = "new-hash-5678"
+    skill.save_config(config, yaml_path)
+    if zip_path.exists():
+        zip_path.unlink()
+    
+    with patch("manager.download_repo_zip") as mock_download:
+        def side_effect(repo_id, dest_path):
+            with zipfile.ZipFile(dest_path, "w") as zf:
+                zf.comment = b"new-hash-5678"
+                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "New Brainstorming")
+        mock_download.side_effect = side_effect
+        
+        skill.sync(yaml_path, temp_env)
+        assert mock_download.call_count == 1
+        
+    assert (dest_dir / "SKILL.md").read_text() == "New Brainstorming"
+    assert (dest_dir / ".commit").read_text(encoding="utf-8").strip() == "new-hash-5678"
+
+
+def test_library_update_command(temp_env):
+    import manager as skill
+    import zipfile
+    yaml_path = temp_env / ".skills.yaml"
+    
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "obra/superpowers",
+        "commit": "old-hash",
+        "skills": [{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    # Create the zip in .skills-repos
+    zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.comment = b"old-hash"
+        zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Old content")
+        
+    # Call library_update
+    with patch("manager.download_repo_zip") as mock_download:
+        def side_effect(repo_id, dest_path):
+            with zipfile.ZipFile(dest_path, "w") as zf:
+                zf.comment = b"updated-hash-999"
+                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Updated content")
+        mock_download.side_effect = side_effect
+        
+        # Test CLI dispatch for library update
+        sys_args = ["manager.py", "library", "update", "obra/superpowers"]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            
+        assert mock_download.call_count == 1
+        
+    config = skill.load_config(yaml_path)
+    repo_entry = next(r for r in config["library"] if r["repoId"] == "obra/superpowers")
+    assert repo_entry["commit"] == "updated-hash-999"
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").read_text() == "Updated content"
+
+
+def test_sync_broken_symlink_overwrite(temp_env):
+    import manager as skill
+    import os
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # 1. Create a broken symlink at conflict target
+    conflict_path = temp_env / "skills/sp-brainstorming"
+    conflict_path.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(temp_env / "non-existent-directory", conflict_path)
+    
+    # Create the correct source directory
+    src_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / "SKILL.md").write_text("# Brainstorming")
+    
+    config = skill.load_config(yaml_path)
+    config["workspace"] = [
+        {
+            "repoId": "obra/superpowers",
+            "skills": [
+                {"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "sp-brainstorming"}
+            ]
+        }
+    ]
+    skill.save_config(config, yaml_path)
+    
+    # Sync should succeed by deleting the broken symlink and recreating it pointing to correct path
+    skill.sync(yaml_path, temp_env)
+    
+    assert conflict_path.is_symlink()
+    assert os.readlink(conflict_path) == str(src_dir.resolve())
+
+
+def test_sync_unmanaged_broken_symlink_pruned(temp_env):
+    import manager as skill
+    import os
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # Create an unmanaged broken symlink in skills folder
+    unmanaged_broken = temp_env / "skills/unmanaged-broken-link"
+    unmanaged_broken.parent.mkdir(parents=True, exist_ok=True)
+    os.symlink(temp_env / "dead-path-somewhere", unmanaged_broken)
+    
+    config = skill.load_config(yaml_path)
+    config["workspace"] = []
+    skill.save_config(config, yaml_path)
+    
+    # Sync should run and prune the broken unmanaged symlink
+    skill.sync(yaml_path, temp_env)
+    
+    assert not unmanaged_broken.exists()
+    assert not unmanaged_broken.is_symlink()
+
+
+
+
 
 
 

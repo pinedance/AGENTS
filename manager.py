@@ -18,11 +18,11 @@ def get_yaml_parser():
 def load_config(path: Path) -> dict:
     yaml = get_yaml_parser()
     if not path.exists():
-        return {"library": [], "workspace": [], "mine": []}
+        return {"library": [], "workspace": []}
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.load(f)
     if not data:
-        return {"library": [], "workspace": [], "mine": []}
+        return {"library": [], "workspace": []}
     
     # Sanitize repoIds (e.g. remove trailing commas/whitespace)
     if "library" in data and isinstance(data["library"], list):
@@ -80,12 +80,10 @@ def sync(config_path: Path, root_path: Path):
     config = load_config(config_path)
     repos_dir = root_path / ".skills-repos"
     library_dir = root_path / "skills-library"
-    mine_dir = root_path / "skills-mine"
-    skills_dir = root_path / "skills"
+    skills_dir = Path(os.environ.get("SKILLS_DIR", "~/.agents/skills")).expanduser()
     
     repos_dir.mkdir(parents=True, exist_ok=True)
     library_dir.mkdir(parents=True, exist_ok=True)
-    mine_dir.mkdir(parents=True, exist_ok=True)
     skills_dir.mkdir(parents=True, exist_ok=True)
     
     active_zips = set()
@@ -101,6 +99,14 @@ def sync(config_path: Path, root_path: Path):
         if not zip_path.exists():
             download_repo_zip(repo_id, zip_path)
             
+        commit_hash = repo.get("commit", "")
+        if not commit_hash and zip_path.exists():
+            try:
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    commit_hash = zf.comment.decode("utf-8").strip()
+            except Exception:
+                pass
+
         # Extract files based on configured skills
         for skill_item in repo.get("skills", []):
             skill_path = skill_item["path"]  # e.g., 'skills/brainstorming/SKILL.md'
@@ -111,8 +117,20 @@ def sync(config_path: Path, root_path: Path):
             dest_skill_dir = library_dir / repo_id / skill_item["name"]
             active_libs.add(dest_skill_dir.resolve())
             
-            # Extract if not exists
-            if not dest_skill_dir.exists():
+            commit_file = dest_skill_dir / ".commit"
+            up_to_date = False
+            if dest_skill_dir.exists() and commit_file.exists():
+                try:
+                    cached_commit = commit_file.read_text(encoding="utf-8").strip()
+                    if cached_commit == commit_hash and commit_hash:
+                        up_to_date = True
+                except Exception:
+                    pass
+
+            # Extract if not up to date
+            if not up_to_date:
+                if dest_skill_dir.exists():
+                    shutil.rmtree(dest_skill_dir)
                 dest_skill_dir.parent.mkdir(parents=True, exist_ok=True)
                 try:
                     with zipfile.ZipFile(zip_path, 'r') as zf:
@@ -156,6 +174,12 @@ def sync(config_path: Path, root_path: Path):
                                     dest_file.parent.mkdir(parents=True, exist_ok=True)
                                     with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
                                         shutil.copyfileobj(source_f, target_f)
+                                        
+                    if commit_hash:
+                        try:
+                            commit_file.write_text(commit_hash, encoding="utf-8")
+                        except Exception:
+                            pass
                 except zipfile.BadZipFile:
                     if zip_path.exists():
                         try:
@@ -196,7 +220,7 @@ def sync(config_path: Path, root_path: Path):
             except OSError:
                 pass
 
-    # 4. Sync workspace & mine links (symlinks inside skills/)
+    # 4. Sync workspace links (symlinks inside ~/.agents/skills/)
     target_links = {} # target_name -> source_absolute_path
     
     # External workspace skills
@@ -204,45 +228,56 @@ def sync(config_path: Path, root_path: Path):
         for skill_item in repo.get("skills", []):
             source = skill_item["source"] # 'obra/superpowers/skills/brainstorming'
             target = skill_item["target"] # 'sp-brainstorming'
+            if target in target_links:
+                raise ValueError(f"Duplicate target name: {target} in workspace configuration")
             target_links[target] = (library_dir / source).resolve()
 
-            
-    # Local mine skills
-    for mine_item in config.get("mine", []):
-        source = mine_item["source"] # 'superpowers/writing-plan'
-        target = mine_item["target"] # 'my-writing-plan'
-        target_links[target] = (mine_dir / source).resolve()
-        
-    # Rebuild symlinks in skills/
-    # Validate all target links point strictly inside library_dir or mine_dir
+    # Rebuild symlinks in skills_dir
+    # Validate all target links point strictly inside library_dir
     resolved_lib = library_dir.resolve()
-    resolved_mine = mine_dir.resolve()
     for target, source_abs in target_links.items():
         resolved_src = source_abs.resolve()
-        if not (resolved_src.is_relative_to(resolved_lib) or resolved_src.is_relative_to(resolved_mine)) or resolved_src == resolved_lib or resolved_src == resolved_mine:
-            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib} or {resolved_mine}")
+        if not resolved_src.is_relative_to(resolved_lib) or resolved_src == resolved_lib:
+            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib}")
 
-    # Delete stale links/files in skills/
+    # Delete stale links/files in skills_dir (safe pruning)
     for item in os.listdir(skills_dir):
         item_path = skills_dir / item
-        if item not in target_links:
-            if item_path.is_symlink() or item_path.is_file():
-                item_path.unlink()
-            else:
-                shutil.rmtree(item_path)
-        else:
-            # If it exists but points to wrong destination, remove it
-            if item_path.is_symlink():
-                real_link = os.readlink(item_path)
-                if Path(real_link).resolve() != target_links[item]:
+        if item_path.is_symlink():
+            try:
+                resolved_target = Path(os.readlink(item_path)).resolve()
+                if resolved_target.is_relative_to(resolved_lib):
+                    if item not in target_links or resolved_target != target_links[item]:
+                        item_path.unlink()
+                elif not resolved_target.exists():
                     item_path.unlink()
-            else:
-                shutil.rmtree(item_path)
+            except Exception:
+                try:
+                    item_path.unlink()
+                except OSError:
+                    pass
                 
-    # Create missing symlinks
+    # Create missing symlinks with collision check
     for target, source_abs in target_links.items():
         link_path = skills_dir / target
-        if not link_path.exists() and not link_path.is_symlink():
+        if link_path.exists() or link_path.is_symlink():
+            if link_path.is_symlink():
+                try:
+                    real_link = Path(os.readlink(link_path)).resolve()
+                    if not real_link.exists():
+                        link_path.unlink()
+                        os.symlink(source_abs, link_path)
+                        continue
+                except OSError:
+                    link_path.unlink()
+                    os.symlink(source_abs, link_path)
+                    continue
+                
+                if real_link != source_abs:
+                    raise ValueError(f"Collision: Symlink '{target}' already exists and points to different source: {real_link}")
+            else:
+                raise ValueError(f"Collision: Target '{target}' already exists and is not a symlink")
+        else:
             os.symlink(source_abs, link_path)
 
 
@@ -251,15 +286,29 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
     if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
 
+    config = load_config(config_path)
+    zip_path = root_path / ".skills-repos" / f"{repo_id}.zip"
+    
+    # "add: 이미 있으면 다운로드 하지 않음"
+    repo_in_config = any(r["repoId"] == repo_id for r in config.get("library", []))
+    if repo_in_config and zip_path.exists():
+        sync(config_path, root_path)
+        return
+
     # Pre-sync: download and find SKILL.md paths
     temp_zip = root_path / ".skills-repos" / f"temp_{repo_id.replace('/', '_')}.zip"
     temp_zip.parent.mkdir(parents=True, exist_ok=True)
     
     skills_found = []
+    commit_hash = ""
     try:
         download_repo_zip(repo_id, temp_zip)
         try:
             with zipfile.ZipFile(temp_zip, 'r') as zf:
+                try:
+                    commit_hash = zf.comment.decode("utf-8").strip()
+                except Exception:
+                    pass
                 for m in zf.namelist():
                     if m.endswith("/SKILL.md"):
                         # Extract skill path relative to repo root (excluding zipball root hash folder)
@@ -274,6 +323,12 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
                     elif m.endswith("SKILL.md") and "/" not in m:
                         # Skill at root
                         skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
+            
+            # Move temp_zip to final zip_path
+            zip_path.parent.mkdir(parents=True, exist_ok=True)
+            if zip_path.exists():
+                zip_path.unlink()
+            temp_zip.replace(zip_path)
         except zipfile.BadZipFile:
             if temp_zip.exists():
                 try:
@@ -289,7 +344,6 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
         raise ValueError(f"No SKILL.md files found in repo {repo_id}.")
 
     # Update YAML config
-    config = load_config(config_path)
     if "library" not in config:
         config["library"] = []
         
@@ -298,6 +352,7 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
     for r in config["library"]:
         if r["repoId"] == repo_id:
             r["skills"] = skills_found
+            r["commit"] = commit_hash
             found = True
             break
     if not found:
@@ -305,6 +360,7 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
             "repoId": repo_id,
             "repoType": "github",
             "repoUrl": f"https://github.com/{repo_id}.git",
+            "commit": commit_hash,
             "skills": skills_found
         })
         
@@ -329,6 +385,28 @@ def library_remove(repo_id: str, config_path: Path, root_path: Path):
     
     # Sync
     sync(config_path, root_path)
+
+
+def library_update(repo_id: str | None, config_path: Path, root_path: Path):
+    config = load_config(config_path)
+    repos_to_update = []
+    if repo_id:
+        repos_to_update = [r for r in config.get("library", []) if r["repoId"] == repo_id]
+        if not repos_to_update:
+            raise ValueError(f"Repository {repo_id} not found in library config")
+    else:
+        repos_to_update = config.get("library", [])
+        
+    repos_dir = root_path / ".skills-repos"
+    for r in repos_to_update:
+        r_id = r["repoId"]
+        zip_path = repos_dir / f"{r_id}.zip"
+        if zip_path.exists():
+            try:
+                zip_path.unlink()
+            except OSError:
+                pass
+        library_add(r_id, config_path, root_path)
 
 
 def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root_path: Path):
@@ -395,10 +473,6 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
             rw["skills"] = [s for s in rw.get("skills", []) if s["target"] != target_name]
         # Clean up empty repo blocks
         config["workspace"] = [rw for rw in config["workspace"] if rw.get("skills")]
-        
-    # 2. Also check the mine list and remove any custom skill with the same target name
-    if "mine" in config:
-        config["mine"] = [m for m in config["mine"] if m.get("target") != target_name]
         
     if "workspace" not in config:
         config["workspace"] = []
@@ -476,166 +550,6 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
     sync(config_path, root_path)
 
 
-def mine_add(skill_name: str, new_name: str | None, config_path: Path, root_path: Path):
-    config = load_config(config_path)
-    
-    # Pre-sync: Find matching skill in library
-    candidates = []
-    for repo in config.get("library", []):
-        repo_id = repo["repoId"]
-        for skill_item in repo.get("skills", []):
-            if skill_item["name"] == skill_name:
-                candidates.append((repo_id, skill_item))
-                
-    if not candidates:
-        print(f"Skill '{skill_name}' not found in library.", file=sys.stderr)
-        return
-        
-    selected_repo_id, selected_skill = None, None
-    if len(candidates) > 1:
-        print("Multiple matches found:")
-        for idx, (repo_id, skill_item) in enumerate(candidates, 1):
-            print(f" [{idx}] {repo_id} ({skill_item['path']})")
-        while True:
-            try:
-                raw_val = input(f"Select repo (1-{len(candidates)}): ").strip()
-                if raw_val.lower() in ("q", "0", "cancel"):
-                    print("Operation canceled.")
-                    return
-                choice = int(raw_val)
-                if 1 <= choice <= len(candidates):
-                    selected_repo_id, selected_skill = candidates[choice - 1]
-                    break
-            except ValueError:
-                pass
-            except (KeyboardInterrupt, EOFError):
-                print("Operation canceled.")
-                return
-    else:
-        selected_repo_id, selected_skill = candidates[0]
-        
-    target_name = new_name
-    if target_name is None:
-        try:
-            raw_val = input(f"Enter target symlink name (default 'my-{skill_name}'): ").strip()
-            if raw_val.lower() in ("q", "0", "cancel"):
-                print("Operation canceled.")
-                return
-            if not raw_val:
-                target_name = f"my-{skill_name}"
-            else:
-                target_name = raw_val
-        except (KeyboardInterrupt, EOFError):
-            print("Operation canceled.")
-            return
-
-    if not target_name or "/" in target_name or "\\" in target_name or target_name in (".", ".."):
-        raise ValueError(f"Invalid target name: {target_name}")
-
-            
-    # Source path relative to library/mine
-    source_path = f"{selected_repo_id}/{skill_name}"
-    
-    # Physical copy from skills-library to skills-mine
-    src_dir = root_path / "skills-library" / source_path
-    dest_dir = root_path / "skills-mine" / source_path
-    
-    if not src_dir.exists():
-        print(f"Source files missing at {src_dir}. Please sync first.", file=sys.stderr)
-        return
-        
-    if dest_dir.exists():
-        try:
-            rel_path = dest_dir.relative_to(root_path).as_posix()
-        except ValueError:
-            rel_path = dest_dir.as_posix()
-            
-        try:
-            overwrite_val = input(f"Custom folder already exists at {rel_path}. Overwrite? (y/N): ").strip().lower()
-            if overwrite_val not in ("y", "yes"):
-                print("Operation canceled. Existing custom skill preserved.")
-                return
-        except (KeyboardInterrupt, EOFError):
-            print("Operation canceled. Existing custom skill preserved.")
-            return
-        shutil.rmtree(dest_dir)
-        
-    dest_dir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(src_dir, dest_dir)
-    
-    # Update YAML config
-    # 1. Remove from workspace list if it exists there by source OR target matching new target name
-    for rw in config.get("workspace", []):
-        rw["skills"] = [s for s in rw.get("skills", []) if s["source"] != source_path and s["target"] != target_name]
-    config["workspace"] = [rw for rw in config.get("workspace", []) if rw.get("skills")]
-    
-    # 2. Add to mine list
-    if "mine" not in config:
-        config["mine"] = []
-    # Avoid duplicates
-    config["mine"] = [m for m in config["mine"] if m["target"] != target_name]
-    config["mine"].append({
-        "name": skill_name,
-        "source": source_path,
-        "target": target_name
-    })
-    
-    save_config(config, config_path)
-    
-    # Sync
-    sync(config_path, root_path)
-
-
-def mine_remove(skill_name: str, config_path: Path, root_path: Path):
-    config = load_config(config_path)
-    
-    # Find matching mine entries
-    candidates = []
-    for m in config.get("mine", []):
-        if m["name"] == skill_name:
-            candidates.append(m)
-            
-    if not candidates:
-        print(f"Skill '{skill_name}' not active in mine list.", file=sys.stderr)
-        return
-        
-    selected_skill = None
-    if len(candidates) > 1:
-        print("Multiple matching mine skills found:")
-        for idx, m in enumerate(candidates, 1):
-            print(f" [{idx}] {m['target']} ({m['source']})")
-        while True:
-            try:
-                raw_val = input(f"Select skill to remove (1-{len(candidates)}): ").strip()
-                if raw_val.lower() in ("q", "0", "cancel"):
-                    print("Operation canceled.")
-                    return
-                choice = int(raw_val)
-                if 1 <= choice <= len(candidates):
-                    selected_skill = candidates[choice - 1]
-                    break
-            except ValueError:
-                pass
-            except (KeyboardInterrupt, EOFError):
-                print("Operation canceled.")
-                return
-    else:
-        selected_skill = candidates[0]
-        
-    # Update YAML
-    config["mine"].remove(selected_skill)
-    save_config(config, config_path)
-    
-    # Sync
-    sync(config_path, root_path)
-    
-    # Notify user that local files were preserved
-    try:
-        dest_dir = root_path / "skills-mine" / selected_skill["source"]
-        rel_path = dest_dir.relative_to(root_path).as_posix()
-    except Exception:
-        rel_path = f"skills-mine/{selected_skill['source']}"
-    print(f"Custom skill folder preserved at {rel_path}.")
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
@@ -655,6 +569,8 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     lib_add.add_argument("repoId", help="GitHub repository identifier, e.g. obra/superpowers")
     lib_rem = lib_sub.add_parser("remove", help="Remove repo from library")
     lib_rem.add_argument("repoId", help="GitHub repository identifier")
+    lib_up = lib_sub.add_parser("update", help="Update remote repo in library")
+    lib_up.add_argument("repoId", nargs="?", help="GitHub repository identifier, optional", default=None)
     
     # workspace
     work_parser = subparsers.add_parser("workspace", help="Manage active workspace skills")
@@ -665,14 +581,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     work_rem = work_sub.add_parser("remove", help="Remove active workspace skill")
     work_rem.add_argument("skill_name", help="Name of skill to remove")
     
-    # mine
-    mine_parser = subparsers.add_parser("mine", help="Manage custom skills")
-    mine_sub = mine_parser.add_subparsers(dest="subcommand", required=True)
-    mine_add_cmd = mine_sub.add_parser("add", help="Customize a library skill to local mine folder")
-    mine_add_cmd.add_argument("skill_name", help="Name of skill to customize")
-    mine_add_cmd.add_argument("--name", help="Custom name for the symlink", default=None)
-    mine_rem = mine_sub.add_parser("remove", help="Remove active custom mine skill")
-    mine_rem.add_argument("skill_name", help="Name of skill to remove")
+
     
     args = parser.parse_args()
     
@@ -698,16 +607,14 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
             library_add(args.repoId, cfg, root)
         elif args.subcommand == "remove":
             library_remove(args.repoId, cfg, root)
+        elif args.subcommand == "update":
+            library_update(args.repoId, cfg, root)
     elif args.command == "workspace":
         if args.subcommand == "add":
             workspace_add(args.skill_name, args.name, cfg, root)
         elif args.subcommand == "remove":
             workspace_remove(args.skill_name, cfg, root)
-    elif args.command == "mine":
-        if args.subcommand == "add":
-            mine_add(args.skill_name, args.name, cfg, root)
-        elif args.subcommand == "remove":
-            mine_remove(args.skill_name, cfg, root)
+
 
 
 if __name__ == "__main__":

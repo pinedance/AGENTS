@@ -1,10 +1,9 @@
-.omc/
-.skills-repos
-skills/
+.skills-repos/
 skills-library/
 
 # DEV
 .dev/
+.omc/
 .agents/
 .gemini/
 .claude/
