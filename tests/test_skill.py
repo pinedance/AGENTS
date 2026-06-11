@@ -17,11 +17,11 @@ workspace:
 - repoId: obra/superpowers
   skills: 
   - name: brainstorming 
-    source: obra/superpowers/skills/brainstorming
+    source: obra/superpowers/brainstorming
     target: sp-brainstorming 
 mine:
   - name: claude-video
-    source: superpowers/writing-plan
+    source: obra/superpowers/writing-plan
     target: my-writing-plan
 """
     yaml_path = tmp_path / ".skills.yaml"
@@ -97,13 +97,13 @@ def test_sync_rebuilds_links_and_library(mock_download, temp_env):
     assert (temp_env / ".skills-repos/obra/superpowers.zip").exists()
     
     # Verify library extracted (should omit 'other' since it's not in library config)
-    assert (temp_env / "skills-library/obra/superpowers/skills/brainstorming/SKILL.md").exists()
-    assert not (temp_env / "skills-library/obra/superpowers/skills/other/SKILL.md").exists()
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").exists()
+    assert not (temp_env / "skills-library/obra/superpowers/other/SKILL.md").exists()
     
     # Verify workspace symlink created
     link_path = temp_env / "skills/sp-brainstorming"
     assert link_path.is_symlink()
-    assert link_path.resolve() == (temp_env / "skills-library/obra/superpowers/skills/brainstorming").resolve()
+    assert link_path.resolve() == (temp_env / "skills-library/obra/superpowers/brainstorming").resolve()
 
 
 @patch("skill.download_repo_zip")
@@ -126,7 +126,7 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     stale_zip.write_text("dummy zip content")
     
     # A stale skill folder in skills-library with SKILL.md
-    stale_lib_skill = temp_env / "skills-library/obra/superpowers/skills/obsolete_skill"
+    stale_lib_skill = temp_env / "skills-library/obra/superpowers/obsolete_skill"
     stale_lib_skill.mkdir(parents=True, exist_ok=True)
     (stale_lib_skill / "SKILL.md").write_text("# Obsolete Skill")
     (stale_lib_skill / "helper.py").write_text("print('stale')")
@@ -146,7 +146,7 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     assert not stale_zip.exists()
     
     # Verify library extracted and stale library skill pruned
-    assert (temp_env / "skills-library/obra/superpowers/skills/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").exists()
     assert not stale_lib_skill.exists()
     
     # Verify stale links inside skills/ are removed, and new ones exist
@@ -249,7 +249,7 @@ def test_library_add_and_remove(mock_download, temp_env):
     assert any(s["name"] == "superpowers" and s["path"] == "SKILL.md" for s in skills)
     
     # Check library dir contains files
-    assert (temp_env / "skills-library/obra/superpowers/skills/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").exists()
     
     # 2. Test Library Remove
     # First ensure we have workspace entries for obra/superpowers
@@ -318,7 +318,7 @@ def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
     }]
     skill.save_config(config, yaml_path)
     
-    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text("# Brainstorming")
     
@@ -371,7 +371,7 @@ def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_downloa
     
     # Create library folders
     for repo_id in ["obra/superpowers", "other/superpowers"]:
-        skill_dir = temp_env / f"skills-library/{repo_id}/skills/brainstorming"
+        skill_dir = temp_env / f"skills-library/{repo_id}/brainstorming"
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text("# Brainstorming")
 
@@ -444,18 +444,18 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     config["workspace"] = [
         {
             "repoId": "obra/superpowers",
-            "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+            "skills": [{"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "sp-brainstorming"}]
         },
         {
             "repoId": "other/superpowers",
-            "skills": [{"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "other-brainstorming"}]
+            "skills": [{"name": "brainstorming", "source": "other/superpowers/brainstorming", "target": "other-brainstorming"}]
         }
     ]
     skill.save_config(config, yaml_path)
     
     # Create library folders and symlinks
     for repo_id, target in [("obra/superpowers", "sp-brainstorming"), ("other/superpowers", "other-brainstorming")]:
-        skill_dir = temp_env / f"skills-library/{repo_id}/skills/brainstorming"
+        skill_dir = temp_env / f"skills-library/{repo_id}/brainstorming"
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text("# Brainstorming")
         
@@ -511,13 +511,13 @@ def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_down
     config["workspace"] = [
         {
             "repoId": "other/superpowers",
-            "skills": [{"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+            "skills": [{"name": "brainstorming", "source": "other/superpowers/brainstorming", "target": "sp-brainstorming"}]
         }
     ]
     skill.save_config(config, yaml_path)
     
     # Create library directory
-    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text("# Brainstorming")
     
@@ -556,7 +556,7 @@ def test_workspace_add_removes_mine_conflicts(mock_input, mock_download, temp_en
     config["mine"] = [{"name": "some-mine-skill", "source": "local/mine", "target": "sp-brainstorming"}]
     skill.save_config(config, yaml_path)
     
-    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text("# Brainstorming")
     
@@ -656,11 +656,11 @@ def test_mine_add_and_remove(mock_input, mock_download, temp_env):
     }]
     config["workspace"] = [{
         "repoId": "obra/superpowers",
-        "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "sp-brainstorming"}]
+        "skills": [{"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "sp-brainstorming"}]
     }]
     skill.save_config(config, yaml_path)
     
-    skill_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    skill_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text("# Brainstorming")
     
@@ -673,7 +673,7 @@ def test_mine_add_and_remove(mock_input, mock_download, temp_env):
     # Check added in mine
     assert any(m["target"] == "my-brainstorming" for m in config.get("mine", []))
     # Check folder physical copy exists in skills-mine
-    assert (temp_env / "skills-mine/obra/superpowers/skills/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills-mine/obra/superpowers/brainstorming/SKILL.md").exists()
     # Check symlink exists
     assert (temp_env / "skills/my-brainstorming").is_symlink()
     
@@ -714,7 +714,7 @@ def test_mine_add_interactive_and_multiple(mock_input, mock_download, temp_env):
     skill.save_config(config, yaml_path)
     
     # Create the library dir for the second one
-    skill_dir = temp_env / "skills-library/other/superpowers/skills/brainstorming"
+    skill_dir = temp_env / "skills-library/other/superpowers/brainstorming"
     skill_dir.mkdir(parents=True, exist_ok=True)
     (skill_dir / "SKILL.md").write_text("# Brainstorming Other")
     
@@ -724,12 +724,12 @@ def test_mine_add_interactive_and_multiple(mock_input, mock_download, temp_env):
     skill.mine_add("brainstorming", None, yaml_path, temp_env)
     
     config = skill.load_config(yaml_path)
-    # Check added in mine with source 'other/superpowers/skills/brainstorming'
+    # Check added in mine with source 'other/superpowers/brainstorming'
     mine_entry = next(m for m in config.get("mine", []) if m["name"] == "brainstorming")
-    assert mine_entry["source"] == "other/superpowers/skills/brainstorming"
+    assert mine_entry["source"] == "other/superpowers/brainstorming"
     assert mine_entry["target"] == "my-brainstorming"
     
-    assert (temp_env / "skills-mine/other/superpowers/skills/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills-mine/other/superpowers/brainstorming/SKILL.md").exists()
     assert (temp_env / "skills/my-brainstorming").is_symlink()
 
 
@@ -742,13 +742,13 @@ def test_mine_remove_multiple(mock_input, temp_env):
     # Seed mine config with two entries for "brainstorming" but different targets
     config = skill.load_config(yaml_path)
     config["mine"] = [
-        {"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "my-brainstorming"},
-        {"name": "brainstorming", "source": "other/superpowers/skills/brainstorming", "target": "other-brainstorming"}
+        {"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "my-brainstorming"},
+        {"name": "brainstorming", "source": "other/superpowers/brainstorming", "target": "other-brainstorming"}
     ]
     skill.save_config(config, yaml_path)
     
     # Create the physical folders in skills-mine
-    for source in ["obra/superpowers/skills/brainstorming", "other/superpowers/skills/brainstorming"]:
+    for source in ["obra/superpowers/brainstorming", "other/superpowers/brainstorming"]:
         (temp_env / "skills-mine" / source).mkdir(parents=True, exist_ok=True)
         (temp_env / "skills-mine" / source / "SKILL.md").write_text("# Brainstorming")
         
@@ -857,12 +857,12 @@ def test_mine_add_existing_folder_abort_and_overwrite(mock_input, mock_download,
     skill.save_config(config, yaml_path)
     
     # Library folder (source)
-    src_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    src_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     src_dir.mkdir(parents=True, exist_ok=True)
     (src_dir / "SKILL.md").write_text("Library Brainstorming")
     
     # Existing Mine folder (target)
-    dest_dir = temp_env / "skills-mine/obra/superpowers/skills/brainstorming"
+    dest_dir = temp_env / "skills-mine/obra/superpowers/brainstorming"
     dest_dir.mkdir(parents=True, exist_ok=True)
     (dest_dir / "SKILL.md").write_text("Existing Custom Brainstorming")
     
@@ -914,17 +914,17 @@ def test_mine_add_cleans_workspace_target_globally(mock_download, temp_env):
     config["workspace"] = [
         {
             "repoId": "obra/superpowers",
-            "skills": [{"name": "brainstorming", "source": "obra/superpowers/skills/brainstorming", "target": "my-brainstorming"}]
+            "skills": [{"name": "brainstorming", "source": "obra/superpowers/brainstorming", "target": "my-brainstorming"}]
         },
         {
             "repoId": "other/superpowers",
-            "skills": [{"name": "other-skill", "source": "other/superpowers/skills/other", "target": "my-brainstorming"}]
+            "skills": [{"name": "other-skill", "source": "other/superpowers/other", "target": "my-brainstorming"}]
         }
     ]
     skill.save_config(config, yaml_path)
     
     # Create source directory
-    src_dir = temp_env / "skills-library/obra/superpowers/skills/brainstorming"
+    src_dir = temp_env / "skills-library/obra/superpowers/brainstorming"
     src_dir.mkdir(parents=True, exist_ok=True)
     (src_dir / "SKILL.md").write_text("# Brainstorming")
     
