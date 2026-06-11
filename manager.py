@@ -28,6 +28,38 @@ def get_yaml_parser():
     yaml.indent(mapping=2, sequence=2, offset=0)
     return yaml
 
+def _sanitize_config(data: dict):
+    for key in ("library", "workspace"):
+        if key in data and isinstance(data[key], list):
+            for repo in data[key]:
+                if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
+                    repo["repoId"] = repo["repoId"].strip(", ")
+
+def prompt_selection(candidates, format_fn, title_label, prompt_label):
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+        
+    print(f"Multiple {title_label} found:")
+    for idx, item in enumerate(candidates, 1):
+        print(f" [{idx}] {format_fn(item)}")
+        
+    while True:
+        try:
+            raw_val = input(f"Select {prompt_label} (1-{len(candidates)}): ").strip()
+            if raw_val.lower() in ("q", "0", "cancel"):
+                print("Operation canceled.")
+                return None
+            choice = int(raw_val)
+            if 1 <= choice <= len(candidates):
+                return candidates[choice - 1]
+        except ValueError:
+            pass
+        except (KeyboardInterrupt, EOFError):
+            print("Operation canceled.")
+            return None
+
 def load_config(path: Path) -> dict:
     yaml = get_yaml_parser()
     if not path.exists():
@@ -37,17 +69,7 @@ def load_config(path: Path) -> dict:
     if not data:
         return {"library": [], "workspace": []}
     
-    # Sanitize repoIds (e.g. remove trailing commas/whitespace)
-    if "library" in data and isinstance(data["library"], list):
-        for repo in data["library"]:
-            if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
-                repo["repoId"] = repo["repoId"].strip(", ")
-                
-    if "workspace" in data and isinstance(data["workspace"], list):
-        for repo in data["workspace"]:
-            if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
-                repo["repoId"] = repo["repoId"].strip(", ")
-                
+    _sanitize_config(data)
     return data
 
 def save_config(config: dict, path: Path):
@@ -218,24 +240,20 @@ def sync(config_path: Path, root_path: Path):
                 except OSError:
                     pass
 
-    # 3. Prune obsolete library folders
-    # Clean folders in library_dir that are not in active_libs
+    # 3. Prune obsolete library folders and clean empty directories
     for root, dirs, files in os.walk(library_dir, topdown=False):
         for d in dirs:
             p = Path(root) / d
-            # Check if this directory contains SKILL.md (is a skill root)
-            if (p / "SKILL.md").exists():
-                if p.resolve() not in active_libs:
+            if (p / "SKILL.md").exists() and p.resolve() not in active_libs:
+                try:
                     shutil.rmtree(p)
-
-    # Clean empty directories in library_dir
-    for root, dirs, files in os.walk(library_dir, topdown=False):
-        for d in dirs:
-            p = Path(root) / d
-            try:
-                p.rmdir()
-            except OSError:
-                pass
+                except Exception:
+                    pass
+            else:
+                try:
+                    p.rmdir()
+                except OSError:
+                    pass
 
     # 4. Sync workspace links (symlinks inside ~/.agents/skills/)
     target_links = {} # target_name -> source_absolute_path
@@ -447,28 +465,15 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         print(f"Skill '{skill_name}' not found in library. Run 'library add' first.", file=sys.stderr)
         return
         
-    selected_repo_id, selected_skill = None, None
-    if len(candidates) > 1:
-        print("Multiple matches found:")
-        for idx, (repo_id, skill_item) in enumerate(candidates, 1):
-            print(f" [{idx}] {repo_id} ({skill_item['path']})")
-        while True:
-            try:
-                raw_val = input(f"Select repo (1-{len(candidates)}): ").strip()
-                if raw_val.lower() in ("q", "0", "cancel"):
-                    print("Operation canceled.")
-                    return
-                choice = int(raw_val)
-                if 1 <= choice <= len(candidates):
-                    selected_repo_id, selected_skill = candidates[choice - 1]
-                    break
-            except ValueError:
-                pass
-            except (KeyboardInterrupt, EOFError):
-                print("Operation canceled.")
-                return
-    else:
-        selected_repo_id, selected_skill = candidates[0]
+    res = prompt_selection(
+        candidates,
+        format_fn=lambda x: f"{x[0]} ({x[1]['path']})",
+        title_label="matches",
+        prompt_label="repo"
+    )
+    if not res:
+        return
+    selected_repo_id, selected_skill = res
         
     target_name = new_name
     if target_name is None:
@@ -546,28 +551,15 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
         print(f"Skill '{skill_name}' not active in workspace.", file=sys.stderr)
         return
         
-    selected_rw, selected_skill = None, None
-    if len(candidates) > 1:
-        print("Multiple active skills found:")
-        for idx, (rw, s) in enumerate(candidates, 1):
-            print(f" [{idx}] {s['target']} (from {rw['repoId']})")
-        while True:
-            try:
-                raw_val = input(f"Select skill to remove (1-{len(candidates)}): ").strip()
-                if raw_val.lower() in ("q", "0", "cancel"):
-                    print("Operation canceled.")
-                    return
-                choice = int(raw_val)
-                if 1 <= choice <= len(candidates):
-                    selected_rw, selected_skill = candidates[choice - 1]
-                    break
-            except ValueError:
-                pass
-            except (KeyboardInterrupt, EOFError):
-                print("Operation canceled.")
-                return
-    else:
-        selected_rw, selected_skill = candidates[0]
+    res = prompt_selection(
+        candidates,
+        format_fn=lambda x: f"{x[1]['target']} (from {x[0]['repoId']})",
+        title_label="active skills",
+        prompt_label="skill to remove"
+    )
+    if not res:
+        return
+    selected_rw, selected_skill = res
         
     # Update YAML
     selected_rw["skills"].remove(selected_skill)
