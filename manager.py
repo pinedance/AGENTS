@@ -6,12 +6,14 @@ import sys
 import urllib.error
 import urllib.request
 import zipfile
+import re
 from ruamel.yaml import YAML
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 DEFAULT_SKILLS_DIR = "~/.agents/skills"
 DEFAULT_CONFIG_NAME = ".skills.yaml"
+SKILL_FILENAME = "SKILL.md"
 REPOS_DIR_NAME = ".skills-repos"
 LIBRARY_DIR_NAME = "skills-library"
 SKILLS_DIR_ENV_VAR = "SKILLS_DIR"
@@ -28,7 +30,7 @@ def get_yaml_parser():
     yaml.indent(mapping=2, sequence=2, offset=0)
     return yaml
 
-def _sanitize_config(data: dict):
+def _sanitize_config(data: dict) -> None:
     for key in ("library", "workspace"):
         if key in data and isinstance(data[key], list):
             for repo in data[key]:
@@ -74,8 +76,18 @@ def load_config(path: Path) -> dict:
 
 def save_config(config: dict, path: Path):
     yaml = get_yaml_parser()
-    with open(path, "w", encoding="utf-8") as f:
-        yaml.dump(config, f)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            yaml.dump(config, f)
+        tmp.replace(path)
+    except Exception:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+        raise
 
 def download_repo_zip(repo_id: str, dest_path: Path):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,23 +104,23 @@ def download_repo_zip(repo_id: str, dest_path: Path):
                 headers={"User-Agent": USER_AGENT}
             )
             with urllib.request.urlopen(req) as response, open(temp_path, "wb") as out_file:
-                out_file.write(response.read())
+                # Stream in chunks to avoid loading entire ZIP into memory
+                shutil.copyfileobj(response, out_file)
             temp_path.replace(dest_path)
             return
         except urllib.error.URLError as e:
             last_err = e
-        finally:
-            if temp_path.exists():
-                try:
-                    temp_path.unlink()
-                except OSError:
-                    pass
-            
+            temp_path.unlink(missing_ok=True)
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+
     if last_err:
         raise last_err
 
 
 def sync(config_path: Path, root_path: Path):
+    print("Syncing skills...")
     config = load_config(config_path)
     repos_dir = root_path / REPOS_DIR_NAME
     library_dir = root_path / LIBRARY_DIR_NAME
@@ -124,12 +136,16 @@ def sync(config_path: Path, root_path: Path):
     
     # 1. Sync library (Downloads & Extractions)
     for repo in config.get("library", []):
-        repo_id = repo["repoId"]
+        repo_id = repo.get("repoId", "")
+        if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
+            print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
+            continue
         zip_path = repos_dir / f"{repo_id}.zip"
         active_zips.add(zip_path.resolve())
         
         # Download zip if missing
         if not zip_path.exists():
+            print(f"Downloading {repo_id}...")
             download_repo_zip(repo_id, zip_path)
             
         commit_hash = repo.get("commit", "")
@@ -166,6 +182,7 @@ def sync(config_path: Path, root_path: Path):
 
             # Extract if not up to date
             if not up_to_date:
+                print(f"Extracting {skill_item['name']} from {repo_id}...")
                 if dest_skill_dir.exists():
                     shutil.rmtree(dest_skill_dir)
                 dest_skill_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -176,15 +193,17 @@ def sync(config_path: Path, root_path: Path):
                         # We look for the folder structure ending in the skill_parent_dir_rel
                         prefix = ""
                         for m in members:
-                            if m.endswith(skill_parent_dir_rel_posix + "/SKILL.md"):
-                                prefix = m[:-len(skill_parent_dir_rel_posix + "/SKILL.md")]
+                            suffix_path = f"{skill_parent_dir_rel_posix}/{SKILL_FILENAME}"
+                            if m.endswith(suffix_path):
+                                prefix = m[:-len(suffix_path)]
                                 break
                         
                         if not prefix:
                             # Fallback for SKILL.md directly at root
+                            root_suffix = f"/{SKILL_FILENAME}"
                             for m in members:
-                                if m.endswith("/SKILL.md") and m.count('/') == 1:
-                                    prefix = m[:-len("SKILL.md")]
+                                if m.endswith(root_suffix) and m.count('/') == 1:
+                                    prefix = m[:-len(SKILL_FILENAME)]
                                     break
                         
                         # Extract files belonging to this skill directory
@@ -224,6 +243,8 @@ def sync(config_path: Path, root_path: Path):
                         except OSError:
                             pass
                     raise
+            else:
+                print(f"Skill '{skill_item['name']}' from {repo_id} is up to date.")
 
     if config_changed:
         save_config(config, config_path)
@@ -244,7 +265,7 @@ def sync(config_path: Path, root_path: Path):
     for root, dirs, files in os.walk(library_dir, topdown=False):
         for d in dirs:
             p = Path(root) / d
-            if (p / "SKILL.md").exists() and p.resolve() not in active_libs:
+            if (p / SKILL_FILENAME).exists() and p.resolve() not in active_libs:
                 try:
                     shutil.rmtree(p)
                 except Exception:
@@ -283,8 +304,10 @@ def sync(config_path: Path, root_path: Path):
                 resolved_target = Path(os.readlink(item_path)).resolve()
                 if resolved_target.is_relative_to(resolved_lib):
                     if item not in target_links or resolved_target != target_links[item]:
+                        print(f"Pruning stale symlink: {item}")
                         item_path.unlink()
                 elif not resolved_target.exists():
+                    print(f"Pruning broken symlink: {item}")
                     item_path.unlink()
             except Exception:
                 try:
@@ -300,6 +323,7 @@ def sync(config_path: Path, root_path: Path):
                 try:
                     real_link = Path(os.readlink(link_path)).resolve()
                     if not real_link.exists():
+                        print(f"Recreating broken symlink: {target} -> {source_abs}")
                         link_path.unlink()
                         os.symlink(source_abs, link_path)
                         continue
@@ -313,23 +337,27 @@ def sync(config_path: Path, root_path: Path):
             else:
                 raise ValueError(f"Collision: Target '{target}' already exists and is not a symlink")
         else:
+            print(f"Creating symlink: {target} -> {source_abs}")
             os.symlink(source_abs, link_path)
+            
+    print("Sync completed successfully.")
 
 
-def library_add(repo_id: str, config_path: Path, root_path: Path):
-    import re
+def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool = True):
     if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
 
     config = load_config(config_path)
     zip_path = root_path / REPOS_DIR_NAME / f"{repo_id}.zip"
     
-    # "add: 이미 있으면 다운로드 하지 않음"
+    # Skip download if repo is already in config and zip already exists
     repo_in_config = any(r["repoId"] == repo_id for r in config.get("library", []))
     if repo_in_config and zip_path.exists():
+        print(f"Repository {repo_id} already in library. Running sync.")
         sync(config_path, root_path)
         return
 
+    print(f"Adding repository {repo_id} to library...")
     # Pre-sync: download and find SKILL.md paths
     temp_zip = root_path / REPOS_DIR_NAME / f"temp_{repo_id.replace('/', '_')}.zip"
     temp_zip.parent.mkdir(parents=True, exist_ok=True)
@@ -338,45 +366,37 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
     commit_hash = ""
     try:
         download_repo_zip(repo_id, temp_zip)
-        try:
-            with zipfile.ZipFile(temp_zip, 'r') as zf:
-                try:
-                    commit_hash = zf.comment.decode("utf-8").strip()
-                except Exception:
-                    pass
-                for m in zf.namelist():
-                    if m.endswith("/SKILL.md"):
-                        # Extract skill path relative to repo root (excluding zipball root hash folder)
-                        parts = m.split('/')
-                        skill_path = "/".join(parts[1:])
-                        # Name is parent folder
-                        if len(parts) == 2:
-                            skill_name = repo_id.split('/')[-1]
-                        else:
-                            skill_name = parts[-2]
-                        skills_found.append({"name": skill_name, "path": skill_path})
-                    elif m.endswith("SKILL.md") and "/" not in m:
-                        # Skill at root
-                        skills_found.append({"name": repo_id.split('/')[-1], "path": "SKILL.md"})
-            
-            # Move temp_zip to final zip_path
-            zip_path.parent.mkdir(parents=True, exist_ok=True)
-            if zip_path.exists():
-                zip_path.unlink()
-            temp_zip.replace(zip_path)
-        except zipfile.BadZipFile:
-            if temp_zip.exists():
-                try:
-                    temp_zip.unlink()
-                except OSError:
-                    pass
-            raise
-    finally:
-        if temp_zip.exists():
-            temp_zip.unlink()
+        with zipfile.ZipFile(temp_zip, 'r') as zf:
+            try:
+                commit_hash = zf.comment.decode("utf-8").strip()
+            except Exception:
+                pass
+            for m in zf.namelist():
+                if m.endswith(f"/{SKILL_FILENAME}"):
+                    # Extract skill path relative to repo root (excluding zipball root hash folder)
+                    parts = m.split('/')
+                    skill_path = "/".join(parts[1:])
+                    # Name is parent folder
+                    if len(parts) == 2:
+                        skill_name = repo_id.split('/')[-1]
+                    else:
+                        skill_name = parts[-2]
+                    skills_found.append({"name": skill_name, "path": skill_path})
+                elif m.endswith(SKILL_FILENAME) and "/" not in m:
+                    # Skill at root
+                    skills_found.append({"name": repo_id.split('/')[-1], "path": SKILL_FILENAME})
+
+        # Move temp_zip to final zip_path
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        if zip_path.exists():
+            zip_path.unlink()
+        temp_zip.replace(zip_path)
+    except Exception:
+        temp_zip.unlink(missing_ok=True)
+        raise
         
     if not skills_found:
-        raise ValueError(f"No SKILL.md files found in repo {repo_id}.")
+        raise ValueError(f"No {SKILL_FILENAME} files found in repo {repo_id}.")
 
     # Update YAML config
     if "library" not in config:
@@ -400,12 +420,15 @@ def library_add(repo_id: str, config_path: Path, root_path: Path):
         })
         
     save_config(config, config_path)
+    print(f"Added repository {repo_id} to library.")
     
     # Sync to finish the process
-    sync(config_path, root_path)
+    if _do_sync:
+        sync(config_path, root_path)
 
 
 def library_remove(repo_id: str, config_path: Path, root_path: Path):
+    print(f"Removing repository {repo_id} from library...")
     config = load_config(config_path)
     
     # Update YAML: remove from library
@@ -423,6 +446,7 @@ def library_remove(repo_id: str, config_path: Path, root_path: Path):
                 del work[i]
         
     save_config(config, config_path)
+    print(f"Removed repository {repo_id} from library.")
     
     # Sync
     sync(config_path, root_path)
@@ -435,8 +459,10 @@ def library_update(repo_id: str | None, config_path: Path, root_path: Path):
         repos_to_update = [r for r in config.get("library", []) if r["repoId"] == repo_id]
         if not repos_to_update:
             raise ValueError(f"Repository {repo_id} not found in library config")
+        print(f"Updating repository {repo_id}...")
     else:
         repos_to_update = config.get("library", [])
+        print("Updating all repositories in library...")
         
     repos_dir = root_path / REPOS_DIR_NAME
     for r in repos_to_update:
@@ -447,7 +473,11 @@ def library_update(repo_id: str | None, config_path: Path, root_path: Path):
                 zip_path.unlink()
             except OSError:
                 pass
-        library_add(r_id, config_path, root_path)
+        library_add(r_id, config_path, root_path, _do_sync=False)
+
+    # Single sync after all repos are updated — avoids O(N) redundant syncs
+    # and prevents intermediate pruning from deleting not-yet-refreshed zips
+    sync(config_path, root_path)
 
 
 def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root_path: Path):
@@ -490,9 +520,10 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
             print("Operation canceled.")
             return
 
-    if not target_name or "/" in target_name or "\\" in target_name or target_name in (".", ".."):
-        raise ValueError(f"Invalid target name: {target_name}")
+    if not target_name or not re.match(r"^[a-zA-Z0-9._-]+$", target_name):
+        raise ValueError(f"Invalid target name: {target_name!r}. Must match pattern: [a-zA-Z0-9._-]+")
 
+    print(f"Adding skill {skill_name} to active workspace as {target_name}...")
             
     # Update YAML: add to workspace
     # 1. Globally remove any skill across all workspace repo blocks with the same target name
@@ -532,6 +563,7 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
     })
     
     save_config(config, config_path)
+    print(f"Added skill {skill_name} to active workspace.")
     
     # Sync
     sync(config_path, root_path)
@@ -561,6 +593,7 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
         return
     selected_rw, selected_skill = res
         
+    print(f"Removing skill {skill_name} from active workspace...")
     # Update YAML
     selected_rw["skills"].remove(selected_skill)
     # Clean up empty repo blocks in-place
@@ -571,6 +604,7 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
                 del work[i]
     
     save_config(config, config_path)
+    print(f"Removed skill {skill_name} from active workspace.")
     
     # Sync
     sync(config_path, root_path)
