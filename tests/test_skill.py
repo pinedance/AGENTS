@@ -21,10 +21,6 @@ workspace:
   - name: brainstorming 
     source: obra/superpowers/brainstorming
     target: sp-brainstorming 
-mine:
-  - name: claude-video
-    source: obra/superpowers/writing-plan
-    target: my-writing-plan
 """
     yaml_path = tmp_path / ".skills.yaml"
     yaml_path.write_text(yaml_content)
@@ -184,7 +180,8 @@ def test_download_repo_zip_fallback(mock_urlopen, tmp_path):
     
     response_mock = MagicMock()
     response_mock.__enter__.return_value = response_mock
-    response_mock.read.return_value = b"zip-content"
+    _data_187 = [b"zip-content", b""]
+    response_mock.read.side_effect = lambda n=-1: _data_187.pop(0) if _data_187 else b""
     
     calls = []
     def urlopen_side_effect(req, *args, **kwargs):
@@ -776,7 +773,8 @@ def test_atomic_download_and_bad_zip_handling(temp_env):
     from unittest.mock import MagicMock
     response_mock = MagicMock()
     response_mock.__enter__.return_value = response_mock
-    response_mock.read.return_value = b"some zip content"
+    _data_779 = [b"some zip content", b""]
+    response_mock.read.side_effect = lambda n=-1: _data_779.pop(0) if _data_779 else b""
     
     # We patch open to see if the tmp file is created
     original_open = open

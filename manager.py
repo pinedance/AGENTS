@@ -57,7 +57,7 @@ def prompt_selection(candidates, format_fn, title_label, prompt_label):
             if 1 <= choice <= len(candidates):
                 return candidates[choice - 1]
         except ValueError:
-            pass
+            print(f"Invalid choice. Enter a number between 1 and {len(candidates)}, or 'q' to cancel.")
         except (KeyboardInterrupt, EOFError):
             print("Operation canceled.")
             return None
@@ -66,7 +66,7 @@ def load_config(path: Path) -> dict:
     yaml = get_yaml_parser()
     if not path.exists():
         return {"library": [], "workspace": []}
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8-sig") as f:
         data = yaml.load(f)
     if not data:
         return {"library": [], "workspace": []}
@@ -174,7 +174,7 @@ def sync(config_path: Path, root_path: Path):
             up_to_date = False
             if dest_skill_dir.exists() and commit_file.exists():
                 try:
-                    cached_commit = commit_file.read_text(encoding="utf-8").strip()
+                    cached_commit = commit_file.read_text(encoding="utf-8-sig").strip()
                     if cached_commit == commit_hash and commit_hash:
                         up_to_date = True
                 except Exception:
@@ -343,65 +343,70 @@ def sync(config_path: Path, root_path: Path):
     print("Sync completed successfully.")
 
 
+def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
+    """Scan a zip file for SKILL.md entries. Returns (skills_found, commit_hash)."""
+    skills_found: list = []
+    commit_hash: str = ""
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        try:
+            commit_hash = zf.comment.decode("utf-8").strip()
+        except Exception:
+            pass
+        for m in zf.namelist():
+            if m.endswith(f"/{SKILL_FILENAME}"):
+                # Extract skill path relative to repo root (excluding zipball root hash folder)
+                parts = m.split("/")
+                skill_path = "/".join(parts[1:])
+                # Name is parent folder
+                if len(parts) == 2:
+                    skill_name = repo_id.split("/")[-1]
+                else:
+                    skill_name = parts[-2]
+                skills_found.append({"name": skill_name, "path": skill_path})
+            elif m.endswith(SKILL_FILENAME) and "/" not in m:
+                # Skill at root
+                skills_found.append({"name": repo_id.split("/")[-1], "path": SKILL_FILENAME})
+    return skills_found, commit_hash
+
+
 def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool = True):
     if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
 
     config = load_config(config_path)
     zip_path = root_path / REPOS_DIR_NAME / f"{repo_id}.zip"
-    
-    # Skip download if repo is already in config and zip already exists
-    repo_in_config = any(r["repoId"] == repo_id for r in config.get("library", []))
-    if repo_in_config and zip_path.exists():
-        print(f"Repository {repo_id} already in library. Running sync.")
-        sync(config_path, root_path)
-        return
 
-    print(f"Adding repository {repo_id} to library...")
-    # Pre-sync: download and find SKILL.md paths
-    temp_zip = root_path / REPOS_DIR_NAME / f"temp_{repo_id.replace('/', '_')}.zip"
-    temp_zip.parent.mkdir(parents=True, exist_ok=True)
-    
-    skills_found = []
-    commit_hash = ""
-    try:
-        download_repo_zip(repo_id, temp_zip)
-        with zipfile.ZipFile(temp_zip, 'r') as zf:
-            try:
-                commit_hash = zf.comment.decode("utf-8").strip()
-            except Exception:
-                pass
-            for m in zf.namelist():
-                if m.endswith(f"/{SKILL_FILENAME}"):
-                    # Extract skill path relative to repo root (excluding zipball root hash folder)
-                    parts = m.split('/')
-                    skill_path = "/".join(parts[1:])
-                    # Name is parent folder
-                    if len(parts) == 2:
-                        skill_name = repo_id.split('/')[-1]
-                    else:
-                        skill_name = parts[-2]
-                    skills_found.append({"name": skill_name, "path": skill_path})
-                elif m.endswith(SKILL_FILENAME) and "/" not in m:
-                    # Skill at root
-                    skills_found.append({"name": repo_id.split('/')[-1], "path": SKILL_FILENAME})
+    skills_found: list = []
+    commit_hash: str = ""
 
-        # Move temp_zip to final zip_path
-        zip_path.parent.mkdir(parents=True, exist_ok=True)
-        if zip_path.exists():
-            zip_path.unlink()
-        temp_zip.replace(zip_path)
-    except Exception:
-        temp_zip.unlink(missing_ok=True)
-        raise
-        
+    if zip_path.exists():
+        # Re-scan existing zip to pick up any new skills added upstream (no re-download)
+        print(f"Repository {repo_id} already downloaded. Refreshing skill list...")
+        try:
+            skills_found, commit_hash = _scan_zip_for_skills(zip_path, repo_id)
+        except zipfile.BadZipFile:
+            zip_path.unlink(missing_ok=True)
+            raise
+    else:
+        print(f"Adding repository {repo_id} to library...")
+        temp_zip = root_path / REPOS_DIR_NAME / f"temp_{repo_id.replace('/', '_')}.zip"
+        temp_zip.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            download_repo_zip(repo_id, temp_zip)
+            skills_found, commit_hash = _scan_zip_for_skills(temp_zip, repo_id)
+            zip_path.parent.mkdir(parents=True, exist_ok=True)
+            temp_zip.replace(zip_path)
+        except Exception:
+            temp_zip.unlink(missing_ok=True)
+            raise
+
     if not skills_found:
         raise ValueError(f"No {SKILL_FILENAME} files found in repo {repo_id}.")
 
     # Update YAML config
     if "library" not in config:
         config["library"] = []
-        
+
     # Find or update existing repoId
     found = False
     for r in config["library"]:
@@ -418,10 +423,10 @@ def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool
             "commit": commit_hash,
             "skills": skills_found
         })
-        
+
     save_config(config, config_path)
     print(f"Added repository {repo_id} to library.")
-    
+
     # Sync to finish the process
     if _do_sync:
         sync(config_path, root_path)
@@ -520,7 +525,7 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
             print("Operation canceled.")
             return
 
-    if not target_name or not re.match(r"^[a-zA-Z0-9._-]+$", target_name):
+    if not target_name or target_name in (".", "..") or not re.match(r"^[a-zA-Z0-9._-]+$", target_name):
         raise ValueError(f"Invalid target name: {target_name!r}. Must match pattern: [a-zA-Z0-9._-]+")
 
     print(f"Adding skill {skill_name} to active workspace as {target_name}...")
