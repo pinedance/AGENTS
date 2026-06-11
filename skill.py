@@ -133,7 +133,10 @@ def sync(config_path: Path, root_path: Path):
                                     break
                         
                         # Extract files belonging to this skill directory
-                        target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
+                        if skill_parent_dir_rel_posix in (".", ""):
+                            target_zip_dir_prefix = prefix
+                        else:
+                            target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
                         for m in members:
                             if m.startswith(target_zip_dir_prefix):
                                 # Strip both prefix and original nested path within the zip

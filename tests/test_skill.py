@@ -250,6 +250,7 @@ def test_library_add_and_remove(mock_download, temp_env):
     
     # Check library dir contains files
     assert (temp_env / "skills-library/obra/superpowers/brainstorming/SKILL.md").exists()
+    assert (temp_env / "skills-library/obra/superpowers/superpowers/SKILL.md").exists()
     
     # 2. Test Library Remove
     # First ensure we have workspace entries for obra/superpowers
