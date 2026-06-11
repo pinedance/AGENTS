@@ -108,7 +108,7 @@ def sync(config_path: Path, root_path: Path):
             skill_parent_dir_rel_posix = skill_parent_dir_rel.as_posix()
             
             # Destination path inside skills-library
-            dest_skill_dir = library_dir / repo_id / skill_parent_dir_rel
+            dest_skill_dir = library_dir / repo_id / skill_item["name"]
             active_libs.add(dest_skill_dir.resolve())
             
             # Extract if not exists
@@ -136,11 +136,14 @@ def sync(config_path: Path, root_path: Path):
                         target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
                         for m in members:
                             if m.startswith(target_zip_dir_prefix):
-                                relative_member = m[len(prefix):]
-                                dest_file = library_dir / repo_id / relative_member
+                                # Strip both prefix and original nested path within the zip
+                                relative_member = m[len(target_zip_dir_prefix):]
+                                if not relative_member:
+                                    continue
+                                dest_file = dest_skill_dir / relative_member
                                 
                                 # Zip Slip Prevention
-                                dest_base = (library_dir / repo_id).resolve()
+                                dest_base = dest_skill_dir.resolve()
                                 if not dest_file.resolve().is_relative_to(dest_base):
                                     raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
                                 
