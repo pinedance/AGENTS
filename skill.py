@@ -23,6 +23,18 @@ def load_config(path: Path) -> dict:
         data = yaml.load(f)
     if not data:
         return {"library": [], "workspace": [], "mine": []}
+    
+    # Sanitize repoIds (e.g. remove trailing commas/whitespace)
+    if "library" in data and isinstance(data["library"], list):
+        for repo in data["library"]:
+            if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
+                repo["repoId"] = repo["repoId"].strip(", ")
+                
+    if "workspace" in data and isinstance(data["workspace"], list):
+        for repo in data["workspace"]:
+            if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
+                repo["repoId"] = repo["repoId"].strip(", ")
+                
     return data
 
 def save_config(config: dict, path: Path):

@@ -55,6 +55,24 @@ def test_load_only_comments_config(tmp_path):
     config = skill.load_config(yaml_path)
     assert config == {"library": [], "workspace": [], "mine": []}
 
+def test_load_config_sanitizes_repo_id(tmp_path):
+    yaml_path = tmp_path / ".skills.yaml"
+    yaml_content = """
+library:
+- repoId: "obra/superpowers, "
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  skills: []
+workspace:
+- repoId: "anthropics/skills,"
+  skills: []
+"""
+    yaml_path.write_text(yaml_content)
+    config = skill.load_config(yaml_path)
+    assert config["library"][0]["repoId"] == "obra/superpowers"
+    assert config["workspace"][0]["repoId"] == "anthropics/skills"
+
+
 
 from unittest.mock import patch
 

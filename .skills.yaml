@@ -45,7 +45,7 @@ library:
       path: skills/writing-plans/SKILL.md
     - name: writing-skills
       path: skills/writing-skills/SKILL.md
-- repoId: anthropics/skills,
+- repoId: anthropics/skills
   repoType: github
   repoUrl: https://github.com/anthropics/skills.git
   skills:
@@ -83,7 +83,7 @@ workspace:
   - name: executing-plans
     source: obra/superpowers/skills/executing-plans
     target: sp-executing-plans
-- repoId: anthropics/skills,
+- repoId: anthropics/skills
   skills: 
   - name: pdf
     source: anthropics/skills/skills/pdf
