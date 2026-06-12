@@ -104,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: b19d305a9db832729fddccf0859bf26ec72d346a
+  commit: b1392cbddf7c19404e1fd3f9223c0212e7317930
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
