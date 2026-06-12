@@ -36,14 +36,42 @@ library:
   repoType: github
   repoUrl: https://github.com/anthropics/skills.git
   skills:
-  - name: pdf
-    path: skills/pdf/SKILL.md
+  - name: algorithmic-art
+    path: skills/algorithmic-art/SKILL.md
+  - name: brand-guidelines
+    path: skills/brand-guidelines/SKILL.md
+  - name: canvas-design
+    path: skills/canvas-design/SKILL.md
+  - name: claude-api
+    path: skills/claude-api/SKILL.md
+  - name: doc-coauthoring
+    path: skills/doc-coauthoring/SKILL.md
   - name: docx
     path: skills/docx/SKILL.md
+  - name: frontend-design
+    path: skills/frontend-design/SKILL.md
+  - name: internal-comms
+    path: skills/internal-comms/SKILL.md
+  - name: mcp-builder
+    path: skills/mcp-builder/SKILL.md
+  - name: pdf
+    path: skills/pdf/SKILL.md
   - name: pptx
     path: skills/pptx/SKILL.md
+  - name: skill-creator
+    path: skills/skill-creator/SKILL.md
+  - name: slack-gif-creator
+    path: skills/slack-gif-creator/SKILL.md
+  - name: theme-factory
+    path: skills/theme-factory/SKILL.md
+  - name: web-artifacts-builder
+    path: skills/web-artifacts-builder/SKILL.md
+  - name: webapp-testing
+    path: skills/webapp-testing/SKILL.md
   - name: xlsx
     path: skills/xlsx/SKILL.md
+  - name: template
+    path: template/SKILL.md
   commit: 57546260929473d4e0d1c1bb75297be2fdfa1949
 - repoId: Lum1104/Understand-Anything
   repoType: github
@@ -53,7 +81,19 @@ library:
     path: understand-anything-plugin/skills/understand-chat/SKILL.md
   - name: understand-dashboard
     path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
-  commit: fb1356ae321d7fab987108616ec4e105fb973af3
+  - name: understand-diff
+    path: understand-anything-plugin/skills/understand-diff/SKILL.md
+  - name: understand-domain
+    path: understand-anything-plugin/skills/understand-domain/SKILL.md
+  - name: understand-explain
+    path: understand-anything-plugin/skills/understand-explain/SKILL.md
+  - name: understand-knowledge
+    path: understand-anything-plugin/skills/understand-knowledge/SKILL.md
+  - name: understand-onboard
+    path: understand-anything-plugin/skills/understand-onboard/SKILL.md
+  - name: understand
+    path: understand-anything-plugin/skills/understand/SKILL.md
+  commit: 09ede1917ffd043e6d5bbc8a80b45760814c2d7f
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
@@ -64,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: 2cd197f8bbb06517ed98ba781fe49702ccacc63b
+  commit: db7e4c7a966692d2bb4cfaa6c087a9b92bdae38c
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -74,6 +114,8 @@ library:
     path: skills/executing-plans/SKILL.md
   - name: finishing-a-development-branch
     path: skills/finishing-a-development-branch/SKILL.md
+  - name: my-code-review
+    path: skills/my-code-review/SKILL.md
   - name: receiving-code-review
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
@@ -88,30 +130,360 @@ library:
     path: skills/test-driven-development/SKILL.md
   - name: writing-plans
     path: skills/writing-plans/SKILL.md
+- repoId: JuliusBrussee/caveman
+  repoType: github
+  repoUrl: https://github.com/JuliusBrussee/caveman.git
+  commit: 655b7d9c5431f822264b7732e9901c5578ac84cf
+  skills:
+  - name: cavecrew
+    path: .agents/skills/cavecrew/SKILL.md
+  - name: cavecrew
+    path: .junie/skills/cavecrew/SKILL.md
+  - name: cavecrew
+    path: .kiro/skills/cavecrew/SKILL.md
+  - name: cavecrew
+    path: .roo/skills/cavecrew/SKILL.md
+  - name: cavecrew
+    path: plugins/caveman/skills/cavecrew/SKILL.md
+  - name: caveman-compress
+    path: plugins/caveman/skills/caveman-compress/SKILL.md
+  - name: caveman-stats
+    path: plugins/caveman/skills/caveman-stats/SKILL.md
+  - name: caveman
+    path: plugins/caveman/skills/caveman/SKILL.md
+  - name: cavecrew
+    path: skills/cavecrew/SKILL.md
+  - name: caveman-commit
+    path: skills/caveman-commit/SKILL.md
+  - name: caveman-compress
+    path: skills/caveman-compress/SKILL.md
+  - name: caveman-help
+    path: skills/caveman-help/SKILL.md
+  - name: caveman-review
+    path: skills/caveman-review/SKILL.md
+  - name: caveman-stats
+    path: skills/caveman-stats/SKILL.md
+  - name: caveman
+    path: skills/caveman/SKILL.md
+- repoId: tykimos/cheliped-browser
+  repoType: github
+  repoUrl: https://github.com/tykimos/cheliped-browser.git
+  commit: 7ce4ba850d3a3cede4ca83a37acbce15be591141
+  skills:
+  - name: cheliped-browser
+    path: SKILL.md
+- repoId: K-Dense-AI/scientific-agent-skills
+  repoType: github
+  repoUrl: https://github.com/K-Dense-AI/scientific-agent-skills.git
+  commit: dab7aa672944a77f20cda3f2a672a6f1582adab6
+  skills:
+  - name: adaptyv
+    path: skills/adaptyv/SKILL.md
+  - name: aeon
+    path: skills/aeon/SKILL.md
+  - name: anndata
+    path: skills/anndata/SKILL.md
+  - name: arboreto
+    path: skills/arboreto/SKILL.md
+  - name: astropy
+    path: skills/astropy/SKILL.md
+  - name: autoskill
+    path: skills/autoskill/SKILL.md
+  - name: benchling-integration
+    path: skills/benchling-integration/SKILL.md
+  - name: bgpt-paper-search
+    path: skills/bgpt-paper-search/SKILL.md
+  - name: bids
+    path: skills/bids/SKILL.md
+  - name: biopython
+    path: skills/biopython/SKILL.md
+  - name: bioservices
+    path: skills/bioservices/SKILL.md
+  - name: bulk-rnaseq
+    path: skills/bulk-rnaseq/SKILL.md
+  - name: cellxgene-census
+    path: skills/cellxgene-census/SKILL.md
+  - name: cirq
+    path: skills/cirq/SKILL.md
+  - name: citation-management
+    path: skills/citation-management/SKILL.md
+  - name: clinical-decision-support
+    path: skills/clinical-decision-support/SKILL.md
+  - name: clinical-reports
+    path: skills/clinical-reports/SKILL.md
+  - name: cobrapy
+    path: skills/cobrapy/SKILL.md
+  - name: consciousness-council
+    path: skills/consciousness-council/SKILL.md
+  - name: dask
+    path: skills/dask/SKILL.md
+  - name: database-lookup
+    path: skills/database-lookup/SKILL.md
+  - name: datamol
+    path: skills/datamol/SKILL.md
+  - name: deepchem
+    path: skills/deepchem/SKILL.md
+  - name: deeptools
+    path: skills/deeptools/SKILL.md
+  - name: depmap
+    path: skills/depmap/SKILL.md
+  - name: dhdna-profiler
+    path: skills/dhdna-profiler/SKILL.md
+  - name: diffdock
+    path: skills/diffdock/SKILL.md
+  - name: dnanexus-integration
+    path: skills/dnanexus-integration/SKILL.md
+  - name: docx
+    path: skills/docx/SKILL.md
+  - name: esm
+    path: skills/esm/SKILL.md
+  - name: etetoolkit
+    path: skills/etetoolkit/SKILL.md
+  - name: exa-search
+    path: skills/exa-search/SKILL.md
+  - name: experimental-design
+    path: skills/experimental-design/SKILL.md
+  - name: exploratory-data-analysis
+    path: skills/exploratory-data-analysis/SKILL.md
+  - name: flowio
+    path: skills/flowio/SKILL.md
+  - name: fluidsim
+    path: skills/fluidsim/SKILL.md
+  - name: generate-image
+    path: skills/generate-image/SKILL.md
+  - name: geniml
+    path: skills/geniml/SKILL.md
+  - name: geomaster
+    path: skills/geomaster/SKILL.md
+  - name: geopandas
+    path: skills/geopandas/SKILL.md
+  - name: get-available-resources
+    path: skills/get-available-resources/SKILL.md
+  - name: gget
+    path: skills/gget/SKILL.md
+  - name: ginkgo-cloud-lab
+    path: skills/ginkgo-cloud-lab/SKILL.md
+  - name: glycoengineering
+    path: skills/glycoengineering/SKILL.md
+  - name: gtars
+    path: skills/gtars/SKILL.md
+  - name: histolab
+    path: skills/histolab/SKILL.md
+  - name: hugging-science
+    path: skills/hugging-science/SKILL.md
+  - name: hypogenic
+    path: skills/hypogenic/SKILL.md
+  - name: hypothesis-generation
+    path: skills/hypothesis-generation/SKILL.md
+  - name: imaging-data-commons
+    path: skills/imaging-data-commons/SKILL.md
+  - name: infographics
+    path: skills/infographics/SKILL.md
+  - name: iso-13485-certification
+    path: skills/iso-13485-certification/SKILL.md
+  - name: labarchive-integration
+    path: skills/labarchive-integration/SKILL.md
+  - name: lamindb
+    path: skills/lamindb/SKILL.md
+  - name: latchbio-integration
+    path: skills/latchbio-integration/SKILL.md
+  - name: latex-posters
+    path: skills/latex-posters/SKILL.md
+  - name: liteparse
+    path: skills/liteparse/SKILL.md
+  - name: literature-review
+    path: skills/literature-review/SKILL.md
+  - name: markdown-mermaid-writing
+    path: skills/markdown-mermaid-writing/SKILL.md
+  - name: market-research-reports
+    path: skills/market-research-reports/SKILL.md
+  - name: markitdown
+    path: skills/markitdown/SKILL.md
+  - name: matchms
+    path: skills/matchms/SKILL.md
+  - name: matlab
+    path: skills/matlab/SKILL.md
+  - name: matplotlib
+    path: skills/matplotlib/SKILL.md
+  - name: medchem
+    path: skills/medchem/SKILL.md
+  - name: modal
+    path: skills/modal/SKILL.md
+  - name: molecular-dynamics
+    path: skills/molecular-dynamics/SKILL.md
+  - name: molfeat
+    path: skills/molfeat/SKILL.md
+  - name: networkx
+    path: skills/networkx/SKILL.md
+  - name: neurokit2
+    path: skills/neurokit2/SKILL.md
+  - name: neuropixels-analysis
+    path: skills/neuropixels-analysis/SKILL.md
+  - name: nextflow
+    path: skills/nextflow/SKILL.md
+  - name: omero-integration
+    path: skills/omero-integration/SKILL.md
+  - name: open-notebook
+    path: skills/open-notebook/SKILL.md
+  - name: opentrons-integration
+    path: skills/opentrons-integration/SKILL.md
+  - name: optimize-for-gpu
+    path: skills/optimize-for-gpu/SKILL.md
+  - name: pacsomatic
+    path: skills/pacsomatic/SKILL.md
+  - name: paper-lookup
+    path: skills/paper-lookup/SKILL.md
+  - name: paperzilla
+    path: skills/paperzilla/SKILL.md
+  - name: parallel-web
+    path: skills/parallel-web/SKILL.md
+  - name: pathml
+    path: skills/pathml/SKILL.md
+  - name: pathway-enrichment
+    path: skills/pathway-enrichment/SKILL.md
+  - name: pdf
+    path: skills/pdf/SKILL.md
+  - name: peer-review
+    path: skills/peer-review/SKILL.md
+  - name: pennylane
+    path: skills/pennylane/SKILL.md
+  - name: phylogenetics
+    path: skills/phylogenetics/SKILL.md
+  - name: pi-agent
+    path: skills/pi-agent/SKILL.md
+  - name: polars-bio
+    path: skills/polars-bio/SKILL.md
+  - name: polars
+    path: skills/polars/SKILL.md
+  - name: pptx-posters
+    path: skills/pptx-posters/SKILL.md
+  - name: pptx
+    path: skills/pptx/SKILL.md
+  - name: primekg
+    path: skills/primekg/SKILL.md
+  - name: protocolsio-integration
+    path: skills/protocolsio-integration/SKILL.md
+  - name: pufferlib
+    path: skills/pufferlib/SKILL.md
+  - name: pydeseq2
+    path: skills/pydeseq2/SKILL.md
+  - name: pydicom
+    path: skills/pydicom/SKILL.md
+  - name: pyhealth
+    path: skills/pyhealth/SKILL.md
+  - name: pylabrobot
+    path: skills/pylabrobot/SKILL.md
+  - name: pymatgen
+    path: skills/pymatgen/SKILL.md
+  - name: pymc
+    path: skills/pymc/SKILL.md
+  - name: pymoo
+    path: skills/pymoo/SKILL.md
+  - name: pyopenms
+    path: skills/pyopenms/SKILL.md
+  - name: pysam
+    path: skills/pysam/SKILL.md
+  - name: pytdc
+    path: skills/pytdc/SKILL.md
+  - name: pytorch-lightning
+    path: skills/pytorch-lightning/SKILL.md
+  - name: pyzotero
+    path: skills/pyzotero/SKILL.md
+  - name: qiskit
+    path: skills/qiskit/SKILL.md
+  - name: qutip
+    path: skills/qutip/SKILL.md
+  - name: rdkit
+    path: skills/rdkit/SKILL.md
+  - name: research-grants
+    path: skills/research-grants/SKILL.md
+  - name: research-lookup
+    path: skills/research-lookup/SKILL.md
+  - name: rowan
+    path: skills/rowan/SKILL.md
+  - name: scanpy
+    path: skills/scanpy/SKILL.md
+  - name: scholar-evaluation
+    path: skills/scholar-evaluation/SKILL.md
+  - name: scientific-brainstorming
+    path: skills/scientific-brainstorming/SKILL.md
+  - name: scientific-critical-thinking
+    path: skills/scientific-critical-thinking/SKILL.md
+  - name: scientific-schematics
+    path: skills/scientific-schematics/SKILL.md
+  - name: scientific-slides
+    path: skills/scientific-slides/SKILL.md
+  - name: scientific-visualization
+    path: skills/scientific-visualization/SKILL.md
+  - name: scientific-writing
+    path: skills/scientific-writing/SKILL.md
+  - name: scikit-bio
+    path: skills/scikit-bio/SKILL.md
+  - name: scikit-learn
+    path: skills/scikit-learn/SKILL.md
+  - name: scikit-survival
+    path: skills/scikit-survival/SKILL.md
+  - name: scvelo
+    path: skills/scvelo/SKILL.md
+  - name: scvi-tools
+    path: skills/scvi-tools/SKILL.md
+  - name: seaborn
+    path: skills/seaborn/SKILL.md
+  - name: shap
+    path: skills/shap/SKILL.md
+  - name: simpy
+    path: skills/simpy/SKILL.md
+  - name: stable-baselines3
+    path: skills/stable-baselines3/SKILL.md
+  - name: statistical-analysis
+    path: skills/statistical-analysis/SKILL.md
+  - name: statistical-power
+    path: skills/statistical-power/SKILL.md
+  - name: statsmodels
+    path: skills/statsmodels/SKILL.md
+  - name: sympy
+    path: skills/sympy/SKILL.md
+  - name: tiledbvcf
+    path: skills/tiledbvcf/SKILL.md
+  - name: timesfm-forecasting
+    path: skills/timesfm-forecasting/SKILL.md
+  - name: torch-geometric
+    path: skills/torch-geometric/SKILL.md
+  - name: torchdrug
+    path: skills/torchdrug/SKILL.md
+  - name: transformers
+    path: skills/transformers/SKILL.md
+  - name: treatment-plans
+    path: skills/treatment-plans/SKILL.md
+  - name: umap-learn
+    path: skills/umap-learn/SKILL.md
+  - name: usfiscaldata
+    path: skills/usfiscaldata/SKILL.md
+  - name: vaex
+    path: skills/vaex/SKILL.md
+  - name: venue-templates
+    path: skills/venue-templates/SKILL.md
+  - name: what-if-oracle
+    path: skills/what-if-oracle/SKILL.md
+  - name: xlsx
+    path: skills/xlsx/SKILL.md
+  - name: zarr-python
+    path: skills/zarr-python/SKILL.md
 workspace:
 - repoId: pinedance/AGENTS
   skills:
-  - name: caveman
-    source: pinedance/AGENTS/caveman
-    target: caveman
   - name: brainstorming
     source: pinedance/AGENTS/brainstorming
     target: brainstorming
   - name: executing-plans
     source: pinedance/AGENTS/executing-plans
     target: executing-plans
-  - name: finishing-a-development-branch
-    source: pinedance/AGENTS/finishing-a-development-branch
-    target: finishing-a-development-branch
   - name: receiving-code-review
     source: pinedance/AGENTS/receiving-code-review
     target: receiving-code-review
   - name: requesting-code-review
     source: pinedance/AGENTS/requesting-code-review
     target: requesting-code-review
-  - name: skill-creator
-    source: pinedance/AGENTS/skill-creator
-    target: skill-creator
   - name: subagent-driven-development
     source: pinedance/AGENTS/subagent-driven-development
     target: subagent-driven-development
@@ -132,6 +504,9 @@ workspace:
   - name: pdf
     source: anthropics/skills/pdf
     target: anthropics-pdf
+  - name: skill-creator
+    source: anthropics/skills/skill-creator
+    target: skill-creator
 - repoId: bradautomates/claude-video
   skills:
   - name: claude-video
@@ -139,3 +514,23 @@ workspace:
     target: claude-video
 
 
+- repoId: JuliusBrussee/caveman
+  skills:
+  - name: caveman
+    source: JuliusBrussee/caveman/caveman
+    target: caveman
+- repoId: tykimos/cheliped-browser
+  skills:
+  - name: cheliped-browser
+    source: tykimos/cheliped-browser/cheliped-browser
+    target: cheliped-browser
+- repoId: obra/superpowers
+  skills:
+  - name: finishing-a-development-branch
+    source: obra/superpowers/finishing-a-development-branch
+    target: finishing-a-development-branch
+- repoId: K-Dense-AI/scientific-agent-skills
+  skills:
+  - name: database-lookup
+    source: K-Dense-AI/scientific-agent-skills/database-lookup
+    target: database-lookup
