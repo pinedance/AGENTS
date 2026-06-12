@@ -104,12 +104,10 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: e4d628c3630a0cf1d03de021b3a3b3d023b65072
+  commit: c0362e45b7ee22a14a767ae02b9fb9eb12246209
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
-  - name: caveman
-    path: skills/caveman/SKILL.md
   - name: executing-plans
     path: skills/executing-plans/SKILL.md
   - name: my-code-review
