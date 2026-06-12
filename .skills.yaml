@@ -104,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: db7e4c7a966692d2bb4cfaa6c087a9b92bdae38c
+  commit: b19d305a9db832729fddccf0859bf26ec72d346a
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -112,16 +112,12 @@ library:
     path: skills/caveman/SKILL.md
   - name: executing-plans
     path: skills/executing-plans/SKILL.md
-  - name: finishing-a-development-branch
-    path: skills/finishing-a-development-branch/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
   - name: receiving-code-review
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
     path: skills/requesting-code-review/SKILL.md
-  - name: skill-creator
-    path: skills/skill-creator/SKILL.md
   - name: subagent-driven-development
     path: skills/subagent-driven-development/SKILL.md
   - name: systematic-debugging
