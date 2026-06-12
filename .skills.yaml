@@ -463,6 +463,8 @@ library:
     path: skills/xlsx/SKILL.md
   - name: zarr-python
     path: skills/zarr-python/SKILL.md
+
+
 workspace:
 - repoId: pinedance/AGENTS
   skills:
@@ -506,8 +508,6 @@ workspace:
   - name: claude-video
     source: bradautomates/claude-video/claude-video
     target: claude-video
-
-
 - repoId: JuliusBrussee/caveman
   skills:
   - name: caveman
