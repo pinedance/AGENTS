@@ -1127,10 +1127,10 @@ def test_myskills_command_stages_commits_pushes_and_syncs(mock_run, mock_sync, t
     skill.PROJECT_ROOT = temp_env
     skill.myskills(message="update brainstorming", config_path=temp_env / ".skills.yaml", root_path=temp_env)
 
-    # Check that git status, add, commit, push were called in sequence
+    # Check that git status, add, commit, push were called in sequence targeting skills/
     called_cmds = [call[0][0] for call in mock_run.call_args_list]
-    assert any("status" in cmd for cmd in called_cmds)
-    assert any("add" in cmd for cmd in called_cmds)
+    assert any(cmd[:4] == ["git", "status", "--porcelain", "skills/"] for cmd in called_cmds)
+    assert any(cmd == ["git", "add", "skills/"] for cmd in called_cmds)
     assert any("commit" in cmd for cmd in called_cmds)
     assert any("push" in cmd for cmd in called_cmds)
     

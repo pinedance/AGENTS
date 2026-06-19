@@ -673,18 +673,19 @@ def myskills(message: str | None, config_path: Path, root_path: Path):
         return
 
     # 2. Check status
-    res_status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True)
+    res_status = subprocess.run(["git", "status", "--porcelain", "skills/"], capture_output=True, text=True, check=True)
     if not res_status.stdout.strip():
-        print("No changes to publish. Syncing...")
+        print("No changes in skills/ to publish. Syncing...")
         sync(config_path, root_path)
         return
 
     # 3. Add, commit, push
     msg = message or "Update skills"
     print(f"Staging, committing, and pushing changes on branch '{branch}'...")
-    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "add", "skills/"], check=True)
     subprocess.run(["git", "commit", "-m", msg], check=True)
     subprocess.run(["git", "push", "origin", branch], check=True)
+
 
     # 4. Sync
     print("Push complete. Updating active workspace...")
