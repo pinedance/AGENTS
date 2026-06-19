@@ -162,7 +162,8 @@ def sync(config_path: Path, root_path: Path):
         
         repo_url = repo.get("repoUrl", "")
         commit_hash = repo.get("commit", "")
-        is_dynamic = not commit_hash
+        is_dynamic = (commit_hash == "latest")
+
 
         if is_dynamic and repo_url:
             # Dynamically fetch remote commit hash
@@ -660,6 +661,34 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
     sync(config_path, root_path)
 
 
+def myskills(message: str | None, config_path: Path, root_path: Path):
+    import subprocess
+    print("Checking repository status...")
+    # 1. Get branch
+    try:
+        res_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
+        branch = res_branch.stdout.strip()
+    except subprocess.CalledProcessError:
+        print("Error: Not a git repository.", file=sys.stderr)
+        return
+
+    # 2. Check status
+    res_status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True)
+    if not res_status.stdout.strip():
+        print("No changes to publish. Syncing...")
+        sync(config_path, root_path)
+        return
+
+    # 3. Add, commit, push
+    msg = message or "Update skills"
+    print(f"Staging, committing, and pushing changes on branch '{branch}'...")
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", msg], check=True)
+    subprocess.run(["git", "push", "origin", branch], check=True)
+
+    # 4. Sync
+    print("Push complete. Updating active workspace...")
+    sync(config_path, root_path)
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
@@ -691,8 +720,10 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     work_rem = work_sub.add_parser("remove", help="Remove active workspace skill")
     work_rem.add_argument("skill_name", help="Name of skill to remove")
     
+    # myskills
+    myskills_parser = subparsers.add_parser("myskills", help="Stage, commit, push local skill changes and sync library")
+    myskills_parser.add_argument("-m", "--message", help="Commit message", default=None)
 
-    
     args = parser.parse_args()
     
     cli_root = Path(args.root) if args.root else None
@@ -715,11 +746,13 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
             workspace_add(args.skill_name, args.name, cfg, root)
         elif args.subcommand == "remove":
             workspace_remove(args.skill_name, cfg, root)
-
+    elif args.command == "myskills":
+        myskills(args.message, cfg, root)
 
 
 if __name__ == "__main__":
     main()
+
 
 
 

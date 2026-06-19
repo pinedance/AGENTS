@@ -1075,12 +1075,13 @@ def test_sync_resolves_dynamic_commit_on_empty(mock_run, mock_download, temp_env
             zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
     mock_download.side_effect = side_effect
 
-    # Setup YAML with empty commit hash
+    # Setup YAML with commit: latest
     yaml_content = """
 library:
 - repoId: obra/superpowers
   repoType: github
   repoUrl: https://github.com/obra/superpowers.git
+  commit: latest
   skills:
     - name: brainstorming
       path: skills/brainstorming/SKILL.md
@@ -1100,6 +1101,42 @@ library:
     
     # Verify zip downloaded and .commit cached file created with dynamic hash
     assert (temp_env / "skills-library/obra/superpowers/brainstorming/.commit").read_text().strip() == "9999a9999b9999c9999d9999e9999f9999000000"
+
+
+@patch("manager.sync")
+@patch("subprocess.run")
+def test_myskills_command_stages_commits_pushes_and_syncs(mock_run, mock_sync, temp_env):
+    import manager as skill
+    from unittest.mock import MagicMock
+    
+    # Mock subprocess.run outputs for git commands
+    def run_side_effect(cmd, *args, **kwargs):
+        res = MagicMock()
+        if "remote" in cmd:
+            res.stdout = "origin\thttps://github.com/pinedance/AGENTS.git (fetch)\n"
+        elif "status" in cmd:
+            res.stdout = " M skills/brainstorming/SKILL.md\n"
+        elif "rev-parse" in cmd:
+            res.stdout = "main\n"
+        else:
+            res.stdout = ""
+        return res
+    mock_run.side_effect = run_side_effect
+
+    # Call myskills CLI logic
+    skill.PROJECT_ROOT = temp_env
+    skill.myskills(message="update brainstorming", config_path=temp_env / ".skills.yaml", root_path=temp_env)
+
+    # Check that git status, add, commit, push were called in sequence
+    called_cmds = [call[0][0] for call in mock_run.call_args_list]
+    assert any("status" in cmd for cmd in called_cmds)
+    assert any("add" in cmd for cmd in called_cmds)
+    assert any("commit" in cmd for cmd in called_cmds)
+    assert any("push" in cmd for cmd in called_cmds)
+    
+    # Check that sync was triggered
+    mock_sync.assert_called_once_with(temp_env / ".skills.yaml", temp_env)
+
 
 
 
