@@ -31,7 +31,7 @@ library:
     path: skills/writing-plans/SKILL.md
   - name: writing-skills
     path: skills/writing-skills/SKILL.md
-  commit: 6fd4507659784c351abbd2bc264c7162cfd386dc
+  commit: 896224c4b1879920ab573417e68fd51d2ccc9072
 - repoId: anthropics/skills
   repoType: github
   repoUrl: https://github.com/anthropics/skills.git
@@ -93,7 +93,7 @@ library:
     path: understand-anything-plugin/skills/understand-onboard/SKILL.md
   - name: understand
     path: understand-anything-plugin/skills/understand/SKILL.md
-  commit: 09ede1917ffd043e6d5bbc8a80b45760814c2d7f
+  commit: 7f5a717694d3a94f19f523b375c777eb21548ff5
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
@@ -104,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: 24d62e7fe24c32c9209ed14d431ea61ef43b1d66
+  commit: f61fe92ae0c596e86b45ee78fc504145cd042c9d
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -129,16 +129,8 @@ library:
 - repoId: JuliusBrussee/caveman
   repoType: github
   repoUrl: https://github.com/JuliusBrussee/caveman.git
-  commit: 655b7d9c5431f822264b7732e9901c5578ac84cf
+  commit: 25d22f864ad68cc447a4cb93aefde918aa4aec9f
   skills:
-  - name: cavecrew
-    path: .agents/skills/cavecrew/SKILL.md
-  - name: cavecrew
-    path: .junie/skills/cavecrew/SKILL.md
-  - name: cavecrew
-    path: .kiro/skills/cavecrew/SKILL.md
-  - name: cavecrew
-    path: .roo/skills/cavecrew/SKILL.md
   - name: cavecrew
     path: plugins/caveman/skills/cavecrew/SKILL.md
   - name: caveman-compress
@@ -164,14 +156,16 @@ library:
 - repoId: tykimos/cheliped-browser
   repoType: github
   repoUrl: https://github.com/tykimos/cheliped-browser.git
-  commit: 7ce4ba850d3a3cede4ca83a37acbce15be591141
+  commit: 01db5ad695c7f0a7af8c90d6fdd9adbc495afe74
   skills:
-  - name: cheliped-browser
-    path: SKILL.md
+  - name: browser
+    path: browser/SKILL.md
+  - name: computer-use
+    path: computer-use/SKILL.md
 - repoId: K-Dense-AI/scientific-agent-skills
   repoType: github
   repoUrl: https://github.com/K-Dense-AI/scientific-agent-skills.git
-  commit: dab7aa672944a77f20cda3f2a672a6f1582adab6
+  commit: 209390194c85b3466259853417eeac81ea4f0976
   skills:
   - name: adaptyv
     path: skills/adaptyv/SKILL.md
@@ -179,6 +173,8 @@ library:
     path: skills/aeon/SKILL.md
   - name: anndata
     path: skills/anndata/SKILL.md
+  - name: arbor
+    path: skills/arbor/SKILL.md
   - name: arboreto
     path: skills/arboreto/SKILL.md
   - name: astropy
@@ -465,8 +461,6 @@ library:
     path: skills/xlsx/SKILL.md
   - name: zarr-python
     path: skills/zarr-python/SKILL.md
-
-
 workspace:
 - repoId: pinedance/AGENTS
   skills:
