@@ -1055,6 +1055,54 @@ workspace: []
     assert config["library"][0]["commit"] == "a1b2c3d4e5f67890"
 
 
+@patch("manager.download_repo_zip")
+@patch("subprocess.run")
+def test_sync_resolves_dynamic_commit_on_empty(mock_run, mock_download, temp_env):
+    import manager as skill
+    from unittest.mock import MagicMock
+    
+    # Mock git ls-remote HEAD to return a specific mock hash
+    mock_res = MagicMock()
+    mock_res.stdout = "9999a9999b9999c9999d9999e9999f9999000000\tHEAD\n"
+    mock_run.return_value = mock_res
+    
+    # Mock download to write dummy zip
+    def side_effect(repo_id, dest_path):
+        import zipfile
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(dest_path, "w") as zf:
+            zf.comment = b"9999a9999b9999c9999d9999e9999f9999000000"
+            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+    mock_download.side_effect = side_effect
+
+    # Setup YAML with empty commit hash
+    yaml_content = """
+library:
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  skills:
+    - name: brainstorming
+      path: skills/brainstorming/SKILL.md
+"""
+    (temp_env / ".skills.yaml").write_text(yaml_content)
+    
+    skill.PROJECT_ROOT = temp_env
+    skill.sync(temp_env / ".skills.yaml", temp_env)
+    
+    # Verify git ls-remote was called
+    mock_run.assert_called_with(
+        ["git", "ls-remote", "https://github.com/obra/superpowers.git", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    
+    # Verify zip downloaded and .commit cached file created with dynamic hash
+    assert (temp_env / "skills-library/obra/superpowers/brainstorming/.commit").read_text().strip() == "9999a9999b9999c9999d9999e9999f9999000000"
+
+
+
 
 
 

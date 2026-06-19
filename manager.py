@@ -119,6 +119,23 @@ def download_repo_zip(repo_id: str, dest_path: Path):
         raise last_err
 
 
+def get_remote_commit_hash(repo_url: str) -> str:
+    import subprocess
+    try:
+        res = subprocess.run(
+            ["git", "ls-remote", repo_url, "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        output = res.stdout.strip()
+        if output:
+            return output.split()[0]
+    except Exception as e:
+        print(f"Error fetching remote commit hash for {repo_url}: {e}", file=sys.stderr)
+    return ""
+
+
 def sync(config_path: Path, root_path: Path):
     print("Syncing skills...")
     config = load_config(config_path)
@@ -143,22 +160,50 @@ def sync(config_path: Path, root_path: Path):
         zip_path = repos_dir / f"{repo_id}.zip"
         active_zips.add(zip_path.resolve())
         
-        # Download zip if missing
-        if not zip_path.exists():
-            print(f"Downloading {repo_id}...")
-            download_repo_zip(repo_id, zip_path)
-            
+        repo_url = repo.get("repoUrl", "")
         commit_hash = repo.get("commit", "")
-        if not commit_hash and zip_path.exists():
-            try:
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    extracted_hash = zf.comment.decode("utf-8").strip()
-                    if extracted_hash:
-                        commit_hash = extracted_hash
-                        repo["commit"] = commit_hash
-                        config_changed = True
-            except Exception:
-                pass
+        is_dynamic = not commit_hash
+
+        if is_dynamic and repo_url:
+            # Dynamically fetch remote commit hash
+            commit_hash = get_remote_commit_hash(repo_url)
+            
+            # Read comment from existing zip if it exists
+            local_hash = ""
+            if zip_path.exists():
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zf:
+                        local_hash = zf.comment.decode("utf-8").strip()
+                except Exception:
+                    pass
+            
+            if not commit_hash:
+                commit_hash = local_hash
+
+            # If zip doesn't exist or is outdated, delete to force download
+            if commit_hash and (not zip_path.exists() or local_hash != commit_hash):
+                if zip_path.exists():
+                    zip_path.unlink()
+                print(f"Downloading {repo_id} (dynamic update to {commit_hash})...")
+                download_repo_zip(repo_id, zip_path)
+        else:
+            # Download zip if missing (static flow)
+            if not zip_path.exists():
+                print(f"Downloading {repo_id}...")
+                download_repo_zip(repo_id, zip_path)
+            
+            commit_hash = repo.get("commit", "")
+            if not commit_hash and zip_path.exists():
+                try:
+                    with zipfile.ZipFile(zip_path, 'r') as zf:
+                        extracted_hash = zf.comment.decode("utf-8").strip()
+                        if extracted_hash:
+                            commit_hash = extracted_hash
+                            repo["commit"] = commit_hash
+                            config_changed = True
+                except Exception:
+                    pass
+
 
         # Extract files based on configured skills
         for skill_item in repo.get("skills", []):
