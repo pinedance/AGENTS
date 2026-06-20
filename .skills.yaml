@@ -104,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: f61fe92ae0c596e86b45ee78fc504145cd042c9d
+  commit: 9a506bd7f04cddf836abd1bc32f9272f423f13a9
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -114,6 +114,8 @@ library:
     path: skills/my-code-review/SKILL.md
   - name: my-git-commit
     path: skills/my-git-commit/SKILL.md
+  - name: my-new-session
+    path: skills/my-new-session/SKILL.md
   - name: receiving-code-review
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
@@ -494,6 +496,9 @@ workspace:
   - name: my-git-commit
     source: pinedance/AGENTS/my-git-commit
     target: my-git-commit
+  - name: my-new-session
+    source: pinedance/AGENTS/my-new-session
+    target: my-new-session
 - repoId: anthropics/skills
   skills:
   - name: pdf
