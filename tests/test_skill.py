@@ -1261,6 +1261,41 @@ library:
     assert config["library"][0]["commit"] == "latest"
 
 
+def test_sync_does_not_overwrite_latest_with_hash(temp_env):
+    import manager as skill
+    from unittest.mock import patch, MagicMock
+    
+    yaml_content = """
+library:
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  commit: latest
+  skills:
+    - name: brainstorming
+      path: skills/brainstorming/SKILL.md
+"""
+    (temp_env / ".skills.yaml").write_text(yaml_content)
+    skill.PROJECT_ROOT = temp_env
+    
+    # Mock remote commit resolution
+    with patch("manager.get_remote_commit_hash", return_value="some_hash"), \
+         patch("manager._get_zip_comment", return_value="some_hash"), \
+         patch("manager.download_repo_zip"), \
+         patch("manager._rebuild_symlinks"):
+        # Create dummy extracted structure
+        (temp_env / ".skills-repos/obra").mkdir(parents=True, exist_ok=True)
+        import zipfile
+        zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.comment = b"some_hash"
+            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+        skill.sync(temp_env / ".skills.yaml", temp_env)
+        
+    config = skill.load_config(temp_env / ".skills.yaml")
+    assert config["library"][0]["commit"] == "latest"
+
+
 
 
 

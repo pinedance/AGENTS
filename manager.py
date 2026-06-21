@@ -268,11 +268,16 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
         active_zips.add(zip_path.resolve())
         
         repo_url = repo.get("repoUrl", "")
-        commit_hash = repo.get("commit", "")  # ID1
+        configured_commit = repo.get("commit", "")
+        commit_hash = configured_commit
 
         # Support dynamic latest commit hash resolution
         if commit_hash == "latest" and repo_url:
-            commit_hash = get_remote_commit_hash(repo_url)
+            resolved_hash = get_remote_commit_hash(repo_url)
+            if resolved_hash:
+                commit_hash = resolved_hash
+            else:
+                commit_hash = local_hash if local_hash else ""
 
         # Extract local comment (ID2) using helper
         local_hash = _get_zip_comment(zip_path)
@@ -320,13 +325,15 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
                 extracted_hash = _get_zip_comment(zip_path)
                 if extracted_hash:
                     commit_hash = extracted_hash
-                    repo["commit"] = commit_hash
-                    config_changed = True
+                    if configured_commit != "latest":
+                        repo["commit"] = commit_hash
+                        config_changed = True
         elif not commit_hash and local_hash:
             # If zip exists but config has no commit, update config with local hash
             commit_hash = local_hash
-            repo["commit"] = commit_hash
-            config_changed = True
+            if configured_commit != "latest":
+                repo["commit"] = commit_hash
+                config_changed = True
 
         # Extract files based on configured skills
         for skill_item in repo.get("skills", []):
