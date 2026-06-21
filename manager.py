@@ -50,6 +50,96 @@ def _get_zip_comment(zip_path: Path) -> str:
         pass
     return ""
 
+def _prune_obsolete_zips(repos_dir: Path, active_zips: set):
+    """Delete stale .zip files in the repos directory."""
+    if not repos_dir.exists():
+        return
+    for root, dirs, files in os.walk(repos_dir):
+        for f in files:
+            p = Path(root) / f
+            if p.suffix == ".zip" and p.resolve() not in active_zips:
+                try:
+                    p.unlink()
+                    p.parent.rmdir()
+                except OSError:
+                    pass
+
+def _prune_obsolete_libs(library_dir: Path, active_libs: set):
+    """Clean up obsolete extracted library directories."""
+    if not library_dir.exists():
+        return
+    for root, dirs, files in os.walk(library_dir, topdown=False):
+        for d in dirs:
+            p = Path(root) / d
+            if (p / SKILL_FILENAME).exists() and p.resolve() not in active_libs:
+                try:
+                    shutil.rmtree(p)
+                except OSError:
+                    pass
+            else:
+                try:
+                    p.rmdir()
+                except OSError:
+                    pass
+
+def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
+    """Rebuild symlinks in skills_dir pointing to library_dir."""
+    resolved_lib = library_dir.resolve()
+    for target, source_abs in target_links.items():
+        resolved_src = source_abs.resolve()
+        if not resolved_src.is_relative_to(resolved_lib) or resolved_src == resolved_lib:
+            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib}")
+
+    # Delete stale links/files in skills_dir (safe pruning)
+    for item in os.listdir(skills_dir):
+        item_path = skills_dir / item
+        if item_path.is_symlink():
+            try:
+                resolved_target = Path(os.readlink(item_path)).resolve()
+                if resolved_target.is_relative_to(resolved_lib):
+                    if item not in target_links or resolved_target != target_links[item]:
+                        print(f"Pruning stale symlink: {item}")
+                        item_path.unlink()
+                elif not resolved_target.exists():
+                    print(f"Pruning broken symlink: {item}")
+                    item_path.unlink()
+            except OSError:
+                try:
+                    item_path.unlink()
+                except OSError:
+                    pass
+                
+    # Create missing symlinks with collision check
+    for target, source_abs in target_links.items():
+        link_path = skills_dir / target
+        if link_path.exists() or link_path.is_symlink():
+            if link_path.is_symlink():
+                try:
+                    real_link = Path(os.readlink(link_path)).resolve()
+                    if not real_link.exists():
+                        print(f"Recreating broken symlink: {target} -> {source_abs}")
+                        link_path.unlink()
+                        os.symlink(source_abs, link_path)
+                        continue
+                except OSError:
+                    try:
+                        link_path.unlink()
+                        os.symlink(source_abs, link_path)
+                    except OSError:
+                        pass
+                    continue
+                
+                if real_link != source_abs:
+                    raise ValueError(f"Collision: Symlink '{target}' already exists and points to different source: {real_link}")
+            else:
+                raise ValueError(f"Collision: Target '{target}' already exists and is not a symlink")
+        else:
+            print(f"Creating symlink: {target} -> {source_abs}")
+            try:
+                os.symlink(source_abs, link_path)
+            except OSError:
+                pass
+
 def prompt_selection(candidates, format_fn, title_label, prompt_label):
     if not candidates:
         return None
@@ -183,14 +273,8 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
         if commit_hash == "latest" and repo_url:
             commit_hash = get_remote_commit_hash(repo_url)
 
-        # Extract local comment (ID2)
-        local_hash = ""
-        if zip_path.exists():
-            try:
-                with zipfile.ZipFile(zip_path, 'r') as zf:
-                    local_hash = zf.comment.decode("utf-8").strip()
-            except Exception:
-                pass
+        # Extract local comment (ID2) using helper
+        local_hash = _get_zip_comment(zip_path)
 
         # Compare ID1 vs ID2
         force_download = False
@@ -233,15 +317,11 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
 
             # If commit_hash was missing, extract it from the newly downloaded zip
             if not commit_hash and zip_path.exists():
-                try:
-                    with zipfile.ZipFile(zip_path, 'r') as zf:
-                        extracted_hash = zf.comment.decode("utf-8").strip()
-                        if extracted_hash:
-                            commit_hash = extracted_hash
-                            repo["commit"] = commit_hash
-                            config_changed = True
-                except Exception:
-                    pass
+                extracted_hash = _get_zip_comment(zip_path)
+                if extracted_hash:
+                    commit_hash = extracted_hash
+                    repo["commit"] = commit_hash
+                    config_changed = True
         elif not commit_hash and local_hash:
             # If zip exists but config has no commit, update config with local hash
             commit_hash = local_hash
@@ -265,7 +345,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
                     cached_commit = commit_file.read_text(encoding="utf-8-sig").strip()
                     if cached_commit == commit_hash and commit_hash:
                         up_to_date = True
-                except Exception:
+                except OSError:
                     pass
 
             # Extract if not up to date
@@ -320,7 +400,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
                     if commit_hash:
                           try:
                               commit_file.write_text(commit_hash, encoding="utf-8")
-                          except Exception:
+                          except OSError:
                               pass
                 except zipfile.BadZipFile:
                     if zip_path.exists():
@@ -336,31 +416,10 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
         save_config(config, config_path)
 
     # 2. Prune obsolete zips
-    for root, dirs, files in os.walk(repos_dir):
-        for f in files:
-            p = Path(root) / f
-            if p.suffix == ".zip" and p.resolve() not in active_zips:
-                p.unlink()
-                # remove empty parents
-                try:
-                    p.parent.rmdir()
-                except OSError:
-                    pass
+    _prune_obsolete_zips(repos_dir, active_zips)
 
-    # 3. Prune obsolete library folders and clean empty directories
-    for root, dirs, files in os.walk(library_dir, topdown=False):
-        for d in dirs:
-            p = Path(root) / d
-            if (p / SKILL_FILENAME).exists() and p.resolve() not in active_libs:
-                try:
-                    shutil.rmtree(p)
-                except Exception:
-                    pass
-            else:
-                try:
-                    p.rmdir()
-                except OSError:
-                    pass
+    # 3. Prune obsolete library folders
+    _prune_obsolete_libs(library_dir, active_libs)
 
     # 4. Sync workspace links (symlinks inside ~/.agents/skills/)
     target_links = {} # target_name -> source_absolute_path
@@ -374,70 +433,15 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
                 raise ValueError(f"Duplicate target name: {target} in workspace configuration")
             target_links[target] = (library_dir / source).resolve()
 
-    # Rebuild symlinks in skills_dir
-    # Validate all target links point strictly inside library_dir
-    resolved_lib = library_dir.resolve()
-    for target, source_abs in target_links.items():
-        resolved_src = source_abs.resolve()
-        if not resolved_src.is_relative_to(resolved_lib) or resolved_src == resolved_lib:
-            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib}")
-
-    # Delete stale links/files in skills_dir (safe pruning)
-    for item in os.listdir(skills_dir):
-        item_path = skills_dir / item
-        if item_path.is_symlink():
-            try:
-                resolved_target = Path(os.readlink(item_path)).resolve()
-                if resolved_target.is_relative_to(resolved_lib):
-                    if item not in target_links or resolved_target != target_links[item]:
-                        print(f"Pruning stale symlink: {item}")
-                        item_path.unlink()
-                elif not resolved_target.exists():
-                    print(f"Pruning broken symlink: {item}")
-                    item_path.unlink()
-            except Exception:
-                try:
-                    item_path.unlink()
-                except OSError:
-                    pass
-                
-    # Create missing symlinks with collision check
-    for target, source_abs in target_links.items():
-        link_path = skills_dir / target
-        if link_path.exists() or link_path.is_symlink():
-            if link_path.is_symlink():
-                try:
-                    real_link = Path(os.readlink(link_path)).resolve()
-                    if not real_link.exists():
-                        print(f"Recreating broken symlink: {target} -> {source_abs}")
-                        link_path.unlink()
-                        os.symlink(source_abs, link_path)
-                        continue
-                except OSError:
-                    link_path.unlink()
-                    os.symlink(source_abs, link_path)
-                    continue
-                
-                if real_link != source_abs:
-                    raise ValueError(f"Collision: Symlink '{target}' already exists and points to different source: {real_link}")
-            else:
-                raise ValueError(f"Collision: Target '{target}' already exists and is not a symlink")
-        else:
-            print(f"Creating symlink: {target} -> {source_abs}")
-            os.symlink(source_abs, link_path)
-            
+    _rebuild_symlinks(skills_dir, library_dir, target_links)
     print("Sync completed successfully.")
 
 
 def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
     """Scan a zip file for SKILL.md entries. Returns (skills_found, commit_hash)."""
     skills_found: list = []
-    commit_hash: str = ""
+    commit_hash = _get_zip_comment(zip_path)
     with zipfile.ZipFile(zip_path, "r") as zf:
-        try:
-            commit_hash = zf.comment.decode("utf-8").strip()
-        except Exception:
-            pass
         for m in zf.namelist():
             if m.endswith(f"/{SKILL_FILENAME}"):
                 # Extract skill path relative to repo root (excluding zipball root hash folder)
