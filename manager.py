@@ -244,27 +244,17 @@ def get_remote_commit_hash(repo_url: str) -> str:
     return ""
 
 
-def sync(config_path: Path, root_path: Path, check_remote: bool = False):
-    print("Syncing skills...")
-    config = load_config(config_path)
-    repos_dir = root_path / REPOS_DIR_NAME
-    library_dir = root_path / LIBRARY_DIR_NAME
-    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
-    
-    repos_dir.mkdir(parents=True, exist_ok=True)
-    library_dir.mkdir(parents=True, exist_ok=True)
-    skills_dir.mkdir(parents=True, exist_ok=True)
-    
-    active_zips = set()
-    active_libs = set()
+def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path, check_remote: bool, active_zips: set, active_libs: set) -> bool:
+    """Download missing/changed repository ZIP files and extract their configured skills."""
     config_changed = False
+    resolved_hashes = {}
     
-    # 1. Sync library (Downloads & Extractions)
     for repo in config.get("library", []):
         repo_id = repo.get("repoId", "")
         if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
             print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
             continue
+            
         zip_path = repos_dir / f"{repo_id}.zip"
         active_zips.add(zip_path.resolve())
         
@@ -272,12 +262,15 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
         configured_commit = repo.get("commit", "")
         commit_hash = configured_commit
 
-        # Support dynamic latest commit hash resolution
+        # Support dynamic latest commit hash resolution with caching
         if commit_hash == "latest" and repo_url:
-            resolved_hash = get_remote_commit_hash(repo_url)
+            if repo_url not in resolved_hashes:
+                resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
+            resolved_hash = resolved_hashes[repo_url]
             if resolved_hash:
                 commit_hash = resolved_hash
             else:
+                local_hash = _get_zip_comment(zip_path)
                 commit_hash = local_hash if local_hash else ""
 
         # Extract local comment (ID2) using helper
@@ -291,14 +284,19 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
 
         # Compare ID1 vs ID3 (--check-remote)
         if check_remote and repo_url:
-            remote_hash = get_remote_commit_hash(repo_url)
+            if repo_url not in resolved_hashes:
+                resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
+            remote_hash = resolved_hashes[repo_url]
             if commit_hash and remote_hash and commit_hash != remote_hash:
                 print(f"Warning: {repo_id} is not up-to-date with remote latest (ID1: {commit_hash}, ID3: {remote_hash}). Update required.")
 
         # Download logic
         if not zip_path.exists() or force_download:
             if zip_path.exists():
-                zip_path.unlink()
+                try:
+                    zip_path.unlink()
+                except OSError as e:
+                    print(f"Warning: Failed to delete stale zip {zip_path}: {e}", file=sys.stderr)
             if commit_hash:
                 print(f"Downloading {repo_id} (commit {commit_hash})...")
                 # Clean signature inspection to support mocked functions in tests
@@ -338,90 +336,104 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
 
         # Extract files based on configured skills
         for skill_item in repo.get("skills", []):
-            skill_path = skill_item["path"]  # e.g., 'skills/brainstorming/SKILL.md'
-            skill_parent_dir_rel = Path(skill_path).parent # 'skills/brainstorming'
-            skill_parent_dir_rel_posix = skill_parent_dir_rel.as_posix()
-            
-            # Destination path inside skills-library
             dest_skill_dir = library_dir / repo_id / skill_item["name"]
             active_libs.add(dest_skill_dir.resolve())
+            _extract_skill_if_needed(zip_path, skill_item, repo_id, commit_hash, dest_skill_dir)
+
+    return config_changed
+
+
+def _extract_skill_if_needed(zip_path: Path, skill_item: dict, repo_id: str, commit_hash: str, dest_skill_dir: Path):
+    """Extract files belonging to this skill directory from the ZIP file if not up to date."""
+    commit_file = dest_skill_dir / ".commit"
+    up_to_date = False
+    if dest_skill_dir.exists() and commit_file.exists():
+        try:
+            cached_commit = commit_file.read_text(encoding="utf-8-sig").strip()
+            if cached_commit == commit_hash and commit_hash:
+                up_to_date = True
+        except OSError:
+            pass
+
+    if up_to_date:
+        print(f"Skill '{skill_item['name']}' from {repo_id} is up to date.")
+        return
+
+    print(f"Extracting {skill_item['name']} from {repo_id}...")
+    if dest_skill_dir.exists():
+        try:
+            shutil.rmtree(dest_skill_dir)
+        except OSError as e:
+            print(f"Warning: Failed to remove directory {dest_skill_dir}: {e}", file=sys.stderr)
+            return
+
+    dest_skill_dir.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            _extract_zip_members(zf, skill_item, dest_skill_dir)
             
-            commit_file = dest_skill_dir / ".commit"
-            up_to_date = False
-            if dest_skill_dir.exists() and commit_file.exists():
-                try:
-                    cached_commit = commit_file.read_text(encoding="utf-8-sig").strip()
-                    if cached_commit == commit_hash and commit_hash:
-                        up_to_date = True
-                except OSError:
-                    pass
+        if commit_hash:
+            try:
+                commit_file.write_text(commit_hash, encoding="utf-8")
+            except OSError as e:
+                print(f"Warning: Failed to write commit hash to {commit_file}: {e}", file=sys.stderr)
+    except zipfile.BadZipFile:
+        if zip_path.exists():
+            try:
+                zip_path.unlink()
+            except OSError as e:
+                print(f"Warning: Failed to delete bad zip {zip_path}: {e}", file=sys.stderr)
+        raise
 
-            # Extract if not up to date
-            if not up_to_date:
-                print(f"Extracting {skill_item['name']} from {repo_id}...")
-                if dest_skill_dir.exists():
-                    shutil.rmtree(dest_skill_dir)
-                dest_skill_dir.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    with zipfile.ZipFile(zip_path, 'r') as zf:
-                        # Find matching file in zip (GitHub zipballs prefix folders with hashes)
-                        members = zf.namelist()
-                        prefix = ""
-                        for m in members:
-                            suffix_path = f"{skill_parent_dir_rel_posix}/{SKILL_FILENAME}"
-                            if m.endswith(suffix_path):
-                                prefix = m[:-len(suffix_path)]
-                                break
-                        
-                        if not prefix:
-                            # Fallback for SKILL.md directly at root
-                            root_suffix = f"/{SKILL_FILENAME}"
-                            for m in members:
-                                if m.endswith(root_suffix) and m.count('/') == 1:
-                                    prefix = m[:-len(SKILL_FILENAME)]
-                                    break
-                        
-                        # Extract files belonging to this skill directory
-                        if skill_parent_dir_rel_posix in (".", ""):
-                            target_zip_dir_prefix = prefix
-                        else:
-                            target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
-                        for m in members:
-                            if m.startswith(target_zip_dir_prefix):
-                                relative_member = m[len(target_zip_dir_prefix):]
-                                if not relative_member:
-                                    continue
-                                dest_file = dest_skill_dir / relative_member
-                                
-                                # Zip Slip Prevention
-                                dest_base = dest_skill_dir.resolve()
-                                if not dest_file.resolve().is_relative_to(dest_base):
-                                    raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
-                                
-                                if m.endswith('/'):
-                                    dest_file.mkdir(parents=True, exist_ok=True)
-                                else:
-                                    dest_file.parent.mkdir(parents=True, exist_ok=True)
-                                    with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
-                                        shutil.copyfileobj(source_f, target_f)
-                                        
-                    if commit_hash:
-                          try:
-                              commit_file.write_text(commit_hash, encoding="utf-8")
-                          except OSError:
-                              pass
-                except zipfile.BadZipFile:
-                    if zip_path.exists():
-                        try:
-                            zip_path.unlink()
-                        except OSError:
-                            pass
-                    raise
+
+def _extract_zip_members(zf: zipfile.ZipFile, skill_item: dict, dest_skill_dir: Path):
+    skill_path = skill_item["path"]
+    skill_parent_dir_rel = Path(skill_path).parent
+    skill_parent_dir_rel_posix = skill_parent_dir_rel.as_posix()
+    
+    members = zf.namelist()
+    prefix = ""
+    for m in members:
+        suffix_path = f"{skill_parent_dir_rel_posix}/{SKILL_FILENAME}"
+        if m.endswith(suffix_path):
+            prefix = m[:-len(suffix_path)]
+            break
+            
+    if not prefix:
+        root_suffix = f"/{SKILL_FILENAME}"
+        for m in members:
+            if m.endswith(root_suffix) and m.count('/') == 1:
+                prefix = m[:-len(SKILL_FILENAME)]
+                break
+
+    if skill_parent_dir_rel_posix in (".", ""):
+        target_zip_dir_prefix = prefix
+    else:
+        target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
+        
+    for m in members:
+        if m.startswith(target_zip_dir_prefix):
+            relative_member = m[len(target_zip_dir_prefix):]
+            if not relative_member:
+                continue
+            dest_file = dest_skill_dir / relative_member
+            
+            # Zip Slip Prevention
+            dest_base = dest_skill_dir.resolve()
+            if not dest_file.resolve().is_relative_to(dest_base):
+                raise ValueError(f"Path traversal detected: {dest_file} is outside {dest_base}")
+            
+            if m.endswith('/'):
+                dest_file.mkdir(parents=True, exist_ok=True)
             else:
-                print(f"Skill '{skill_item['name']}' from {repo_id} is up to date.")
+                dest_file.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(m) as source_f, open(dest_file, "wb") as target_f:
+                    shutil.copyfileobj(source_f, target_f)
 
-    # 1.5 Validate active workspace skills against library skills
-    library_skills = {}  # (repoId, skill_name) -> path
+
+def _validate_active_workspaces(config: dict) -> bool:
+    """Validate and auto-heal active workspace mapping entries."""
+    library_skills = {}
     for repo in config.get("library", []):
         r_id = repo["repoId"]
         for s in repo.get("skills", []):
@@ -437,14 +449,14 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
             if (r_id, s_name) in library_skills:
                 valid_skills.append(s)
             else:
-                # Try to auto-correct renamed/relocated skill path via substring match
+                # Try auto-healing substring match
                 repo_skills = [lib_s for lib in config.get("library", []) if lib["repoId"] == r_id for lib_s in lib.get("skills", [])]
                 match = None
                 for lib_s in repo_skills:
                     if lib_s["name"].lower() in s_name.lower() or s_name.lower() in lib_s["name"].lower():
                         match = lib_s
                         break
-                
+                        
                 if match:
                     new_name = match["name"]
                     print(f"Warning: Skill '{s_name}' from repo '{r_id}' was relocated/renamed. Auto-correcting workspace mapping to '{new_name}'.")
@@ -463,29 +475,42 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
 
     if workspace_changed:
         config["workspace"] = valid_workspaces
-        config_changed = True
+    return workspace_changed
 
+
+def sync(config_path: Path, root_path: Path, check_remote: bool = False):
+    print("Syncing skills...")
+    config = load_config(config_path)
+    repos_dir = root_path / REPOS_DIR_NAME
+    library_dir = root_path / LIBRARY_DIR_NAME
+    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
+    
+    repos_dir.mkdir(parents=True, exist_ok=True)
+    library_dir.mkdir(parents=True, exist_ok=True)
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    
+    active_zips = set()
+    active_libs = set()
+    
+    config_changed = _resolve_and_download_repos(config, repos_dir, library_dir, check_remote, active_zips, active_libs)
+    config_changed |= _validate_active_workspaces(config)
+    
     if config_changed:
         save_config(config, config_path)
-
-    # 2. Prune obsolete zips
+        
     _prune_obsolete_zips(repos_dir, active_zips)
-
-    # 3. Prune obsolete library folders
     _prune_obsolete_libs(library_dir, active_libs)
-
-    # 4. Sync workspace links (symlinks inside ~/.agents/skills/)
-    target_links = {} # target_name -> source_absolute_path
     
-    # External workspace skills
+    # Sync workspace links
+    target_links = {}
     for repo in config.get("workspace", []):
         for skill_item in repo.get("skills", []):
-            source = skill_item["source"] # 'obra/superpowers/skills/brainstorming'
-            target = skill_item["target"] # 'sp-brainstorming'
+            source = skill_item["source"]
+            target = skill_item["target"]
             if target in target_links:
                 raise ValueError(f"Duplicate target name: {target} in workspace configuration")
             target_links[target] = (library_dir / source).resolve()
-
+            
     _rebuild_symlinks(skills_dir, library_dir, target_links)
     print("Sync completed successfully.")
 
