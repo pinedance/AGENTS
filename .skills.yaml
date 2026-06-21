@@ -104,7 +104,7 @@ library:
 - repoId: pinedance/AGENTS
   repoType: github
   repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: d5caaad48bd27911d2a94012f325b68c75ea57a7
+  commit: 703e13ad9f0e0e8a0f98a3a5aa15d7875ba37e5d
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -112,6 +112,8 @@ library:
     path: skills/executing-plans/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
+  - name: my-coding-guidelines
+    path: skills/my-coding-guidelines/SKILL.md
   - name: my-git-commit
     path: skills/my-git-commit/SKILL.md
   - name: my-new-session
@@ -160,9 +162,9 @@ library:
   repoUrl: https://github.com/tykimos/cheliped-browser.git
   commit: 01db5ad695c7f0a7af8c90d6fdd9adbc495afe74
   skills:
-  - name: browser
+  - name: cheliped-browser
     path: browser/SKILL.md
-  - name: computer-use
+  - name: cheliped-computer-use
     path: computer-use/SKILL.md
 - repoId: K-Dense-AI/scientific-agent-skills
   repoType: github
@@ -499,6 +501,9 @@ workspace:
   - name: my-new-session
     source: pinedance/AGENTS/my-new-session
     target: my-new-session
+  - name: my-coding-guidelines
+    source: pinedance/AGENTS/my-coding-guidelines
+    target: my-coding-guidelines
 - repoId: anthropics/skills
   skills:
   - name: pdf
