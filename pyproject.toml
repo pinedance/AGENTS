@@ -15,4 +15,9 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+norecursedirs = [
+    ".git",
+    ".skills-repos",
+    "skills-library",
+]
 
