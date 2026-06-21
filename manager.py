@@ -89,11 +89,14 @@ def save_config(config: dict, path: Path):
                 pass
         raise
 
-def download_repo_zip(repo_id: str, dest_path: Path):
+def download_repo_zip(repo_id: str, dest_path: Path, commit_or_branch: str = None):
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     # Avoid api.github.com due to strict rate limits.
-    # Try downloading from main branch first, then fallback to master branch.
-    urls = [tpl.format(repo_id=repo_id) for tpl in GITHUB_ZIP_URL_TEMPLATES]
+    # Try downloading from specific commit/branch if provided, else main/master branch.
+    if commit_or_branch:
+        urls = [f"https://github.com/{repo_id}/archive/{commit_or_branch}.zip"]
+    else:
+        urls = [tpl.format(repo_id=repo_id) for tpl in GITHUB_ZIP_URL_TEMPLATES]
     
     temp_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
     last_err = None

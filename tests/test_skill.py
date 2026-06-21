@@ -1137,14 +1137,19 @@ def test_myskills_command_stages_commits_pushes_and_syncs(mock_run, mock_sync, t
     # Check that sync was triggered
     mock_sync.assert_called_once_with(temp_env / ".skills.yaml", temp_env)
 
-
-
-
-
-
-
-
-
-
-
+def test_download_repo_zip_with_commit(tmp_path):
+    import manager
+    from unittest.mock import patch, MagicMock
+    dest = tmp_path / "repo.zip"
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_resp = MagicMock()
+        mock_resp.__enter__.return_value = mock_resp
+        mock_resp.read.return_value = b""
+        mock_urlopen.return_value = mock_resp
+        
+        manager.download_repo_zip("foo/bar", dest, commit_or_branch="abcdef123456")
+        
+        args, kwargs = mock_urlopen.call_args
+        req = args[0]
+        assert req.full_url == "https://github.com/foo/bar/archive/abcdef123456.zip"
 
