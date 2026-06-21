@@ -45,7 +45,13 @@ Assess maintainability, readability, and naming conventions strictly against the
 
 ### 4. Duplicate Code Evaluation (중복 코드 평가)
 
-Identify repetition that increases maintenance burden (violating the **Single Source of Truth (SSoT)** principle in [my-coding-guidelines](../my-coding-guidelines/SKILL.md)).
+Identify repetition that increases maintenance burden:
+
+- **Near-identical blocks**: Differ only by a variable or constant → suggest extracting into a parameterized function.
+- **Copy-pasted logic**: Duplicated code that should be shared → suggest extracting to a utility or base class.
+- **Multiple implementations**: Same concept implemented in different parts of the codebase → suggest consolidating.
+- **Similar data structures**: Structures representing the same domain concept → suggest unifying.
+- **DRY (Don't Repeat Yourself) principle**: Evaluate compliance against the SSoT guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md).
 
 When flagging duplication, point to *all* locations and suggest the consolidation target.
 

@@ -15,19 +15,19 @@ This skill defines the core development principles, coding style, naming convent
 *   **Principle of Least Surprise**: Maintain architectural and design consistency with the existing codebase to ensure predictable behavior.
 *   **Single Responsibility Principle (SRP)**: Restrict each module, class, and function to a single logical responsibility.
 *   **Loose Coupling**: Minimize dependencies between modules; prevent components from accessing or knowing internal states of others.
-*   **Isolation-focused Testability**: Decouple logic from external resources (e.g., databases, networks) using dependency injection to enable isolated unit testing.
+*   **Dependency Inversion (DIP)**: Decouple business logic from concrete external resources (e.g., databases, networks) using interfaces and dependency injection to enable isolated unit testing.
 
 ---
 
 ## 2. Error Handling & Reliability
 
-*   **Fast-Fail (for Programming Errors)**: Reject invalid arguments, incorrect types, or invalid internal states immediately at entry points to fail loudly and prevent error propagation.
-*   **Exception Safety (for Operational Errors)**: Wrap volatile operations (e.g., network, database, I/O) in try-catch blocks to handle or propagate operational failures gracefully.
+*   **Fast-Fail (for Programming Errors)**: Halt execution immediately (e.g., by throwing exceptions) upon encountering invalid arguments, incorrect types, or invalid internal states at entry points to prevent corrupted state propagation.
+*   **Graceful Operational Error Handling**: Wrap volatile operational tasks (e.g., network, database, I/O) in try-catch blocks to handle or propagate failures gracefully without collapsing the application state.
 *   **Exception Swallowing Prevention**: Ban empty catch blocks or over-broad catches (e.g., `catch (Exception e)`) that mask unexpected runtime bugs.
 *   **Explicit Failure over Silent Fallbacks**: Reject returning ambiguous default values (e.g., `null`, `-1`) on failure if they cannot be distinguished from valid successful states.
 *   **Stack Trace Preservation**: Preserve the original stack trace and context when re-throwing or wrapping exceptions.
 *   **Minimal Try-Catch Scope**: Keep try blocks minimal and focused to prevent wrapping unrelated lines and masking distinct errors.
-*   **Defensive Design**: Handle boundary conditions (e.g., empty collections, null/undefined inputs, off-by-one limits) proactively at boundaries.
+*   **Defensive Design (for Boundary States)**: Handle valid but extreme boundary conditions (e.g., empty collections, null/undefined inputs, off-by-one limits) gracefully at boundaries to prevent unexpected runtime crashes.
 
 ---
 
@@ -37,7 +37,7 @@ This skill defines the core development principles, coding style, naming convent
 *   **Pure Functions First**: Prioritize pure, stateless functions with no side effects to ensure thread-safety and predictability.
 *   **Early Return / Guard Clauses**: Limit logical nesting to a maximum of 2 levels. Use early returns and guard clauses to enhance readability.
 *   **Function Size Limit**: Limit functions to a maximum of 30–40 lines. Scrutinize and refactor functions exceeding this threshold.
-*   **Single Level of Abstraction (SLA)**: Ensure a single function orchestrates logic at a uniform level of abstraction; do not mix orchestration with low-level details.
+*   **Single Level of Abstraction Principle (SLAP)**: Ensure a single function orchestrates logic at a uniform level of abstraction; do not mix high-level orchestration with low-level implementation details.
 *   **Constants over Magic Values**: Replace raw literals (numbers, strings) in logic with descriptive named constants.
 *   **Dead Code Elimination**: Remove unreachable branches, unused variables, functions, and imports immediately.
 
