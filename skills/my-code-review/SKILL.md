@@ -10,6 +10,8 @@ Perform a comprehensive, multi-dimensional review of the target codebase or file
 
 ## Review Dimensions
 
+Perform the review across the following five dimensions. For dimensions 3, 4, and 5, evaluate the code strictly against the standards defined in the [my-coding-guidelines](../my-coding-guidelines/SKILL.md) skill.
+
 ### 1. Execution Logic Evaluation (실행 로직 평가)
 
 Trace the actual execution flow and reason about correctness:
@@ -39,45 +41,17 @@ Be specific: quote the line or snippet and explain *why* it is an error.
 
 ### 3. Code Quality Evaluation (코드 퀄리티 평가)
 
-Assess maintainability and readability:
-
-- **Naming**: Do names communicate intent without needing comments to explain them?
-- **Function size and responsibility**: Is each function doing one thing? Functions longer than ~30–40 lines are worth scrutinizing.
-- **Abstraction level consistency**: Does a single function mix high-level orchestration with low-level detail?
-- **Coupling**: Are modules unnecessarily aware of each other's internals?
-- **Magic values**: Are raw literals scattered through logic where named constants belong?
-- **Dead code**: Are there unreachable branches, unused variables, or imports?
-- **Testability**: Is the code structured so that units can be tested in isolation?
-
-Distinguish between must-fix issues (correctness, security) and nice-to-have improvements (style, naming). Don't treat style opinions as bugs.
+Assess maintainability, readability, and naming conventions strictly against the standards defined in the [my-coding-guidelines](../my-coding-guidelines/SKILL.md) skill.
 
 ### 4. Duplicate Code Evaluation (중복 코드 평가)
 
-Identify repetition that increases maintenance burden:
-
-- Near-identical blocks that differ only by a variable or constant → extract into a parameterized function
-- Copy-pasted logic that should be shared → extract to a utility or base class
-- Multiple implementations of the same concept in different parts of the codebase → consolidate
-- Similar data structures that represent the same domain concept → unify
+Identify repetition that increases maintenance burden (violating the **Single Source of Truth (SSoT)** principle in [my-coding-guidelines](../my-coding-guidelines/SKILL.md)).
 
 When flagging duplication, point to *all* locations and suggest the consolidation target.
 
 ### 5. Fast-Fail & Exception Handling Review (fast fail 위배 / 과도한 예외처리 검토)
 
-Fast-fail means: detect invalid state as early as possible and stop loudly, rather than silently carrying bad state forward.
-
-Look for violations:
-
-- **Swallowing exceptions**: `catch` blocks that log (or do nothing) and continue — the caller never knows something went wrong
-- **Over-broad catches**: `catch (Exception e)` or `except:` that mask unexpected errors, hiding bugs
-- **Silent fallbacks**: returning a default value on error when the caller has no way to distinguish success from failure
-- **Deferred validation**: inputs validated deep in the call stack rather than at entry points
-- **Excessive nesting**: defensive checks that wrap every operation in try/catch when only specific errors are expected
-- **Suppressed stack traces**: re-throwing as a generic error that loses origin context
-
-Also flag the opposite — code that *should* have a try/catch but doesn't, leaving the caller exposed to unhandled exceptions.
-
-The principle: fail loud, fail early, fail with enough context to diagnose.
+Evaluate the exception handling design and state validation flow strictly against the **Fast-Fail & Exception Safety** guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md).
 
 ---
 

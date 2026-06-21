@@ -76,38 +76,7 @@ Perform the following git workspace checks and operations:
 
 ## Step 4: Core Development Principles
 
-Always adhere to the following development principles during the session:
-
-1. **Fast-Fail Principle**:
-   - Implement code that fails immediately and visibly when an error or invalid state is encountered (e.g., validate arguments early, avoid swallowing exceptions, fast-fail on critical checks). Do not hide bugs behind excessive exception handling.
-2. **Single Source of Truth (SSoT) Principle**:
-   - Maintain a single, unambiguous representation of data, logic, and configuration. Avoid duplicating code, settings, or states across different parts of the system. Always reference the primary source.
-
-1. **Core Architecture**:
-   - **Fast-Fail Principle** (Validate early, reject immediately)
-   - **SSoT** (Single Source of Truth)
-   - **Principle of Least Surprise** (Maintain architectural consistency with codebase)
-
-2. **Coding Style & Logic**:
-   - **Strict Typing & Explicit Coding** (Ban magic code, enforce explicit declarations)
-   - **Stateless & Pure Functions First** (Minimize side effects)
-   - **Defensive Programming** (Strict input validation & edge-case handling)
-   - **Exception Safety** (Ensure consistent state during errors)
-   - **SRP** (Single Responsibility Principle)
-   - **Low Cognitive Complexity** (Limit nesting to max 2 levels, prefer early returns)
-
-3. **Naming Conventions**:
-   - **Hierarchical Naming / Left-to-Right Naming** (e.g., `price_daily`, `user_total`)
-   - **Verb-Noun Convention** (Functions must start with a verb)
-   - **Standardized Abbreviations Only** (e.g., `calc`, `init`, `config`, `stats` - *Do not invent custom cuts*)
-   - **Structural Self-Documentation** (Reveal intent through clear hierarchy, strictly ban filler words like `data`, `info`, `temp`, `my`, `value`)
-   - **Boolean Prefix Convention** (e.g., `is_`, `has_`, `can_`)
-   - **Symmetric Antonyms Rule** (e.g., `open/close`, `start/stop`, `get/set`)
-   - **Plural Naming for Collections** (e.g., `users`, `user_map`)
-
-4. **Documentation**:
-   - **Document the "Why", Not the "What"**
-
+Always adhere to the core development principles defined in the [my-coding-guidelines](../my-coding-guidelines/SKILL.md) skill. Ensure that all codebase modifications, architecture designs, naming patterns, and error handling mechanisms conform strictly to those guidelines.
 ---
 
 ## Example Interaction Flow
