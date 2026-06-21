@@ -1153,3 +1153,17 @@ def test_download_repo_zip_with_commit(tmp_path):
         req = args[0]
         assert req.full_url == "https://github.com/foo/bar/archive/abcdef123456.zip"
 
+
+def test_sync_cli_parser_check_remote():
+    import sys
+    from unittest.mock import patch
+    import manager
+    
+    test_args = ["manager.py", "sync", "--check-remote"]
+    with patch.object(sys, "argv", test_args), patch("manager.sync") as mock_sync:
+        manager.main()
+        mock_sync.assert_called_once()
+        kwargs = mock_sync.call_args[1]
+        assert kwargs.get("check_remote") is True
+
+

@@ -703,7 +703,8 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     subparsers = parser.add_subparsers(dest="command", required=True)
     
     # sync
-    subparsers.add_parser("sync", help=f"Sync local file system with {DEFAULT_CONFIG_NAME}")
+    sync_parser = subparsers.add_parser("sync", help=f"Sync local file system with {DEFAULT_CONFIG_NAME}")
+    sync_parser.add_argument("--check-remote", action="store_true", help="Compare with remote latest commit ID as well")
     
     # library
     lib_parser = subparsers.add_parser("library", help="Manage skill library")
@@ -737,7 +738,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     cfg = cli_cfg or config_path or (root / DEFAULT_CONFIG_NAME)
     
     if args.command == "sync":
-        sync(cfg, root)
+        sync(cfg, root, check_remote=args.check_remote)
     elif args.command == "library":
         if args.subcommand == "add":
             library_add(args.repoId, cfg, root)
