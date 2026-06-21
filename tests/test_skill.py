@@ -1200,4 +1200,14 @@ library:
         mock_download.assert_called_with("foo/bar", zip_path, "commit1")
 
 
+def test_get_zip_comment(tmp_path):
+    import manager
+    import zipfile
+    zip_path = tmp_path / "test.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.comment = b"test-comment"
+    assert manager._get_zip_comment(zip_path) == "test-comment"
+
+
+
 

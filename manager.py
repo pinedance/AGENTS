@@ -1,12 +1,14 @@
 from pathlib import Path
 import argparse
+import inspect
 import os
+import re
 import shutil
+import subprocess
 import sys
 import urllib.error
 import urllib.request
 import zipfile
-import re
 from ruamel.yaml import YAML
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
@@ -36,6 +38,17 @@ def _sanitize_config(data: dict) -> None:
             for repo in data[key]:
                 if isinstance(repo, dict) and "repoId" in repo and isinstance(repo["repoId"], str):
                     repo["repoId"] = repo["repoId"].strip(", ")
+
+def _get_zip_comment(zip_path: Path) -> str:
+    """Extract comment from a zip file safely."""
+    if not zip_path.exists():
+        return ""
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            return zf.comment.decode("utf-8").strip()
+    except (zipfile.BadZipFile, OSError):
+        pass
+    return ""
 
 def prompt_selection(candidates, format_fn, title_label, prompt_label):
     if not candidates:
