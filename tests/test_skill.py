@@ -1209,5 +1209,13 @@ def test_get_zip_comment(tmp_path):
     assert manager._get_zip_comment(zip_path) == "test-comment"
 
 
+def test_git_missing_handling():
+    import manager
+    from unittest.mock import patch
+    with patch("subprocess.run", side_effect=FileNotFoundError):
+        assert manager.get_remote_commit_hash("some_url") == ""
+
+
+
 
 

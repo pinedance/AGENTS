@@ -226,7 +226,6 @@ def download_repo_zip(repo_id: str, dest_path: Path, commit_or_branch: str = Non
 
 
 def get_remote_commit_hash(repo_url: str) -> str:
-    import subprocess
     try:
         res = subprocess.run(
             ["git", "ls-remote", repo_url, "HEAD"],
@@ -237,7 +236,9 @@ def get_remote_commit_hash(repo_url: str) -> str:
         output = res.stdout.strip()
         if output:
             return output.split()[0]
-    except Exception as e:
+    except FileNotFoundError:
+        print("Error: git command line tool not found on system.", file=sys.stderr)
+    except subprocess.CalledProcessError as e:
         print(f"Error fetching remote commit hash for {repo_url}: {e}", file=sys.stderr)
     return ""
 
@@ -295,7 +296,6 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
             if commit_hash:
                 print(f"Downloading {repo_id} (commit {commit_hash})...")
                 # Clean signature inspection to support mocked functions in tests
-                import inspect
                 is_mock = hasattr(download_repo_zip, "_mock_call")
                 func_to_inspect = download_repo_zip.side_effect if (is_mock and download_repo_zip.side_effect) else download_repo_zip
                 has_commit_arg = True
@@ -706,12 +706,14 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
 
 
 def myskills(message: str | None, config_path: Path, root_path: Path):
-    import subprocess
     print("Checking repository status...")
     # 1. Get branch
     try:
         res_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
         branch = res_branch.stdout.strip()
+    except FileNotFoundError:
+        print("Error: git command line tool not found on system.", file=sys.stderr)
+        return
     except subprocess.CalledProcessError:
         print("Error: Not a git repository.", file=sys.stderr)
         return
