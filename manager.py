@@ -1,7 +1,6 @@
 from pathlib import Path
 import argparse
 import filecmp
-import inspect
 import os
 import re
 import shutil
@@ -10,13 +9,14 @@ import sys
 import urllib.error
 import urllib.request
 import zipfile
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, YAMLError
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 DEFAULT_SKILLS_DIR = "~/.agents/skills"
 DEFAULT_CONFIG_NAME = ".skills.yaml"
 SKILL_FILENAME = "SKILL.md"
+COMMIT_FILENAME = ".commit"
 REPOS_DIR_NAME = ".skills-repos"
 LIBRARY_DIR_NAME = "skills-library"
 SKILLS_DIR_ENV_VAR = "SKILLS_DIR"
@@ -61,9 +61,13 @@ def _prune_obsolete_zips(repos_dir: Path, active_zips: set):
             if p.suffix == ".zip" and p.resolve() not in active_zips:
                 try:
                     p.unlink()
+                except OSError as e:
+                    print(f"Warning: Failed to delete stale zip {p}: {e}", file=sys.stderr)
+                    continue
+                try:
                     p.parent.rmdir()
                 except OSError:
-                    pass
+                    pass  # Non-empty dir — expected, skip
 
 def _prune_obsolete_libs(library_dir: Path, active_libs: set):
     """Clean up obsolete extracted library directories."""
@@ -75,13 +79,13 @@ def _prune_obsolete_libs(library_dir: Path, active_libs: set):
             if (p / SKILL_FILENAME).exists() and p.resolve() not in active_libs:
                 try:
                     shutil.rmtree(p)
-                except OSError:
-                    pass
+                except OSError as e:
+                    print(f"Warning: Failed to remove stale library directory {p}: {e}", file=sys.stderr)
             else:
                 try:
                     p.rmdir()
                 except OSError:
-                    pass
+                    pass  # Non-empty dir — expected, skip
 
 def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
     """Rebuild symlinks in skills_dir pointing to library_dir."""
@@ -122,12 +126,12 @@ def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
                         link_path.unlink()
                         os.symlink(source_abs, link_path)
                         continue
-                except OSError:
+                except OSError as e:
                     try:
                         link_path.unlink()
                         os.symlink(source_abs, link_path)
                     except OSError:
-                        pass
+                        raise OSError(f"Failed to recreate symlink '{target}' -> {source_abs}: {e}") from e
                     continue
                 
                 if real_link != source_abs:
@@ -138,8 +142,8 @@ def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
             print(f"Creating symlink: {target} -> {source_abs}")
             try:
                 os.symlink(source_abs, link_path)
-            except OSError:
-                pass
+            except OSError as e:
+                raise OSError(f"Failed to create symlink '{target}' -> {source_abs}: {e}") from e
 
 def prompt_selection(candidates, format_fn, title_label, prompt_label):
     if not candidates:
@@ -244,97 +248,118 @@ def get_remote_commit_hash(repo_url: str) -> str:
     return ""
 
 
-def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path, check_remote: bool, active_zips: set, active_libs: set) -> bool:
-    """Download missing/changed repository ZIP files and extract their configured skills."""
+def _resolve_commit_hash(
+    repo: dict,
+    zip_path: Path,
+    check_remote: bool,
+    resolved_hashes: dict,
+) -> tuple[str, bool]:
+    """Resolve the effective commit hash for a repo and flag if a re-download is needed.
+
+    Returns (commit_hash, force_download).
+    """
+    repo_id = repo.get("repoId", "")
+    repo_url = repo.get("repoUrl", "")
+    commit_hash = repo.get("commit", "")
+
+    # Support dynamic "latest" resolution with per-URL caching
+    if commit_hash == "latest" and repo_url:
+        if repo_url not in resolved_hashes:
+            resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
+        resolved_hash = resolved_hashes[repo_url]
+        commit_hash = resolved_hash if resolved_hash else _get_zip_comment(zip_path)
+
+    local_hash = _get_zip_comment(zip_path)
+
+    # ID1 vs ID2: config hash vs local zip hash
+    force_download = bool(
+        zip_path.exists() and local_hash and commit_hash and commit_hash != local_hash
+    )
+    if force_download:
+        print(f"Warning: Local file for {repo_id} does not match .skills.yaml version (ID1: {commit_hash}, ID2: {local_hash})")
+
+    # ID1 vs ID3: config hash vs remote HEAD (--check-remote, informational only)
+    if check_remote and repo_url:
+        if repo_url not in resolved_hashes:
+            resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
+        remote_hash = resolved_hashes[repo_url]
+        if commit_hash and remote_hash and commit_hash != remote_hash:
+            print(f"Warning: {repo_id} is not up-to-date with remote latest (ID1: {commit_hash}, ID3: {remote_hash}). Update required.")
+
+    return commit_hash, force_download
+
+
+def _download_repo_if_needed(
+    repo: dict,
+    zip_path: Path,
+    commit_hash: str,
+    force_download: bool,
+) -> bool:
+    """Download the repo zip if missing or stale, and backfill commit hash into repo dict.
+
+    Returns True if the config was changed.
+    """
+    configured_commit = repo.get("commit", "")
     config_changed = False
-    resolved_hashes = {}
-    
-    for repo in config.get("library", []):
-        repo_id = repo.get("repoId", "")
-        if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
-            print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
-            continue
-            
-        zip_path = repos_dir / f"{repo_id}.zip"
-        active_zips.add(zip_path.resolve())
-        
-        repo_url = repo.get("repoUrl", "")
-        configured_commit = repo.get("commit", "")
-        commit_hash = configured_commit
 
-        # Support dynamic latest commit hash resolution with caching
-        if commit_hash == "latest" and repo_url:
-            if repo_url not in resolved_hashes:
-                resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
-            resolved_hash = resolved_hashes[repo_url]
-            if resolved_hash:
-                commit_hash = resolved_hash
-            else:
-                local_hash = _get_zip_comment(zip_path)
-                commit_hash = local_hash if local_hash else ""
+    if not zip_path.exists() or force_download:
+        if zip_path.exists():
+            try:
+                zip_path.unlink()
+            except OSError as e:
+                print(f"Warning: Failed to delete stale zip {zip_path}: {e}", file=sys.stderr)
+        if commit_hash:
+            print(f"Downloading {repo['repoId']} (commit {commit_hash})...")
+            download_repo_zip(repo["repoId"], zip_path, commit_hash)
+        else:
+            print(f"Downloading {repo['repoId']}...")
+            download_repo_zip(repo["repoId"], zip_path)
 
-        # Extract local comment (ID2) using helper
+        # Backfill commit hash from newly downloaded zip when it was previously unknown
+        if not commit_hash and zip_path.exists():
+            extracted_hash = _get_zip_comment(zip_path)
+            if extracted_hash:
+                commit_hash = extracted_hash
+                if configured_commit != "latest":
+                    repo["commit"] = commit_hash
+                    config_changed = True
+    else:
         local_hash = _get_zip_comment(zip_path)
-
-        # Compare ID1 vs ID2
-        force_download = False
-        if zip_path.exists() and local_hash and commit_hash and commit_hash != local_hash:
-            print(f"Warning: Local file for {repo_id} does not match .skills.yaml version (ID1: {commit_hash}, ID2: {local_hash})")
-            force_download = True
-
-        # Compare ID1 vs ID3 (--check-remote)
-        if check_remote and repo_url:
-            if repo_url not in resolved_hashes:
-                resolved_hashes[repo_url] = get_remote_commit_hash(repo_url)
-            remote_hash = resolved_hashes[repo_url]
-            if commit_hash and remote_hash and commit_hash != remote_hash:
-                print(f"Warning: {repo_id} is not up-to-date with remote latest (ID1: {commit_hash}, ID3: {remote_hash}). Update required.")
-
-        # Download logic
-        if not zip_path.exists() or force_download:
-            if zip_path.exists():
-                try:
-                    zip_path.unlink()
-                except OSError as e:
-                    print(f"Warning: Failed to delete stale zip {zip_path}: {e}", file=sys.stderr)
-            if commit_hash:
-                print(f"Downloading {repo_id} (commit {commit_hash})...")
-                # Clean signature inspection to support mocked functions in tests
-                is_mock = hasattr(download_repo_zip, "_mock_call")
-                func_to_inspect = download_repo_zip.side_effect if (is_mock and download_repo_zip.side_effect) else download_repo_zip
-                has_commit_arg = True
-                try:
-                    sig = inspect.signature(func_to_inspect)
-                    params = list(sig.parameters.values())
-                    if len(params) < 3 and not any(p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD) for p in params):
-                        has_commit_arg = False
-                except Exception:
-                    pass
-
-                if has_commit_arg:
-                    download_repo_zip(repo_id, zip_path, commit_hash)
-                else:
-                    download_repo_zip(repo_id, zip_path)
-            else:
-                print(f"Downloading {repo_id}...")
-                download_repo_zip(repo_id, zip_path)
-
-            # If commit_hash was missing, extract it from the newly downloaded zip
-            if not commit_hash and zip_path.exists():
-                extracted_hash = _get_zip_comment(zip_path)
-                if extracted_hash:
-                    commit_hash = extracted_hash
-                    if configured_commit != "latest":
-                        repo["commit"] = commit_hash
-                        config_changed = True
-        elif not commit_hash and local_hash:
-            # If zip exists but config has no commit, update config with local hash
+        if not commit_hash and local_hash:
+            # Zip exists but config has no commit — backfill from local zip
             commit_hash = local_hash
             if configured_commit != "latest":
                 repo["commit"] = commit_hash
                 config_changed = True
 
-        # Extract files based on configured skills
+    return config_changed
+
+
+def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path, check_remote: bool, active_zips: set, active_libs: set) -> bool:
+    """Orchestrate commit resolution, downloading, and skill extraction for all library repos."""
+    config_changed = False
+    resolved_hashes: dict = {}
+
+    for repo in config.get("library", []):
+        repo_id = repo.get("repoId", "")
+        if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
+            print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
+            continue
+
+        zip_path = repos_dir / f"{repo_id}.zip"
+        active_zips.add(zip_path.resolve())
+
+        commit_hash, force_download = _resolve_commit_hash(repo, zip_path, check_remote, resolved_hashes)
+        config_changed |= _download_repo_if_needed(repo, zip_path, commit_hash, force_download)
+
+        # Reconcile commit_hash for skill extraction:
+        # - If _download_repo_if_needed backfilled a real hash (commit was ""), use it.
+        # - If config says "latest", keep the resolved hash from _resolve_commit_hash (not "latest").
+        # - Otherwise (specific hash), repo["commit"] equals commit_hash already.
+        stored_commit = repo.get("commit", "")
+        if stored_commit and stored_commit != "latest":
+            commit_hash = stored_commit
+
         for skill_item in repo.get("skills", []):
             dest_skill_dir = library_dir / repo_id / skill_item["name"]
             active_libs.add(dest_skill_dir.resolve())
@@ -345,7 +370,7 @@ def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path
 
 def _extract_skill_if_needed(zip_path: Path, skill_item: dict, repo_id: str, commit_hash: str, dest_skill_dir: Path):
     """Extract files belonging to this skill directory from the ZIP file if not up to date."""
-    commit_file = dest_skill_dir / ".commit"
+    commit_file = dest_skill_dir / COMMIT_FILENAME
     up_to_date = False
     if dest_skill_dir.exists() and commit_file.exists():
         try:
@@ -451,18 +476,21 @@ def _validate_active_workspaces(config: dict) -> bool:
             else:
                 # Try auto-healing substring match
                 repo_skills = [lib_s for lib in config.get("library", []) if lib["repoId"] == r_id for lib_s in lib.get("skills", [])]
-                match = None
+                matches = []
                 for lib_s in repo_skills:
                     if lib_s["name"].lower() in s_name.lower() or s_name.lower() in lib_s["name"].lower():
-                        match = lib_s
-                        break
+                        matches.append(lib_s)
                         
-                if match:
+                if len(matches) == 1:
+                    match = matches[0]
                     new_name = match["name"]
                     print(f"Warning: Skill '{s_name}' from repo '{r_id}' was relocated/renamed. Auto-correcting workspace mapping to '{new_name}'.")
                     s["name"] = new_name
                     s["source"] = f"{r_id}/{new_name}"
                     valid_skills.append(s)
+                    workspace_changed = True
+                elif len(matches) > 1:
+                    print(f"Warning: Skill '{s_name}' from repo '{r_id}' is ambiguous (matches: {[m['name'] for m in matches]}). Removing from active workspace.")
                     workspace_changed = True
                 else:
                     print(f"Warning: Skill '{s_name}' from repo '{r_id}' is no longer available in the library. Removing from active workspace.")
@@ -525,9 +553,19 @@ def _extract_name_from_front_matter(content: str) -> str:
             data = yaml.load(yaml_content)
             if data and isinstance(data, dict) and "name" in data:
                 return str(data["name"]).strip()
-        except Exception:
+        except YAMLError:
             pass
     return ""
+
+
+def _read_skill_name_from_zip(zf: zipfile.ZipFile, member: str) -> str:
+    """Read and parse the skill name from a SKILL.md entry inside a zip file."""
+    try:
+        with zf.open(member) as f:
+            content = f.read().decode("utf-8", errors="ignore")
+            return _extract_name_from_front_matter(content)
+    except (KeyError, OSError, UnicodeDecodeError):
+        return ""
 
 
 def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
@@ -540,30 +578,14 @@ def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
                 # Extract skill path relative to repo root (excluding zipball root hash folder)
                 parts = m.split("/")
                 skill_path = "/".join(parts[1:])
-                # Read SKILL.md from zip
-                try:
-                    with zf.open(m) as f:
-                        content = f.read().decode("utf-8", errors="ignore")
-                        skill_name = _extract_name_from_front_matter(content)
-                except Exception:
-                    skill_name = ""
+                skill_name = _read_skill_name_from_zip(zf, m)
                 # Fallback to parent folder name
                 if not skill_name:
-                    if len(parts) == 2:
-                        skill_name = repo_id.split("/")[-1]
-                    else:
-                        skill_name = parts[-2]
+                    skill_name = repo_id.split("/")[-1] if len(parts) == 2 else parts[-2]
                 skills_found.append({"name": skill_name, "path": skill_path})
             elif m.endswith(SKILL_FILENAME) and "/" not in m:
                 # Skill at root
-                try:
-                    with zf.open(m) as f:
-                        content = f.read().decode("utf-8", errors="ignore")
-                        skill_name = _extract_name_from_front_matter(content)
-                except Exception:
-                    skill_name = ""
-                if not skill_name:
-                    skill_name = repo_id.split("/")[-1]
+                skill_name = _read_skill_name_from_zip(zf, m) or repo_id.split("/")[-1]
                 skills_found.append({"name": skill_name, "path": SKILL_FILENAME})
     return skills_found, commit_hash
 
@@ -822,7 +844,7 @@ def _get_local_repo_id() -> str | None:
         match = re.search(r"github\.com[:/]([^/\s]+/[^/\s.]+)", url)
         if match:
             return match.group(1)
-    except Exception:
+    except (FileNotFoundError, subprocess.CalledProcessError, AttributeError):
         pass
     return None
 
@@ -834,7 +856,7 @@ def _sync_library_to_source(lib_dir: Path, src_dir: Path):
     comparison = filecmp.dircmp(lib_dir, src_dir)
     
     for name in comparison.left_only:
-        if name == ".commit":
+        if name == COMMIT_FILENAME:
             continue
         lib_path = lib_dir / name
         src_path = src_dir / name
@@ -846,7 +868,7 @@ def _sync_library_to_source(lib_dir: Path, src_dir: Path):
             print(f"Copied file: {name}")
             
     for name in comparison.diff_files:
-        if name == ".commit":
+        if name == COMMIT_FILENAME:
             continue
         shutil.copy2(lib_dir / name, src_dir / name)
         print(f"Updated file: {name}")
@@ -908,7 +930,18 @@ def myskills(message: str | None, config_path: Path, root_path: Path):
         return
 
     # 2. Check status
-    res_status = subprocess.run(["git", "status", "--porcelain", "skills/"], capture_output=True, text=True, check=True)
+    try:
+        res_status = subprocess.run(
+            ["git", "status", "--porcelain", "skills/"],
+            capture_output=True, text=True, check=True
+        )
+    except FileNotFoundError:
+        print("Error: git command line tool not found on system.", file=sys.stderr)
+        return
+    except subprocess.CalledProcessError as e:
+        print(f"Error: git status failed: {e}", file=sys.stderr)
+        return
+
     if not res_status.stdout.strip():
         print("No changes in skills/ to publish. Syncing...")
         sync(config_path, root_path)
@@ -917,9 +950,13 @@ def myskills(message: str | None, config_path: Path, root_path: Path):
     # 3. Add, commit, push
     msg = message or "Update skills"
     print(f"Staging, committing, and pushing changes on branch '{branch}'...")
-    subprocess.run(["git", "add", "skills/"], check=True)
-    subprocess.run(["git", "commit", "-m", msg], check=True)
-    subprocess.run(["git", "push", "origin", branch], check=True)
+    try:
+        subprocess.run(["git", "add", "skills/"], check=True)
+        subprocess.run(["git", "commit", "-m", msg], check=True)
+        subprocess.run(["git", "push", "origin", branch], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error: git operation failed: {e}", file=sys.stderr)
+        return
 
 
     # 4. Sync
@@ -989,10 +1026,3 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
