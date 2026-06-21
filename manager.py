@@ -578,7 +578,8 @@ def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool
     for r in config["library"]:
         if r["repoId"] == repo_id:
             r["skills"] = skills_found
-            r["commit"] = commit_hash
+            if r.get("commit") != "latest":
+                r["commit"] = commit_hash
             found = True
             break
     if not found:

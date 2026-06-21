@@ -1228,6 +1228,39 @@ def test_git_missing_handling():
         assert manager.get_remote_commit_hash("some_url") == ""
 
 
+def test_library_add_preserves_latest_commit(temp_env):
+    import manager as skill
+    import zipfile
+    from unittest.mock import patch
+    
+    yaml_content = """
+library:
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  commit: latest
+  skills:
+    - name: brainstorming
+      path: skills/brainstorming/SKILL.md
+"""
+    (temp_env / ".skills.yaml").write_text(yaml_content)
+    skill.PROJECT_ROOT = temp_env
+    
+    # Mock zip scanning and download_repo_zip to write dummy zip
+    with patch("manager.download_repo_zip") as mock_download, \
+         patch("manager._scan_zip_for_skills", return_value=([{"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"}], "new_hash")), \
+         patch("manager.sync"):
+        def side_effect(repo_id, dest_path, *args, **kwargs):
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            dest_path.touch()
+        mock_download.side_effect = side_effect
+        
+        skill.library_add("obra/superpowers", temp_env / ".skills.yaml", temp_env)
+        
+    config = skill.load_config(temp_env / ".skills.yaml")
+    assert config["library"][0]["commit"] == "latest"
+
+
 
 
 
