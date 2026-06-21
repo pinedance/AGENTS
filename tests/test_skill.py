@@ -801,6 +801,18 @@ def test_workspace_collision_detection_internal(temp_env):
     import pytest
     yaml_path = temp_env / ".skills.yaml"
     config = skill.load_config(yaml_path)
+    # Seed library config with both skills to pass validation
+    config["library"] = [
+        {
+            "repoId": "obra/superpowers",
+            "repoType": "github",
+            "repoUrl": "https://github.com/obra/superpowers.git",
+            "skills": [
+                {"name": "brainstorming", "path": "skills/brainstorming/SKILL.md"},
+                {"name": "executing-plans", "path": "skills/executing-plans/SKILL.md"}
+            ]
+        }
+    ]
     config["workspace"] = [
         {
             "repoId": "obra/superpowers",

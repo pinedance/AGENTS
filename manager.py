@@ -116,7 +116,7 @@ def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
             if link_path.is_symlink():
                 try:
                     real_link = Path(os.readlink(link_path)).resolve()
-                    if not real_link.exists():
+                    if not real_link.exists() and real_link != source_abs:
                         print(f"Recreating broken symlink: {target} -> {source_abs}")
                         link_path.unlink()
                         os.symlink(source_abs, link_path)
@@ -412,6 +412,51 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
             else:
                 print(f"Skill '{skill_item['name']}' from {repo_id} is up to date.")
 
+    # 1.5 Validate active workspace skills against library skills
+    library_skills = {}  # (repoId, skill_name) -> path
+    for repo in config.get("library", []):
+        r_id = repo["repoId"]
+        for s in repo.get("skills", []):
+            library_skills[(r_id, s["name"])] = s["path"]
+
+    valid_workspaces = []
+    workspace_changed = False
+    for rw in config.get("workspace", []):
+        r_id = rw["repoId"]
+        valid_skills = []
+        for s in rw.get("skills", []):
+            s_name = s["name"]
+            if (r_id, s_name) in library_skills:
+                valid_skills.append(s)
+            else:
+                # Try to auto-correct renamed/relocated skill path via substring match
+                repo_skills = [lib_s for lib in config.get("library", []) if lib["repoId"] == r_id for lib_s in lib.get("skills", [])]
+                match = None
+                for lib_s in repo_skills:
+                    if lib_s["name"].lower() in s_name.lower() or s_name.lower() in lib_s["name"].lower():
+                        match = lib_s
+                        break
+                
+                if match:
+                    new_name = match["name"]
+                    print(f"Warning: Skill '{s_name}' from repo '{r_id}' was relocated/renamed. Auto-correcting workspace mapping to '{new_name}'.")
+                    s["name"] = new_name
+                    s["source"] = f"{r_id}/{new_name}"
+                    valid_skills.append(s)
+                    workspace_changed = True
+                else:
+                    print(f"Warning: Skill '{s_name}' from repo '{r_id}' is no longer available in the library. Removing from active workspace.")
+                    workspace_changed = True
+        if valid_skills:
+            rw["skills"] = valid_skills
+            valid_workspaces.append(rw)
+        else:
+            workspace_changed = True
+
+    if workspace_changed:
+        config["workspace"] = valid_workspaces
+        config_changed = True
+
     if config_changed:
         save_config(config, config_path)
 
@@ -437,6 +482,21 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     print("Sync completed successfully.")
 
 
+def _extract_name_from_front_matter(content: str) -> str:
+    content_clean = content.lstrip("\ufeff\n\r\t ")
+    match = re.match(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", content_clean, re.DOTALL)
+    if match:
+        yaml_content = match.group(1)
+        try:
+            yaml = get_yaml_parser()
+            data = yaml.load(yaml_content)
+            if data and isinstance(data, dict) and "name" in data:
+                return str(data["name"]).strip()
+        except Exception:
+            pass
+    return ""
+
+
 def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
     """Scan a zip file for SKILL.md entries. Returns (skills_found, commit_hash)."""
     skills_found: list = []
@@ -447,15 +507,31 @@ def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
                 # Extract skill path relative to repo root (excluding zipball root hash folder)
                 parts = m.split("/")
                 skill_path = "/".join(parts[1:])
-                # Name is parent folder
-                if len(parts) == 2:
-                    skill_name = repo_id.split("/")[-1]
-                else:
-                    skill_name = parts[-2]
+                # Read SKILL.md from zip
+                try:
+                    with zf.open(m) as f:
+                        content = f.read().decode("utf-8", errors="ignore")
+                        skill_name = _extract_name_from_front_matter(content)
+                except Exception:
+                    skill_name = ""
+                # Fallback to parent folder name
+                if not skill_name:
+                    if len(parts) == 2:
+                        skill_name = repo_id.split("/")[-1]
+                    else:
+                        skill_name = parts[-2]
                 skills_found.append({"name": skill_name, "path": skill_path})
             elif m.endswith(SKILL_FILENAME) and "/" not in m:
                 # Skill at root
-                skills_found.append({"name": repo_id.split("/")[-1], "path": SKILL_FILENAME})
+                try:
+                    with zf.open(m) as f:
+                        content = f.read().decode("utf-8", errors="ignore")
+                        skill_name = _extract_name_from_front_matter(content)
+                except Exception:
+                    skill_name = ""
+                if not skill_name:
+                    skill_name = repo_id.split("/")[-1]
+                skills_found.append({"name": skill_name, "path": SKILL_FILENAME})
     return skills_found, commit_hash
 
 
