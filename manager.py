@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import filecmp
 import inspect
 import os
 import re
@@ -789,8 +790,87 @@ def workspace_remove(skill_name: str, config_path: Path, root_path: Path):
     sync(config_path, root_path)
 
 
+def _get_local_repo_id() -> str | None:
+    try:
+        res = subprocess.run(["git", "remote", "get-url", "origin"], capture_output=True, text=True, check=True)
+        url = res.stdout.strip()
+        match = re.search(r"github\.com[:/]([^/\s]+/[^/\s.]+)", url)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return None
+
+
+def _sync_library_to_source(lib_dir: Path, src_dir: Path):
+    if not lib_dir.exists():
+        return
+    src_dir.mkdir(parents=True, exist_ok=True)
+    comparison = filecmp.dircmp(lib_dir, src_dir)
+    
+    for name in comparison.left_only:
+        if name == ".commit":
+            continue
+        lib_path = lib_dir / name
+        src_path = src_dir / name
+        if lib_path.is_dir():
+            shutil.copytree(lib_path, src_path)
+            print(f"Copied directory: {name}")
+        else:
+            shutil.copy2(lib_path, src_path)
+            print(f"Copied file: {name}")
+            
+    for name in comparison.diff_files:
+        if name == ".commit":
+            continue
+        shutil.copy2(lib_dir / name, src_dir / name)
+        print(f"Updated file: {name}")
+        
+    for name in comparison.common_dirs:
+        _sync_library_to_source(lib_dir / name, src_dir / name)
+        
+    for name in comparison.right_only:
+        src_path = src_dir / name
+        if src_path.is_dir():
+            shutil.rmtree(src_path)
+            print(f"Deleted directory: {name}")
+        else:
+            src_path.unlink()
+            print(f"Deleted file: {name}")
+
+
 def myskills(message: str | None, config_path: Path, root_path: Path):
     print("Checking repository status...")
+    config = load_config(config_path)
+    repos_dir = root_path / REPOS_DIR_NAME
+    library_dir = root_path / LIBRARY_DIR_NAME
+
+    local_repo_id = _get_local_repo_id()
+    if local_repo_id:
+        # Find matching repo in library config
+        matching_repo = None
+        for r in config.get("library", []):
+            if r["repoId"] == local_repo_id:
+                matching_repo = r
+                break
+                
+        if matching_repo:
+            print(f"Syncing modifications back from library extract for '{local_repo_id}' to source...")
+            for skill_item in matching_repo.get("skills", []):
+                s_name = skill_item["name"]
+                s_path = skill_item["path"]
+                
+                lib_skill_dir = library_dir / local_repo_id / s_name
+                src_skill_dir = root_path / Path(s_path).parent
+                
+                if lib_skill_dir.exists():
+                    _sync_library_to_source(lib_skill_dir, src_skill_dir)
+            
+            # Revert library extract back to clean state
+            lib_repo_dir = library_dir / local_repo_id
+            if lib_repo_dir.exists():
+                shutil.rmtree(lib_repo_dir)
+
     # 1. Get branch
     try:
         res_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)

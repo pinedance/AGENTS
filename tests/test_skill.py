@@ -1296,6 +1296,54 @@ library:
     assert config["library"][0]["commit"] == "latest"
 
 
+def test_myskills_syncs_back_modifications_from_extracted_library(temp_env):
+    import manager as skill
+    from unittest.mock import patch, MagicMock
+    
+    yaml_content = """
+library:
+- repoId: pinedance/AGENTS
+  repoType: github
+  repoUrl: https://github.com/pinedance/AGENTS.git
+  commit: latest
+  skills:
+    - name: brainstorming
+      path: skills/brainstorming/SKILL.md
+"""
+    (temp_env / ".skills.yaml").write_text(yaml_content)
+    skill.PROJECT_ROOT = temp_env
+    
+    # Setup folders
+    (temp_env / "skills/brainstorming").mkdir(parents=True)
+    (temp_env / "skills/brainstorming/SKILL.md").write_text("Old content")
+    
+    (temp_env / "skills-library/pinedance/AGENTS/brainstorming").mkdir(parents=True)
+    (temp_env / "skills-library/pinedance/AGENTS/brainstorming/SKILL.md").write_text("New modified content")
+    (temp_env / "skills-library/pinedance/AGENTS/brainstorming/.commit").write_text("hash")
+    
+    # Mock subprocess.run
+    def run_side_effect(cmd, *args, **kwargs):
+        res = MagicMock()
+        if "remote" in cmd:
+            res.stdout = "origin\tgit@github.com:pinedance/AGENTS.git (fetch)\n"
+        elif "status" in cmd:
+            res.stdout = " M skills/brainstorming/SKILL.md\n"
+        elif "rev-parse" in cmd:
+            res.stdout = "main\n"
+        else:
+            res.stdout = ""
+        return res
+        
+    with patch("subprocess.run", side_effect=run_side_effect), \
+         patch("manager.sync") as mock_sync:
+        skill.myskills(message="update brainstorming", config_path=temp_env / ".skills.yaml", root_path=temp_env)
+        
+    # Verify sync back took place
+    assert (temp_env / "skills/brainstorming/SKILL.md").read_text() == "New modified content"
+    # Verify lib extraction directory was deleted/reverted before push
+    assert not (temp_env / "skills-library/pinedance/AGENTS").exists()
+
+
 
 
 
