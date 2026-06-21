@@ -1,6 +1,32 @@
 from pathlib import Path
+from unittest.mock import patch
+import os
 import pytest
+import shutil
+import sys
+import zipfile
 import manager as skill
+
+
+def make_dummy_zip(
+    dest_path: Path,
+    members: dict,
+    comment: bytes = b"",
+) -> None:
+    """Create a zip file at dest_path with the given member files and optional comment.
+
+    Args:
+        dest_path: Destination path for the zip file.
+        members: Mapping of zip entry name → string content.
+        comment: Optional zip file comment (used as commit hash sentinel).
+    """
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(dest_path, "w") as zf:
+        if comment:
+            zf.comment = comment
+        for name, content in members.items():
+            zf.writestr(name, content)
+
 
 @pytest.fixture
 def temp_env(tmp_path, monkeypatch):
@@ -71,7 +97,6 @@ workspace:
 
 
 
-from unittest.mock import patch
 
 @patch("manager.download_repo_zip")
 def test_sync_rebuilds_links_and_library(mock_download, temp_env):
@@ -79,11 +104,10 @@ def test_sync_rebuilds_links_and_library(mock_download, temp_env):
     
     # Mock download to write a dummy zip with a SKILL.md
     def side_effect(repo_id, dest_path, *args, **kwargs):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
-            zf.writestr("superpowers-main/skills/other/SKILL.md", "# Other Skill")
+        make_dummy_zip(dest_path, {
+            "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill",
+            "superpowers-main/skills/other/SKILL.md": "# Other Skill",
+        })
     mock_download.side_effect = side_effect
 
     # Set paths in skill module dynamically or pass to sync
@@ -109,11 +133,10 @@ def test_sync_prunes_obsolete_and_idempotent(mock_download, temp_env):
     import shutil
     
     # 1. Prepare Zip
-    def side_effect(repo_id, dest_path):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {
+            "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill",
+        })
     mock_download.side_effect = side_effect
     
     # Create some obsolete folders/files and symlinks
@@ -220,15 +243,11 @@ def test_download_repo_zip_fails_both(mock_urlopen, tmp_path):
 
 @patch("manager.download_repo_zip")
 def test_sync_zip_slip_prevention(mock_download, temp_env):
-    import manager as skill
-    import pytest
-    
-    def side_effect(repo_id, dest_path):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
-            zf.writestr("superpowers-main/skills/brainstorming/../../../traversal.txt", "evil")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {
+            "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill",
+            "superpowers-main/skills/brainstorming/../../../traversal.txt": "evil"
+        })
     mock_download.side_effect = side_effect
 
     with pytest.raises(ValueError, match="Path traversal detected"):
@@ -241,12 +260,11 @@ def test_library_add_and_remove(mock_download, temp_env):
     skill.PROJECT_ROOT = temp_env
     
     # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
-            zf.writestr("superpowers-main/SKILL.md", "# Root Skill")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {
+            "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill",
+            "superpowers-main/SKILL.md": "# Root Skill",
+        })
     mock_download.side_effect = side_effect
     
     # 1. Test Library Add
@@ -281,11 +299,10 @@ def test_library_add_no_skills(mock_download, temp_env):
     import pytest
     skill.PROJECT_ROOT = temp_env
     
-    def side_effect(repo_id, dest_path):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/random.txt", "hello")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {
+            "superpowers-main/random.txt": "hello",
+        })
     mock_download.side_effect = side_effect
     
     yaml_path = temp_env / ".skills.yaml"
@@ -315,10 +332,8 @@ def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {})
     mock_download.side_effect = side_effect
     
     # Seed library config and library dir
@@ -358,10 +373,8 @@ def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_downloa
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {})
     mock_download.side_effect = side_effect
     
     # Seed library config with two repos containing the same skill name
@@ -431,10 +444,10 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {
+            "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill",
+        })
     mock_download.side_effect = side_effect
     
     # Seed library and active workspace config
@@ -499,10 +512,8 @@ def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_down
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {})
     mock_download.side_effect = side_effect
     
     # Seed config with another workspace block containing the same target 'sp-brainstorming'
@@ -555,10 +566,8 @@ def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, tem
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            pass
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(dest_path, {})
     mock_download.side_effect = side_effect
     
     # 1. Test KeyboardInterrupt on workspace_add (select repo)
@@ -713,10 +722,9 @@ def test_workspace_add_invalid_target(temp_env):
     # Mock download to avoid network calls during library_add or workspace_add
     with patch("manager.download_repo_zip") as mock_download:
         def side_effect(repo_id, dest_path, *args, **kwargs):
-            import zipfile
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(dest_path, "w") as zf:
-                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+            make_dummy_zip(dest_path, {
+                "superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill"
+            })
         mock_download.side_effect = side_effect
         
         # Add to library first
@@ -863,16 +871,15 @@ def test_workspace_collision_detection_external(temp_env):
 
 
 def test_library_add_commit_hash(temp_env):
-    import manager as skill
-    import zipfile
     yaml_path = temp_env / ".skills.yaml"
     
     with patch("manager.download_repo_zip") as mock_download:
-        def side_effect(repo_id, dest_path):
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            with zipfile.ZipFile(dest_path, "w") as zf:
-                zf.comment = b"test-commit-hash-1234"
-                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+        def side_effect(repo_id, dest_path, *args, **kwargs):
+            make_dummy_zip(
+                dest_path,
+                {"superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill"},
+                comment=b"test-commit-hash-1234"
+            )
         mock_download.side_effect = side_effect
         
         skill.library_add("obra/superpowers", yaml_path, temp_env)
@@ -884,8 +891,6 @@ def test_library_add_commit_hash(temp_env):
 
 
 def test_sync_commit_hash_cache(temp_env):
-    import manager as skill
-    import zipfile
     yaml_path = temp_env / ".skills.yaml"
     
     # Pre-extract skill with .commit file
@@ -896,10 +901,11 @@ def test_sync_commit_hash_cache(temp_env):
     
     # Pre-create the zip file
     zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
-    zip_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.comment = b"test-commit-hash-1234"
-        zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Old Brainstorming")
+    make_dummy_zip(
+        zip_path,
+        {"superpowers-main/skills/brainstorming/SKILL.md": "Old Brainstorming"},
+        comment=b"test-commit-hash-1234"
+    )
         
     config = skill.load_config(yaml_path)
     config["library"] = [{
@@ -924,10 +930,12 @@ def test_sync_commit_hash_cache(temp_env):
         zip_path.unlink()
     
     with patch("manager.download_repo_zip") as mock_download:
-        def side_effect(repo_id, dest_path):
-            with zipfile.ZipFile(dest_path, "w") as zf:
-                zf.comment = b"new-hash-5678"
-                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "New Brainstorming")
+        def side_effect(repo_id, dest_path, *args, **kwargs):
+            make_dummy_zip(
+                dest_path,
+                {"superpowers-main/skills/brainstorming/SKILL.md": "New Brainstorming"},
+                comment=b"new-hash-5678"
+            )
         mock_download.side_effect = side_effect
         
         skill.sync(yaml_path, temp_env)
@@ -938,8 +946,6 @@ def test_sync_commit_hash_cache(temp_env):
 
 
 def test_library_update_command(temp_env):
-    import manager as skill
-    import zipfile
     yaml_path = temp_env / ".skills.yaml"
     
     config = skill.load_config(yaml_path)
@@ -952,17 +958,20 @@ def test_library_update_command(temp_env):
     
     # Create the zip in .skills-repos
     zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
-    zip_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.comment = b"old-hash"
-        zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Old content")
+    make_dummy_zip(
+        zip_path,
+        {"superpowers-main/skills/brainstorming/SKILL.md": "Old content"},
+        comment=b"old-hash"
+    )
         
     # Call library_update
     with patch("manager.download_repo_zip") as mock_download:
-        def side_effect(repo_id, dest_path):
-            with zipfile.ZipFile(dest_path, "w") as zf:
-                zf.comment = b"updated-hash-999"
-                zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "Updated content")
+        def side_effect(repo_id, dest_path, *args, **kwargs):
+            make_dummy_zip(
+                dest_path,
+                {"superpowers-main/skills/brainstorming/SKILL.md": "Updated content"},
+                comment=b"updated-hash-999"
+            )
         mock_download.side_effect = side_effect
         
         # Test CLI dispatch for library update
@@ -1034,9 +1043,6 @@ def test_sync_unmanaged_broken_symlink_pruned(temp_env):
 
 @patch("manager.download_repo_zip")
 def test_sync_saves_commit_from_zip_comment(mock_download, temp_env):
-    import manager as skill
-    import zipfile
-    
     yaml_path = temp_env / ".skills.yaml"
     yaml_content = """
 library:
@@ -1050,11 +1056,12 @@ workspace: []
 """
     yaml_path.write_text(yaml_content)
     
-    def side_effect(repo_id, dest_path):
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.writestr("dummy-repo-main/dummy-skill/SKILL.md", "# Dummy Skill")
-            zf.comment = b"a1b2c3d4e5f67890"
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(
+            dest_path,
+            {"dummy-repo-main/dummy-skill/SKILL.md": "# Dummy Skill"},
+            comment=b"a1b2c3d4e5f67890"
+        )
             
     mock_download.side_effect = side_effect
     
@@ -1070,7 +1077,6 @@ workspace: []
 @patch("manager.download_repo_zip")
 @patch("subprocess.run")
 def test_sync_resolves_dynamic_commit_on_empty(mock_run, mock_download, temp_env):
-    import manager as skill
     from unittest.mock import MagicMock
     
     # Mock git ls-remote HEAD to return a specific mock hash
@@ -1079,12 +1085,12 @@ def test_sync_resolves_dynamic_commit_on_empty(mock_run, mock_download, temp_env
     mock_run.return_value = mock_res
     
     # Mock download to write dummy zip
-    def side_effect(repo_id, dest_path):
-        import zipfile
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest_path, "w") as zf:
-            zf.comment = b"9999a9999b9999c9999d9999e9999f9999000000"
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+    def side_effect(repo_id, dest_path, *args, **kwargs):
+        make_dummy_zip(
+            dest_path,
+            {"superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill"},
+            comment=b"9999a9999b9999c9999d9999e9999f9999000000"
+        )
     mock_download.side_effect = side_effect
 
     # Setup YAML with commit: latest
@@ -1200,11 +1206,7 @@ library:
         zip_dir = tmp_path / ".skills-repos"
         zip_dir.mkdir()
         zip_path = zip_dir / "foo/bar.zip"
-        zip_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        import zipfile
-        with zipfile.ZipFile(zip_path, 'w') as zf:
-            zf.comment = b"commit3"
+        make_dummy_zip(zip_path, {}, comment=b"commit3")
         
         manager.sync(config_path, tmp_path, check_remote=False)
         captured = capsys.readouterr()
@@ -1284,12 +1286,12 @@ library:
          patch("manager.download_repo_zip"), \
          patch("manager._rebuild_symlinks"):
         # Create dummy extracted structure
-        (temp_env / ".skills-repos/obra").mkdir(parents=True, exist_ok=True)
-        import zipfile
         zip_path = temp_env / ".skills-repos/obra/superpowers.zip"
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.comment = b"some_hash"
-            zf.writestr("superpowers-main/skills/brainstorming/SKILL.md", "# Brainstorming Skill")
+        make_dummy_zip(
+            zip_path,
+            {"superpowers-main/skills/brainstorming/SKILL.md": "# Brainstorming Skill"},
+            comment=b"some_hash"
+        )
         skill.sync(temp_env / ".skills.yaml", temp_env)
         
     config = skill.load_config(temp_env / ".skills.yaml")
@@ -1344,6 +1346,61 @@ library:
     assert not (temp_env / "skills-library/pinedance/AGENTS").exists()
 
 
+def test_validate_active_workspaces_healing_ambiguity(temp_env):
+    import manager as skill
+    
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_content = """
+library:
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  commit: latest
+  skills:
+    - name: executing-plans
+      path: skills/executing-plans/SKILL.md
+    - name: writing-plans
+      path: skills/writing-plans/SKILL.md
+workspace:
+- repoId: obra/superpowers
+  skills:
+    - name: plan
+      target: my-plan
+"""
+    yaml_path.write_text(yaml_content)
+    
+    config = skill.load_config(yaml_path)
+    changed = skill._validate_active_workspaces(config)
+    
+    assert changed is True
+    assert len(config["workspace"]) == 0
 
 
+def test_validate_active_workspaces_healing_unambiguous(temp_env):
+    import manager as skill
+    
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_content = """
+library:
+- repoId: obra/superpowers
+  repoType: github
+  repoUrl: https://github.com/obra/superpowers.git
+  commit: latest
+  skills:
+    - name: brainstorming-v2
+      path: skills/brainstorming/SKILL.md
+workspace:
+- repoId: obra/superpowers
+  skills:
+    - name: brainstorming
+      target: my-brainstorming
+"""
+    yaml_path.write_text(yaml_content)
+    
+    config = skill.load_config(yaml_path)
+    changed = skill._validate_active_workspaces(config)
+    
+    assert changed is True
+    assert len(config["workspace"]) == 1
+    assert config["workspace"][0]["skills"][0]["name"] == "brainstorming-v2"
 
