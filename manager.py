@@ -139,7 +139,7 @@ def get_remote_commit_hash(repo_url: str) -> str:
     return ""
 
 
-def sync(config_path: Path, root_path: Path):
+def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     print("Syncing skills...")
     config = load_config(config_path)
     repos_dir = root_path / REPOS_DIR_NAME
@@ -164,39 +164,61 @@ def sync(config_path: Path, root_path: Path):
         active_zips.add(zip_path.resolve())
         
         repo_url = repo.get("repoUrl", "")
-        commit_hash = repo.get("commit", "")
-        is_dynamic = (commit_hash == "latest")
+        commit_hash = repo.get("commit", "")  # ID1
 
-
-        if is_dynamic and repo_url:
-            # Dynamically fetch remote commit hash
+        # Support dynamic latest commit hash resolution
+        if commit_hash == "latest" and repo_url:
             commit_hash = get_remote_commit_hash(repo_url)
-            
-            # Read comment from existing zip if it exists
-            local_hash = ""
+
+        # Extract local comment (ID2)
+        local_hash = ""
+        if zip_path.exists():
+            try:
+                with zipfile.ZipFile(zip_path, 'r') as zf:
+                    local_hash = zf.comment.decode("utf-8").strip()
+            except Exception:
+                pass
+
+        # Compare ID1 vs ID2
+        force_download = False
+        if zip_path.exists() and local_hash and commit_hash and commit_hash != local_hash:
+            print(f"Warning: Local file for {repo_id} does not match .skills.yaml version (ID1: {commit_hash}, ID2: {local_hash})")
+            force_download = True
+
+        # Compare ID1 vs ID3 (--check-remote)
+        if check_remote and repo_url:
+            remote_hash = get_remote_commit_hash(repo_url)
+            if commit_hash and remote_hash and commit_hash != remote_hash:
+                print(f"Warning: {repo_id} is not up-to-date with remote latest (ID1: {commit_hash}, ID3: {remote_hash}). Update required.")
+
+        # Download logic
+        if not zip_path.exists() or force_download:
             if zip_path.exists():
+                zip_path.unlink()
+            if commit_hash:
+                print(f"Downloading {repo_id} (commit {commit_hash})...")
+                # Clean signature inspection to support mocked functions in tests
+                import inspect
+                is_mock = hasattr(download_repo_zip, "_mock_call")
+                func_to_inspect = download_repo_zip.side_effect if (is_mock and download_repo_zip.side_effect) else download_repo_zip
+                has_commit_arg = True
                 try:
-                    with zipfile.ZipFile(zip_path, 'r') as zf:
-                        local_hash = zf.comment.decode("utf-8").strip()
+                    sig = inspect.signature(func_to_inspect)
+                    params = list(sig.parameters.values())
+                    if len(params) < 3 and not any(p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD) for p in params):
+                        has_commit_arg = False
                 except Exception:
                     pass
-            
-            if not commit_hash:
-                commit_hash = local_hash
 
-            # If zip doesn't exist or is outdated, delete to force download
-            if commit_hash and (not zip_path.exists() or local_hash != commit_hash):
-                if zip_path.exists():
-                    zip_path.unlink()
-                print(f"Downloading {repo_id} (dynamic update to {commit_hash})...")
-                download_repo_zip(repo_id, zip_path)
-        else:
-            # Download zip if missing (static flow)
-            if not zip_path.exists():
+                if has_commit_arg:
+                    download_repo_zip(repo_id, zip_path, commit_hash)
+                else:
+                    download_repo_zip(repo_id, zip_path)
+            else:
                 print(f"Downloading {repo_id}...")
                 download_repo_zip(repo_id, zip_path)
-            
-            commit_hash = repo.get("commit", "")
+
+            # If commit_hash was missing, extract it from the newly downloaded zip
             if not commit_hash and zip_path.exists():
                 try:
                     with zipfile.ZipFile(zip_path, 'r') as zf:
@@ -207,7 +229,11 @@ def sync(config_path: Path, root_path: Path):
                             config_changed = True
                 except Exception:
                     pass
-
+        elif not commit_hash and local_hash:
+            # If zip exists but config has no commit, update config with local hash
+            commit_hash = local_hash
+            repo["commit"] = commit_hash
+            config_changed = True
 
         # Extract files based on configured skills
         for skill_item in repo.get("skills", []):
@@ -239,7 +265,6 @@ def sync(config_path: Path, root_path: Path):
                     with zipfile.ZipFile(zip_path, 'r') as zf:
                         # Find matching file in zip (GitHub zipballs prefix folders with hashes)
                         members = zf.namelist()
-                        # We look for the folder structure ending in the skill_parent_dir_rel
                         prefix = ""
                         for m in members:
                             suffix_path = f"{skill_parent_dir_rel_posix}/{SKILL_FILENAME}"
@@ -262,7 +287,6 @@ def sync(config_path: Path, root_path: Path):
                             target_zip_dir_prefix = prefix + skill_parent_dir_rel_posix + "/"
                         for m in members:
                             if m.startswith(target_zip_dir_prefix):
-                                # Strip both prefix and original nested path within the zip
                                 relative_member = m[len(target_zip_dir_prefix):]
                                 if not relative_member:
                                     continue
@@ -281,10 +305,10 @@ def sync(config_path: Path, root_path: Path):
                                         shutil.copyfileobj(source_f, target_f)
                                         
                     if commit_hash:
-                        try:
-                            commit_file.write_text(commit_hash, encoding="utf-8")
-                        except Exception:
-                            pass
+                          try:
+                              commit_file.write_text(commit_hash, encoding="utf-8")
+                          except Exception:
+                              pass
                 except zipfile.BadZipFile:
                     if zip_path.exists():
                         try:

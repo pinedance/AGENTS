@@ -78,7 +78,7 @@ def test_sync_rebuilds_links_and_library(mock_download, temp_env):
     import manager as skill
     
     # Mock download to write a dummy zip with a SKILL.md
-    def side_effect(repo_id, dest_path):
+    def side_effect(repo_id, dest_path, *args, **kwargs):
         import zipfile
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(dest_path, "w") as zf:
@@ -633,7 +633,7 @@ def test_cli_subcommands(temp_env):
         sys_args = ["manager.py", "sync"]
         with patch("sys.argv", sys_args):
             skill.main(config_path=yaml_path, root_path=temp_env)
-            mock_sync.assert_called_once_with(yaml_path, temp_env)
+            mock_sync.assert_called_once_with(yaml_path, temp_env, check_remote=False)
             
     # Test library remove subcommand
     with patch("manager.library_remove") as mock_lib_rem:
@@ -675,7 +675,7 @@ def test_cli_config_root_overrides(temp_env):
         ]
         with patch("sys.argv", sys_args):
             skill.main()
-            mock_sync.assert_called_once_with(custom_cfg, custom_root)
+            mock_sync.assert_called_once_with(custom_cfg, custom_root, check_remote=False)
 
 
 
@@ -712,7 +712,7 @@ def test_workspace_add_invalid_target(temp_env):
     
     # Mock download to avoid network calls during library_add or workspace_add
     with patch("manager.download_repo_zip") as mock_download:
-        def side_effect(repo_id, dest_path):
+        def side_effect(repo_id, dest_path, *args, **kwargs):
             import zipfile
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             with zipfile.ZipFile(dest_path, "w") as zf:
@@ -1165,5 +1165,39 @@ def test_sync_cli_parser_check_remote():
         mock_sync.assert_called_once()
         kwargs = mock_sync.call_args[1]
         assert kwargs.get("check_remote") is True
+
+
+def test_sync_hash_verification(tmp_path, capsys):
+    import manager
+    from unittest.mock import patch
+    config_path = tmp_path / ".skills.yaml"
+    config_path.write_text("""
+library:
+- repoId: foo/bar
+  repoType: github
+  repoUrl: https://github.com/foo/bar.git
+  commit: "commit1"
+  skills: []
+""")
+    
+    with patch("manager.download_repo_zip") as mock_download, \
+         patch("manager.get_remote_commit_hash") as mock_remote:
+        
+        mock_remote.return_value = "commit2"
+        
+        zip_dir = tmp_path / ".skills-repos"
+        zip_dir.mkdir()
+        zip_path = zip_dir / "foo/bar.zip"
+        zip_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        import zipfile
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.comment = b"commit3"
+        
+        manager.sync(config_path, tmp_path, check_remote=False)
+        captured = capsys.readouterr()
+        assert "Warning: Local file for foo/bar does not match .skills.yaml version (ID1: commit1, ID2: commit3)" in captured.out
+        mock_download.assert_called_with("foo/bar", zip_path, "commit1")
+
 
 
