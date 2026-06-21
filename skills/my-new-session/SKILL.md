@@ -15,6 +15,11 @@ Follow the steps below in order.
 
 1. **Ask the User**: Ask the user to briefly describe the task they plan to work on (e.g., to generate appropriate branch names, task IDs, or documentation filenames).
 2. **Generate Task Name**: Based on the user's response, generate a clean `task-name` using lowercase alphanumeric characters, numbers, and hyphens (e.g., `refactor-login-auth`, `fix-db-leak`). Show this name to the user.
+3. **Harness Question-Answering Guidelines**:
+   - Whenever you need to ask for user input, preference, or confirmation (e.g., confirming task name, committing changes, syncing remote, checking out branch), check if the `ask_question` tool is available in your tool declaration.
+   - If `ask_question` is available, **always use it** instead of relying solely on plain text questions.
+   - Design options that represent the user's direct response (e.g., "(Recommended) Yes, create and switch to branch '<task-name>'").
+   - The UI automatically provides a write-in ("Other") option, so the user can type a custom response if none of the suggested choices fit.
 
 ---
 
@@ -24,16 +29,31 @@ Perform the following git workspace checks and operations:
 
 1. **Check for Uncommitted Changes**:
    - Run `git status --porcelain` to check if there are uncommitted modifications.
-   - If there are uncommitted changes, ask the user if they would like to commit them before starting the new session. If they agree, write a clear, conventional commit message and commit the changes.
-2. **Check for Remote Sync**:
+   - If there are uncommitted changes, ask the user what to do. If the `ask_question` tool is available, use it with options like:
+     - `(Recommended) Commit the changes first`
+     - `Stash the changes`
+     - `Proceed without committing`
+   - If they choose to commit, write a clear, conventional commit message and commit the changes.
+
+2. **Check for Remote Sync (Pull & Push)**:
    - Check if the repository has a remote configured (`git remote`).
-   - If a remote exists, ask the user if they would like to sync and pull the latest changes (`git pull`). If approved, run `git pull`.
+   - If a remote exists:
+     - Fetch remote branch state (`git fetch`) or run `git status -uno` to see if the branch is ahead or behind.
+     - **If local is ahead of remote**: The local repository has newer commits that need to be pushed. Offer to run `git push`.
+     - **If local is behind remote**: The remote has newer commits. Offer to run `git pull`.
+     - If the `ask_question` tool is available, present the appropriate synchronization options based on the sync status:
+       - `(Recommended) Push local changes to remote` (if local is ahead)
+       - `(Recommended) Pull remote changes to local` (if local is behind)
+       - `Sync both (pull then push)` (if applicable)
+       - `Skip sync and proceed`
+     - Run the approved command (`git push`, `git pull`, or both) depending on the user's selection.
+
 3. **Checkout Task Branch**:
-   - Recommend creating and switching to a new branch for the task:
-     ```bash
-     git checkout -b <task-name>
-     ```
-   - Ask for confirmation before running the command. If approved, checkout the branch.
+   - Recommend creating and switching to a new branch for the task: `git checkout -b <task-name>`.
+   - If the `ask_question` tool is available, use it to confirm the checkout:
+     - `(Recommended) Create and switch to '<task-name>' branch`
+     - `Keep working on the current branch`
+   - If approved, run the command to checkout the branch.
 
 ---
 
@@ -63,35 +83,66 @@ Always adhere to the following development principles during the session:
 2. **Single Source of Truth (SSoT) Principle**:
    - Maintain a single, unambiguous representation of data, logic, and configuration. Avoid duplicating code, settings, or states across different parts of the system. Always reference the primary source.
 
+1. **Core Architecture**:
+   - **Fast-Fail Principle** (Validate early, reject immediately)
+   - **SSoT** (Single Source of Truth)
+   - **Principle of Least Surprise** (Maintain architectural consistency with codebase)
+
+2. **Coding Style & Logic**:
+   - **Strict Typing & Explicit Coding** (Ban magic code, enforce explicit declarations)
+   - **Stateless & Pure Functions First** (Minimize side effects)
+   - **Defensive Programming** (Strict input validation & edge-case handling)
+   - **Exception Safety** (Ensure consistent state during errors)
+   - **SRP** (Single Responsibility Principle)
+   - **Low Cognitive Complexity** (Limit nesting to max 2 levels, prefer early returns)
+
+3. **Naming Conventions**:
+   - **Hierarchical Naming / Left-to-Right Naming** (e.g., `price_daily`, `user_total`)
+   - **Verb-Noun Convention** (Functions must start with a verb)
+   - **Standardized Abbreviations Only** (e.g., `calc`, `init`, `config`, `stats` - *Do not invent custom cuts*)
+   - **Structural Self-Documentation** (Reveal intent through clear hierarchy, strictly ban filler words like `data`, `info`, `temp`, `my`, `value`)
+   - **Boolean Prefix Convention** (e.g., `is_`, `has_`, `can_`)
+   - **Symmetric Antonyms Rule** (e.g., `open/close`, `start/stop`, `get/set`)
+   - **Plural Naming for Collections** (e.g., `users`, `user_map`)
+
+4. **Documentation**:
+   - **Document the "Why", Not the "What"**
+
 ---
 
 ## Example Interaction Flow
 
-### Example 1: Starting a session with uncommitted changes
-```
-Agent: Let's get your new session started! Could you please briefly describe the task you want to work on?
+### Example 1: Starting a session with uncommitted changes & unpushed commits
 
-User: I want to optimize the database query latency for the dashboard.
-
-Agent: 
-I have generated a task name: `optimize-db-latency`.
-Let me check your git repository status...
-I found uncommitted changes in `src/db.py`. Would you like me to commit these changes first?
-
-User: Yes, please commit them.
-
-Agent: [Runs git commit]
-Great, I committed the changes. Next, would you like me to pull the latest changes from the remote repository?
-
-User: Yes, please.
-
-Agent: [Runs git pull]
-Done. Now, I recommend switching to a new branch for this task: `git checkout -b optimize-db-latency`. Shall I proceed with this?
-
-User: Yes, go ahead.
-
-Agent: [Runs git checkout -b optimize-db-latency]
-We are now on the branch `optimize-db-latency`.
-Activating caveman mode...
-/caveman full Korean
-```
+1. **Agent**: Let's get your new session started! Could you please briefly describe the task you want to work on?
+2. **User**: I want to optimize the database query latency for the dashboard.
+3. **Agent**: 
+   - Generates a task name: `optimize-db-latency`.
+   - Runs `git status --porcelain` and finds uncommitted changes in `src/db.py`.
+   - Calls `ask_question`:
+     - **Question**: "I found uncommitted changes in [db.py](file:///absolute/path/to/src/db.py). How would you like to handle them?"
+     - **Options**:
+       - `(Recommended) Commit the changes first`
+       - `Stash the changes`
+       - `Proceed without committing`
+4. **User** selects: `Commit the changes first` (or writes a custom message)
+5. **Agent**: 
+   - Runs `git commit` with a conventional message.
+   - Runs `git status` or `git cherry -v` and finds that the local branch is ahead of the remote repository by 1 commit.
+   - Calls `ask_question`:
+     - **Question**: "Your local branch is ahead of the remote repository. Would you like to push the changes?"
+     - **Options**:
+       - `(Recommended) Push local changes to remote`
+       - `Skip sync and proceed`
+6. **User** selects: `Push local changes to remote`
+7. **Agent**:
+   - Runs `git push`
+   - Calls `ask_question` to confirm branch checkout:
+     - **Question**: "I recommend switching to a new branch for this task. Shall I create and checkout to branch `optimize-db-latency`?"
+     - **Options**:
+       - `(Recommended) Create and switch to 'optimize-db-latency' branch`
+       - `Keep working on the current branch`
+8. **User** selects: `Create and switch to 'optimize-db-latency' branch`
+9. **Agent**:
+   - Runs `git checkout -b optimize-db-latency`
+   - Activates caveman mode: `/caveman full Korean`
