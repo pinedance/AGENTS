@@ -70,7 +70,7 @@ library:
     path: skills/webapp-testing/SKILL.md
   - name: xlsx
     path: skills/xlsx/SKILL.md
-  - name: template
+  - name: template-skill
     path: template/SKILL.md
   commit: 57546260929473d4e0d1c1bb75297be2fdfa1949
 - repoId: Lum1104/Understand-Anything
@@ -98,7 +98,7 @@ library:
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
   skills:
-  - name: claude-video
+  - name: watch
     path: SKILL.md
   commit: c333c2289e57bf040b32846f18d669e3f8edad9b
 - repoId: pinedance/AGENTS
@@ -512,11 +512,6 @@ workspace:
   - name: skill-creator
     source: anthropics/skills/skill-creator
     target: skill-creator
-- repoId: bradautomates/claude-video
-  skills:
-  - name: claude-video
-    source: bradautomates/claude-video/claude-video
-    target: claude-video
 - repoId: JuliusBrussee/caveman
   skills:
   - name: caveman
