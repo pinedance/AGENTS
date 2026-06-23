@@ -469,6 +469,13 @@ library:
     path: skills/xlsx/SKILL.md
   - name: zarr-python
     path: skills/zarr-python/SKILL.md
+- repoId: blader/humanizer
+  repoType: github
+  repoUrl: https://github.com/blader/humanizer.git
+  commit: 9600f2b7241cb4eed6ad803abee5ea01d67fe8e4
+  skills:
+  - name: humanizer
+    path: SKILL.md
 workspace:
 - repoId: pinedance/AGENTS
   skills:
@@ -539,3 +546,8 @@ workspace:
   - name: database-lookup
     source: K-Dense-AI/scientific-agent-skills/database-lookup
     target: database-lookup
+- repoId: blader/humanizer
+  skills:
+  - name: humanizer
+    source: blader/humanizer/humanizer
+    target: humanizer
