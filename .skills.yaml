@@ -126,6 +126,8 @@ library:
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
     path: skills/requesting-code-review/SKILL.md
+  - name: skill-creator
+    path: skills/skill-creator/SKILL.md
   - name: subagent-driven-development
     path: skills/subagent-driven-development/SKILL.md
   - name: systematic-debugging
@@ -508,9 +510,12 @@ workspace:
   - name: my-coding-guidelines
     source: pinedance/AGENTS/my-coding-guidelines
     target: my-coding-guidelines
-  - name: skill-creator
-    source: pinedance/AGENTS/skill-creator
-    target: skill-creator
+  - name: my-skill-creator
+    source: pinedance/AGENTS/my-skill-creator
+    target: my-skill-creator
+  - name: my-skill-updater
+    source: pinedance/AGENTS/my-skill-updater
+    target: my-skill-updater
 - repoId: anthropics/skills
   skills:
   - name: pdf
