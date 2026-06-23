@@ -118,12 +118,14 @@ library:
     path: skills/my-git-commit/SKILL.md
   - name: my-new-session
     path: skills/my-new-session/SKILL.md
+  - name: my-skill-creator
+    path: skills/my-skill-creator/SKILL.md
+  - name: my-skill-updater
+    path: skills/my-skill-updater/SKILL.md
   - name: receiving-code-review
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
     path: skills/requesting-code-review/SKILL.md
-  - name: skill-creator
-    path: skills/skill-creator/SKILL.md
   - name: subagent-driven-development
     path: skills/subagent-driven-development/SKILL.md
   - name: systematic-debugging
