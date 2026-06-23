@@ -40,6 +40,9 @@ This skill defines the core development principles, coding style, naming convent
 *   **Single Level of Abstraction Principle (SLAP)**: Ensure a single function orchestrates logic at a uniform level of abstraction; do not mix high-level orchestration with low-level implementation details.
 *   **Constants over Magic Values**: Replace raw literals (numbers, strings) in logic with descriptive named constants.
 *   **Dead Code Elimination**: Remove unreachable branches, unused variables, functions, and imports immediately.
+*   **Top-Level Imports**: Ban inline imports inside functions or classes. Place all module imports at the very top of the file to maintain clear visibility of dependencies.
+*   **No Nested Functions**: Ban declaring nested helper functions inside another function. Extract them as module-level functions with explicit parameters to ensure testability and readability.
+*   **Layer-Based Layout**: Organize code blocks sequentially within a file based on their logical abstraction layer and execution flow (e.g., Constants/Regex -> Utility Helpers -> Pre-processing -> Generation/Core -> Post-processing -> Orchestration/Main). Ensure the file reads naturally from top to bottom.
 
 ---
 
