@@ -509,9 +509,6 @@ workspace:
   - name: pdf
     source: anthropics/skills/pdf
     target: anthropics-pdf
-  - name: skill-creator
-    source: anthropics/skills/skill-creator
-    target: skill-creator
 - repoId: JuliusBrussee/caveman
   skills:
   - name: caveman
