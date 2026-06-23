@@ -16,6 +16,8 @@ This skill defines the core development principles, coding style, naming convent
 *   **Single Responsibility Principle (SRP)**: Restrict each module, class, and function to a single logical responsibility.
 *   **Loose Coupling**: Minimize dependencies between modules; prevent components from accessing or knowing internal states of others.
 *   **Dependency Inversion (DIP)**: Decouple business logic from concrete external resources (e.g., databases, networks) using interfaces and dependency injection to enable isolated unit testing.
+*   **YAGNI (You Aren't Gonna Need It)**: Reject implementing features, abstractions, or layers before they are explicitly required. Prioritize the simplest design that meets the current specification.
+*   **No Side-Effects in Constructors**: Limit class constructors (`__init__`) to state initialization and assignment. Avoid triggers of I/O, API, database, or network requests inside constructors to ensure clean mockability.
 
 ---
 
@@ -41,8 +43,9 @@ This skill defines the core development principles, coding style, naming convent
 *   **Constants over Magic Values**: Replace raw literals (numbers, strings) in logic with descriptive named constants.
 *   **Dead Code Elimination**: Remove unreachable branches, unused variables, functions, and imports immediately.
 *   **Top-Level Imports**: Ban inline imports inside functions or classes. Place all module imports at the very top of the file to maintain clear visibility of dependencies.
-*   **No Nested Functions**: Ban declaring nested helper functions inside another function. Extract them as module-level functions with explicit parameters to ensure testability and readability.
+*   **No Nested Functions**: Avoid declaring nested helper functions inside another function, except for decorators, closures, or function factories where returning a nested function is structurally necessary. Extract standard helper logic to module-level functions with explicit parameters to ensure testability and readability.
 *   **Layer-Based Layout**: Organize code blocks sequentially within a file based on their logical abstraction layer and execution flow (e.g., Constants/Regex -> Utility Helpers -> Pre-processing -> Generation/Core -> Post-processing -> Orchestration/Main). Ensure the file reads naturally from top to bottom.
+*   **Conventional Commits**: Enforce Conventional Commits specification (e.g., `feat:`, `fix:`, `refactor:`, `test:`, `chore:`) for all git commit messages.
 
 ---
 
