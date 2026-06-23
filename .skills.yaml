@@ -126,8 +126,6 @@ library:
     path: skills/receiving-code-review/SKILL.md
   - name: requesting-code-review
     path: skills/requesting-code-review/SKILL.md
-  - name: skill-creator
-    path: skills/skill-creator/SKILL.md
   - name: subagent-driven-development
     path: skills/subagent-driven-development/SKILL.md
   - name: systematic-debugging
