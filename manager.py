@@ -347,6 +347,8 @@ def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path
 
     for repo in config.get("library", []):
         repo_id = repo.get("repoId", "")
+        if repo_id == "LOCAL":
+            continue
         if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
             print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
             continue

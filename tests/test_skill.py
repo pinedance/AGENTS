@@ -1440,4 +1440,27 @@ library:
     assert config_no_paths.get("paths", {}).get("library") == "skills-library"
 
 
+@patch("manager.download_repo_zip")
+@patch("manager._extract_skill_if_needed")
+def test_sync_skips_local_repo_download_and_extract(mock_extract, mock_download, temp_env):
+    import manager
+    yaml_content = """
+paths:
+  library: skills-library
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: skills/local-skill/SKILL.md
+"""
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text(yaml_content)
+    
+    manager.sync(yaml_path, temp_env)
+    
+    mock_download.assert_not_called()
+    mock_extract.assert_not_called()
+
+
+
 
