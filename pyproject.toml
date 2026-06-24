@@ -25,6 +25,8 @@ norecursedirs = [
 sync = "manager:main"
 library = "manager:main"
 workspace = "manager:main"
+status = "manager:main"
+
 
 [tool.uv]
 package = true
