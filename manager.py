@@ -892,119 +892,7 @@ def _get_local_repo_id() -> str | None:
     return None
 
 
-def _sync_library_to_source(lib_dir: Path, src_dir: Path):
-    if not lib_dir.exists():
-        return
-    src_dir.mkdir(parents=True, exist_ok=True)
-    comparison = filecmp.dircmp(lib_dir, src_dir)
-    
-    for name in comparison.left_only:
-        if name == COMMIT_FILENAME:
-            continue
-        lib_path = lib_dir / name
-        src_path = src_dir / name
-        if lib_path.is_dir():
-            shutil.copytree(lib_path, src_path)
-            print(f"Copied directory: {name}")
-        else:
-            shutil.copy2(lib_path, src_path)
-            print(f"Copied file: {name}")
-            
-    for name in comparison.diff_files:
-        if name == COMMIT_FILENAME:
-            continue
-        shutil.copy2(lib_dir / name, src_dir / name)
-        print(f"Updated file: {name}")
-        
-    for name in comparison.common_dirs:
-        _sync_library_to_source(lib_dir / name, src_dir / name)
-        
-    for name in comparison.right_only:
-        src_path = src_dir / name
-        if src_path.is_dir():
-            shutil.rmtree(src_path)
-            print(f"Deleted directory: {name}")
-        else:
-            src_path.unlink()
-            print(f"Deleted file: {name}")
 
-
-def myskills(message: str | None, config_path: Path, root_path: Path):
-    print("Checking repository status...")
-    config = load_config(config_path)
-    repos_dir = root_path / REPOS_DIR_NAME
-    library_dir = root_path / LIBRARY_DIR_NAME
-
-    local_repo_id = _get_local_repo_id()
-    if local_repo_id and local_repo_id != "LOCAL":
-        # Find matching repo in library config
-        matching_repo = None
-        for r in config.get("library", []):
-            if r["repoId"] == local_repo_id:
-                matching_repo = r
-                break
-                
-        if matching_repo:
-            print(f"Syncing modifications back from library extract for '{local_repo_id}' to source...")
-            for skill_item in matching_repo.get("skills", []):
-                s_name = skill_item["name"]
-                s_path = skill_item["path"]
-                
-                lib_skill_dir = library_dir / local_repo_id / s_name
-                src_skill_dir = root_path / Path(s_path).parent
-                
-                if lib_skill_dir.exists():
-                    _sync_library_to_source(lib_skill_dir, src_skill_dir)
-            
-            # Revert library extract back to clean state
-            lib_repo_dir = library_dir / local_repo_id
-            if lib_repo_dir.exists():
-                shutil.rmtree(lib_repo_dir)
-
-    # 1. Get branch
-    try:
-        res_branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], capture_output=True, text=True, check=True)
-        branch = res_branch.stdout.strip()
-    except FileNotFoundError:
-        print("Error: git command line tool not found on system.", file=sys.stderr)
-        return
-    except subprocess.CalledProcessError:
-        print("Error: Not a git repository.", file=sys.stderr)
-        return
-
-    # 2. Check status
-    try:
-        res_status = subprocess.run(
-            ["git", "status", "--porcelain", "skills/"],
-            capture_output=True, text=True, check=True
-        )
-    except FileNotFoundError:
-        print("Error: git command line tool not found on system.", file=sys.stderr)
-        return
-    except subprocess.CalledProcessError as e:
-        print(f"Error: git status failed: {e}", file=sys.stderr)
-        return
-
-    if not res_status.stdout.strip():
-        print("No changes in skills/ to publish. Syncing...")
-        sync(config_path, root_path)
-        return
-
-    # 3. Add, commit, push
-    msg = message or "Update skills"
-    print(f"Staging, committing, and pushing changes on branch '{branch}'...")
-    try:
-        subprocess.run(["git", "add", "skills/"], check=True)
-        subprocess.run(["git", "commit", "-m", msg], check=True)
-        subprocess.run(["git", "push", "origin", branch], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error: git operation failed: {e}", file=sys.stderr)
-        return
-
-
-    # 4. Sync
-    print("Push complete. Updating active workspace...")
-    sync(config_path, root_path)
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
@@ -1037,9 +925,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     work_rem = work_sub.add_parser("remove", help="Remove active workspace skill")
     work_rem.add_argument("skill_name", help="Name of skill to remove")
     
-    # myskills
-    myskills_parser = subparsers.add_parser("myskills", help="Stage, commit, push local skill changes and sync library")
-    myskills_parser.add_argument("-m", "--message", help="Commit message", default=None)
+
 
     args = parser.parse_args()
     
@@ -1063,8 +949,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
             workspace_add(args.skill_name, args.name, cfg, root)
         elif args.subcommand == "remove":
             workspace_remove(args.skill_name, cfg, root)
-    elif args.command == "myskills":
-        myskills(args.message, cfg, root)
+
 
 
 if __name__ == "__main__":
