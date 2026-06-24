@@ -895,10 +895,14 @@ def _get_local_repo_id() -> str | None:
 
 
 
+def status(config_path: Path, root_path: Path):
+    pass
+
+
 def main(config_path: Path | None = None, root_path: Path | None = None):
     import sys
     cmd_name = Path(sys.argv[0]).name
-    if cmd_name in ("sync", "library", "workspace") and (len(sys.argv) < 2 or sys.argv[1] != cmd_name):
+    if cmd_name in ("sync", "library", "workspace", "status") and (len(sys.argv) < 2 or sys.argv[1] != cmd_name):
         sys.argv.insert(1, cmd_name)
 
     parser = argparse.ArgumentParser(description="Skill Manager CLI")
@@ -910,6 +914,9 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     # sync
     sync_parser = subparsers.add_parser("sync", help=f"Sync local file system with {DEFAULT_CONFIG_NAME}")
     sync_parser.add_argument("--check-remote", action="store_true", help="Compare with remote latest commit ID as well")
+    
+    # status
+    subparsers.add_parser("status", help="Show current configuration and workspace status")
     
     # library
     lib_parser = subparsers.add_parser("library", help="Manage skill library")
@@ -954,6 +961,8 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
             workspace_add(args.skill_name, args.name, cfg, root)
         elif args.subcommand == "remove":
             workspace_remove(args.skill_name, cfg, root)
+    elif args.command == "status":
+        status(cfg, root)
 
 
 

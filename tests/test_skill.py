@@ -1480,6 +1480,18 @@ def test_cli_shortcut_argv_injection():
         assert sys.argv[1] == "sync"
 
 
+def test_cli_status_command_routing():
+    import manager
+    import sys
+    from unittest.mock import patch
+    
+    test_argv = ["/usr/bin/status"]
+    with patch.object(sys, "argv", test_argv), \
+         patch("manager.status") as mock_status:
+        manager.main()
+        mock_status.assert_called_once()
+
+
 
 
 
