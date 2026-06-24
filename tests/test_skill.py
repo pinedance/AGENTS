@@ -1404,3 +1404,40 @@ workspace:
     assert len(config["workspace"]) == 1
     assert config["workspace"][0]["skills"][0]["name"] == "brainstorming-v2"
 
+
+def test_load_config_with_paths_and_local_repo(tmp_path):
+    import manager
+    yaml_content = """
+paths:
+  library: custom-library-dir
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: my-local-skills/local-skill/SKILL.md
+"""
+    cfg_path = tmp_path / ".skills.yaml"
+    cfg_path.write_text(yaml_content)
+    config = manager.load_config(cfg_path)
+    
+    assert config.get("paths", {}).get("library") == "custom-library-dir"
+    # Verify LOCAL repo exists
+    local_repos = [r for r in config.get("library", []) if r.get("repoId") == "LOCAL"]
+    assert len(local_repos) == 1
+    assert local_repos[0]["skills"][0]["name"] == "local-skill"
+
+    # Test fallback to defaults when paths is missing
+    yaml_content_no_paths = """
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: my-local-skills/local-skill/SKILL.md
+"""
+    cfg_path_no_paths = tmp_path / ".skills_no_paths.yaml"
+    cfg_path_no_paths.write_text(yaml_content_no_paths)
+    config_no_paths = manager.load_config(cfg_path_no_paths)
+    assert config_no_paths.get("paths", {}).get("library") == "skills-library"
+
+
+

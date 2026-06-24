@@ -173,12 +173,17 @@ def prompt_selection(candidates, format_fn, title_label, prompt_label):
 def load_config(path: Path) -> dict:
     yaml = get_yaml_parser()
     if not path.exists():
-        return {"library": [], "workspace": []}
+        return {"paths": {"library": "skills-library"}, "library": [], "workspace": []}
     with open(path, "r", encoding="utf-8-sig") as f:
         data = yaml.load(f)
     if not data:
-        return {"library": [], "workspace": []}
+        return {"paths": {"library": "skills-library"}, "library": [], "workspace": []}
     
+    if "paths" not in data:
+        data["paths"] = {"library": "skills-library"}
+    elif "library" not in data["paths"]:
+        data["paths"]["library"] = "skills-library"
+        
     _sanitize_config(data)
     return data
 
