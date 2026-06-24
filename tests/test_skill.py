@@ -1549,41 +1549,55 @@ def test_library_add_and_remove_local(temp_env):
     skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
-    # 1. Create a dummy local skill directory and file
-    local_skill_dir = temp_env / "skills" / "my-local-skill"
-    local_skill_dir.mkdir(parents=True, exist_ok=True)
-    skill_file = local_skill_dir / "SKILL.md"
-    skill_file.write_text("---\nname: my-local-skill\ndescription: A test local skill\n---\n")
+    # 1. Create a dummy local repository folder and skill files
+    local_repo_dir = temp_env / "skills-new"
+    local_repo_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create skill A
+    skill_a_dir = local_repo_dir / "skill-a"
+    skill_a_dir.mkdir(parents=True, exist_ok=True)
+    (skill_a_dir / "SKILL.md").write_text("---\nname: skill-a\ndescription: Skill A\n---\n")
+    
+    # Create skill B
+    skill_b_dir = local_repo_dir / "skill-b"
+    skill_b_dir.mkdir(parents=True, exist_ok=True)
+    (skill_b_dir / "SKILL.md").write_text("---\nname: skill-b\ndescription: Skill B\n---\n")
 
-    # 2. Test library add LOCAL with path
-    skill.library_add("LOCAL", yaml_path, temp_env, local_path="skills/my-local-skill/SKILL.md")
+    # 2. Test library add LOCAL/skills-new
+    skill.library_add("LOCAL/skills-new", yaml_path, temp_env)
     
     config = skill.load_config(yaml_path)
-    local_repo = next(r for r in config["library"] if r["repoId"] == "LOCAL")
-    assert any(s["name"] == "my-local-skill" and s["path"] == "skills/my-local-skill/SKILL.md" for s in local_repo["skills"])
+    local_entry = next(r for r in config["library"] if r["repoId"] == "LOCAL/skills-new")
+    assert any(s["name"] == "skill-a" and s["path"] == "skills-new/skill-a/SKILL.md" for s in local_entry["skills"])
+    assert any(s["name"] == "skill-b" and s["path"] == "skills-new/skill-b/SKILL.md" for s in local_entry["skills"])
 
-    # 3. Test library remove LOCAL with skill name
-    # First we activate it to workspace to verify it gets removed from workspace as well
+    # 3. Test library update LOCAL/skills-new (add new skill C)
+    skill_c_dir = local_repo_dir / "skill-c"
+    skill_c_dir.mkdir(parents=True, exist_ok=True)
+    (skill_c_dir / "SKILL.md").write_text("---\nname: skill-c\ndescription: Skill C\n---\n")
+    
+    skill.library_update("LOCAL/skills-new", yaml_path, temp_env)
+    config = skill.load_config(yaml_path)
+    local_entry = next(r for r in config["library"] if r["repoId"] == "LOCAL/skills-new")
+    assert any(s["name"] == "skill-c" and s["path"] == "skills-new/skill-c/SKILL.md" for s in local_entry["skills"])
+
+    # 4. Test library remove LOCAL/skills-new
+    # First we activate one to workspace to verify workspace removal
     config["workspace"].append({
-        "repoId": "LOCAL",
+        "repoId": "LOCAL/skills-new",
         "skills": [{
-            "name": "my-local-skill",
-            "source": "skills/my-local-skill",
-            "target": "my-local-skill"
+            "name": "skill-a",
+            "source": "skills-new/skill-a",
+            "target": "skill-a"
         }]
     })
     skill.save_config(config, yaml_path)
     
-    skill.library_remove("LOCAL", yaml_path, temp_env, local_skill_name="my-local-skill")
+    skill.library_remove("LOCAL/skills-new", yaml_path, temp_env)
     
     config = skill.load_config(yaml_path)
-    local_repo = next(r for r in config["library"] if r["repoId"] == "LOCAL")
-    assert not any(s["name"] == "my-local-skill" for s in local_repo["skills"])
-    # Verify workspace entry also cleaned up
-    assert not any(
-        w["repoId"] == "LOCAL" and any(s["name"] == "my-local-skill" for s in w.get("skills", []))
-        for w in config.get("workspace", [])
-    )
+    assert not any(r["repoId"] == "LOCAL/skills-new" for r in config["library"])
+    assert not any(w["repoId"] == "LOCAL/skills-new" for w in config.get("workspace", []))
 
 
 

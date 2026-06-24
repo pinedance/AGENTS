@@ -348,7 +348,7 @@ def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path
 
     for repo in config.get("library", []):
         repo_id = repo.get("repoId", "")
-        if repo_id == "LOCAL":
+        if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
             continue
         if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
             print(f"Warning: Skipping invalid repoId in config: {repo_id!r}", file=sys.stderr)
@@ -472,7 +472,7 @@ def _validate_active_workspaces(config: dict, root_path: Path = PROJECT_ROOT) ->
         r_id = repo["repoId"]
         for s in repo.get("skills", []):
             library_skills[(r_id, s["name"])] = s["path"]
-            if r_id == "LOCAL":
+            if r_id == "LOCAL" or r_id.startswith("LOCAL/"):
                 local_paths[s["name"]] = s["path"]
 
     valid_workspaces = []
@@ -484,7 +484,7 @@ def _validate_active_workspaces(config: dict, root_path: Path = PROJECT_ROOT) ->
             s_name = s["name"]
             if (r_id, s_name) in library_skills:
                 # Extra check for LOCAL repository: verify file existence
-                if r_id == "LOCAL":
+                if r_id == "LOCAL" or r_id.startswith("LOCAL/"):
                     path_str = local_paths.get(s_name)
                     if not path_str or not (root_path / path_str).exists():
                         print(f"Warning: Local skill '{s_name}' is missing at source path. Removing from active workspace.")
@@ -557,7 +557,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
             target = skill_item["target"]
             if target in target_links:
                 raise ValueError(f"Duplicate target name: {target} in workspace configuration")
-            if repo_id == "LOCAL":
+            if repo_id == "LOCAL" or (repo_id and repo_id.startswith("LOCAL/")):
                 target_links[target] = (root_path / source).resolve()
             else:
                 target_links[target] = (library_dir / source).resolve()
@@ -565,7 +565,8 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     # Populate allowed_bases dynamically based on LOCAL library skills
     allowed_bases = [library_dir]
     for repo in config.get("library", []):
-        if repo.get("repoId") == "LOCAL":
+        r_id = repo.get("repoId", "")
+        if r_id == "LOCAL" or r_id.startswith("LOCAL/"):
             for skill_item in repo.get("skills", []):
                 path_str = skill_item.get("path", "")
                 if path_str:
@@ -641,72 +642,60 @@ def _read_skill_name_from_file(file_path: Path) -> str:
         return ""
 
 
-def library_add(repo_id: str, config_path: Path, root_path: Path, local_path: str | None = None, _do_sync: bool = True):
-    config = load_config(config_path)
-
-    if repo_id == "LOCAL":
-        if not local_path:
-            raise ValueError("localPath is required when repoId is 'LOCAL'.")
-        
-        target_path = Path(local_path)
-        if not target_path.is_absolute():
-            target_path = root_path / target_path
-            
-        if target_path.is_dir():
-            target_file = target_path / SKILL_FILENAME
-        else:
-            target_file = target_path
-
-        if not target_file.exists():
-            raise ValueError(f"Local skill file not found at: {target_file}")
-            
-        skill_name = _read_skill_name_from_file(target_file)
-        if not skill_name:
-            skill_name = target_file.parent.name
-            
-        try:
-            rel_path = target_file.relative_to(root_path)
-            rel_path_str = rel_path.as_posix()
-        except ValueError:
-            rel_path_str = target_file.resolve().as_posix()
-
-        if "library" not in config:
-            config["library"] = []
-            
-        local_repo = None
-        for r in config["library"]:
-            if r["repoId"] == "LOCAL":
-                local_repo = r
-                break
-                
-        if not local_repo:
-            local_repo = {
-                "repoId": "LOCAL",
-                "skills": []
-            }
-            config["library"].append(local_repo)
-            
-        if "skills" not in local_repo:
-            local_repo["skills"] = []
-            
-        found = False
-        for s in local_repo["skills"]:
-            if s["name"] == skill_name:
-                s["path"] = rel_path_str
-                found = True
-                break
-        if not found:
-            local_repo["skills"].append({
+def _scan_local_dir_for_skills(dir_path: Path, root_path: Path) -> list:
+    skills_found = []
+    for p in sorted(dir_path.rglob(SKILL_FILENAME)):
+        if p.is_file():
+            skill_name = _read_skill_name_from_file(p)
+            if not skill_name:
+                skill_name = p.parent.name
+            try:
+                rel_path = p.relative_to(root_path)
+                rel_path_str = rel_path.as_posix()
+            except ValueError:
+                rel_path_str = p.resolve().as_posix()
+            skills_found.append({
                 "name": skill_name,
                 "path": rel_path_str
             })
+    return skills_found
+
+
+def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool = True):
+    config = load_config(config_path)
+
+    if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
+        if repo_id == "LOCAL":
+            pass
+        else:
+            local_dir_name = repo_id[len("LOCAL/"):]
+            local_dir = root_path / local_dir_name
+            if not local_dir.exists() or not local_dir.is_dir():
+                raise ValueError(f"Local repository directory not found: {local_dir}")
             
-        save_config(config, config_path)
-        print(f"Added local skill '{skill_name}' (path: {rel_path_str}) to library.")
-        
-        if _do_sync:
-            sync(config_path, root_path)
-        return
+            skills_found = _scan_local_dir_for_skills(local_dir, root_path)
+            
+            if "library" not in config:
+                config["library"] = []
+                
+            found = False
+            for r in config["library"]:
+                if r["repoId"] == repo_id:
+                    r["skills"] = skills_found
+                    found = True
+                    break
+            if not found:
+                config["library"].append({
+                    "repoId": repo_id,
+                    "skills": skills_found
+                })
+                
+            save_config(config, config_path)
+            print(f"Added local repository {repo_id} to library.")
+            
+            if _do_sync:
+                sync(config_path, root_path)
+            return
 
     if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
@@ -809,13 +798,16 @@ def library_update(repo_id: str | None, config_path: Path, root_path: Path):
     repos_dir = root_path / REPOS_DIR_NAME
     for r in repos_to_update:
         r_id = r["repoId"]
-        zip_path = repos_dir / f"{r_id}.zip"
-        if zip_path.exists():
-            try:
-                zip_path.unlink()
-            except OSError:
-                pass
-        library_add(r_id, config_path, root_path, _do_sync=False)
+        if r_id == "LOCAL" or r_id.startswith("LOCAL/"):
+            library_add(r_id, config_path, root_path, _do_sync=False)
+        else:
+            zip_path = repos_dir / f"{r_id}.zip"
+            if zip_path.exists():
+                try:
+                    zip_path.unlink()
+                except OSError:
+                    pass
+            library_add(r_id, config_path, root_path, _do_sync=False)
 
     # Single sync after all repos are updated — avoids O(N) redundant syncs
     # and prevents intermediate pruning from deleting not-yet-refreshed zips
@@ -978,7 +970,7 @@ def status(config_path: Path, root_path: Path):
     print("┌── Remote Repositories (.skills-repos) ──────────────────────────┐")
     for repo in config.get("library", []):
         repo_id = repo.get("repoId", "")
-        if repo_id == "LOCAL":
+        if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
             continue
         
         repo_url = repo.get("repoUrl", "")
@@ -1008,7 +1000,7 @@ def status(config_path: Path, root_path: Path):
         for skill_item in repo.get("skills", []):
             s_name = skill_item.get("name", "")
             s_path = skill_item.get("path", "")
-            if repo_id == "LOCAL":
+            if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
                 print(f"│    - {s_name:25} ({s_path})")
             else:
                 print(f"│    - {s_name}")
@@ -1065,10 +1057,10 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     # library
     lib_parser = subparsers.add_parser("library", help="Manage skill library")
     lib_sub = lib_parser.add_subparsers(dest="subcommand", required=True)
-    lib_add = lib_sub.add_parser("add", help="Add remote repo to library")
-    lib_add.add_argument("repoId", help="GitHub repository identifier, e.g. obra/superpowers")
+    lib_add = lib_sub.add_parser("add", help="Add remote repo or local skill directory to library")
+    lib_add.add_argument("repoId", help="GitHub repository identifier or LOCAL/dir")
     lib_rem = lib_sub.add_parser("remove", help="Remove repo from library")
-    lib_rem.add_argument("repoId", help="GitHub repository identifier")
+    lib_rem.add_argument("repoId", help="GitHub repository identifier or LOCAL/dir")
     lib_up = lib_sub.add_parser("update", help="Update remote repo in library")
     lib_up.add_argument("repoId", nargs="?", help="GitHub repository identifier, optional", default=None)
     
