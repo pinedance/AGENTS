@@ -1462,6 +1462,24 @@ workspace:
     assert symlink.resolve() == skill_dir.resolve()
 
 
+def test_cli_shortcut_argv_injection():
+    import manager
+    import sys
+    from unittest.mock import patch
+    
+    # Mock sys.argv simulating calling "sync" script
+    test_argv = ["/usr/bin/sync", "--check-remote"]
+    
+    # Mock the argparse sync parsing and sync() function to verify subcommand resolves correctly
+    with patch.object(sys, "argv", test_argv), \
+         patch("manager.sync") as mock_sync:
+        manager.main()
+        
+        mock_sync.assert_called_once()
+        # The injected command sync should be parsed and mapped to config_path
+        assert sys.argv[1] == "sync"
+
+
 
 
 

@@ -896,6 +896,11 @@ def _get_local_repo_id() -> str | None:
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
+    import sys
+    cmd_name = Path(sys.argv[0]).name
+    if cmd_name in ("sync", "library", "workspace") and (len(sys.argv) < 2 or sys.argv[1] != cmd_name):
+        sys.argv.insert(1, cmd_name)
+
     parser = argparse.ArgumentParser(description="Skill Manager CLI")
     parser.add_argument("--config", help="Path to config file", default=None)
     parser.add_argument("--root", help="Path to project root", default=None)
