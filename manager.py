@@ -105,7 +105,7 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
         item_path = skills_dir / item
         if item_path.is_symlink():
             try:
-                resolved_target = Path(os.readlink(item_path)).resolve()
+                resolved_target = (item_path.parent / os.readlink(item_path)).resolve()
                 is_in_any_base = any(resolved_target.is_relative_to(b) for b in resolved_bases)
                 if is_in_any_base:
                     if item not in target_links or resolved_target != target_links[item]:
@@ -114,11 +114,11 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
                 elif not resolved_target.exists():
                     print(f"Pruning broken symlink: {item}")
                     item_path.unlink()
-            except OSError:
+            except OSError as e:
                 try:
                     item_path.unlink()
-                except OSError:
-                    pass
+                except OSError as unlink_err:
+                    print(f"Warning: Failed to prune broken/stale symlink {item_path}: {unlink_err}", file=sys.stderr)
                 
     # Create missing symlinks with collision check
     for target, source_abs in target_links.items():
@@ -126,7 +126,7 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
         if link_path.exists() or link_path.is_symlink():
             if link_path.is_symlink():
                 try:
-                    real_link = Path(os.readlink(link_path)).resolve()
+                    real_link = (link_path.parent / os.readlink(link_path)).resolve()
                     if not real_link.exists() and real_link != source_abs:
                         print(f"Recreating broken symlink: {target} -> {source_abs}")
                         link_path.unlink()
@@ -136,8 +136,8 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
                     try:
                         link_path.unlink()
                         os.symlink(source_abs, link_path)
-                    except OSError:
-                        raise OSError(f"Failed to recreate symlink '{target}' -> {source_abs}: {e}") from e
+                    except OSError as inner_e:
+                        raise OSError(f"Failed to recreate symlink '{target}' -> {source_abs}: {inner_e}") from inner_e
                     continue
                 
                 if real_link != source_abs:
