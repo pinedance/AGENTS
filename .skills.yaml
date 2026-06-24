@@ -101,36 +101,6 @@ library:
   - name: watch
     path: SKILL.md
   commit: c333c2289e57bf040b32846f18d669e3f8edad9b
-- repoId: LOCAL
-  skills:
-  - name: brainstorming
-    path: skills/brainstorming/SKILL.md
-  - name: executing-plans
-    path: skills/executing-plans/SKILL.md
-  - name: my-code-review
-    path: skills/my-code-review/SKILL.md
-  - name: my-coding-guidelines
-    path: skills/my-coding-guidelines/SKILL.md
-  - name: my-git-commit
-    path: skills/my-git-commit/SKILL.md
-  - name: my-new-session
-    path: skills/my-new-session/SKILL.md
-  - name: my-skill-creator
-    path: skills/my-skill-creator/SKILL.md
-  - name: my-skill-updater
-    path: skills/my-skill-updater/SKILL.md
-  - name: receiving-code-review
-    path: skills/receiving-code-review/SKILL.md
-  - name: requesting-code-review
-    path: skills/requesting-code-review/SKILL.md
-  - name: subagent-driven-development
-    path: skills/subagent-driven-development/SKILL.md
-  - name: systematic-debugging
-    path: skills/systematic-debugging/SKILL.md
-  - name: test-driven-development
-    path: skills/test-driven-development/SKILL.md
-  - name: writing-plans
-    path: skills/writing-plans/SKILL.md
 - repoId: JuliusBrussee/caveman
   repoType: github
   repoUrl: https://github.com/JuliusBrussee/caveman.git
@@ -473,8 +443,40 @@ library:
   skills:
   - name: humanizer
     path: SKILL.md
+- repoId: LOCAL/skills
+  skills:
+  - name: brainstorming
+    path: skills/brainstorming/SKILL.md
+  - name: executing-plans
+    path: skills/executing-plans/SKILL.md
+  - name: finishing-a-development-branch
+    path: skills/finishing-a-development-branch/SKILL.md
+  - name: my-code-review
+    path: skills/my-code-review/SKILL.md
+  - name: my-coding-guidelines
+    path: skills/my-coding-guidelines/SKILL.md
+  - name: my-git-commit
+    path: skills/my-git-commit/SKILL.md
+  - name: my-new-session
+    path: skills/my-new-session/SKILL.md
+  - name: my-skill-creator
+    path: skills/my-skill-creator/SKILL.md
+  - name: my-skill-updater
+    path: skills/my-skill-updater/SKILL.md
+  - name: receiving-code-review
+    path: skills/receiving-code-review/SKILL.md
+  - name: requesting-code-review
+    path: skills/requesting-code-review/SKILL.md
+  - name: subagent-driven-development
+    path: skills/subagent-driven-development/SKILL.md
+  - name: systematic-debugging
+    path: skills/systematic-debugging/SKILL.md
+  - name: test-driven-development
+    path: skills/test-driven-development/SKILL.md
+  - name: writing-plans
+    path: skills/writing-plans/SKILL.md
 workspace:
-- repoId: LOCAL
+- repoId: LOCAL/skills
   skills:
   - name: brainstorming
     source: skills/brainstorming
@@ -518,6 +520,9 @@ workspace:
   - name: my-skill-updater
     source: skills/my-skill-updater
     target: my-skill-updater
+  - name: finishing-a-development-branch
+    source: skills/finishing-a-development-branch
+    target: finishing-a-development-branch
 - repoId: anthropics/skills
   skills:
   - name: pdf
