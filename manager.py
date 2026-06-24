@@ -789,7 +789,18 @@ def library_update(repo_id: str | None, config_path: Path, root_path: Path):
     if repo_id:
         repos_to_update = [r for r in config.get("library", []) if r["repoId"] == repo_id]
         if not repos_to_update:
-            raise ValueError(f"Repository {repo_id} not found in library config")
+            if repo_id.startswith("LOCAL/"):
+                local_dir_name = repo_id[len("LOCAL/"):]
+                local_dir = root_path / local_dir_name
+                if local_dir.exists() and local_dir.is_dir():
+                    print(f"Repository {repo_id} not registered but local directory exists. Registering automatically...")
+                    library_add(repo_id, config_path, root_path, _do_sync=False)
+                    config = load_config(config_path)
+                    repos_to_update = [r for r in config.get("library", []) if r["repoId"] == repo_id]
+                else:
+                    raise ValueError(f"Repository {repo_id} not found in library config and local directory does not exist: {local_dir}")
+            else:
+                raise ValueError(f"Repository {repo_id} not found in library config")
         print(f"Updating repository {repo_id}...")
     else:
         repos_to_update = config.get("library", [])

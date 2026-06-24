@@ -1600,6 +1600,32 @@ def test_library_add_and_remove_local(temp_env):
     assert not any(w["repoId"] == "LOCAL/skills-new" for w in config.get("workspace", []))
 
 
+def test_library_update_auto_register_local_repo(temp_env):
+    import manager as skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # 1. Create a dummy local repo directory with a skill (NOT registered in .skills.yaml yet)
+    local_repo_dir = temp_env / "skills-new"
+    local_repo_dir.mkdir(parents=True, exist_ok=True)
+    skill_dir = local_repo_dir / "my-skill"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("---\nname: my-skill\ndescription: Auto test\n---\n")
+    
+    # Verify .skills.yaml doesn't have it
+    config = skill.load_config(yaml_path)
+    assert not any(r["repoId"] == "LOCAL/skills-new" for r in config.get("library", []))
+    
+    # 2. Call library_update with "LOCAL/skills-new"
+    # It should automatically add it to library rather than raising ValueError
+    skill.library_update("LOCAL/skills-new", yaml_path, temp_env)
+    
+    # 3. Verify it is now registered
+    config = skill.load_config(yaml_path)
+    local_entry = next(r for r in config["library"] if r["repoId"] == "LOCAL/skills-new")
+    assert any(s["name"] == "my-skill" and s["path"] == "skills-new/my-skill/SKILL.md" for s in local_entry["skills"])
+
+
 
 
 
