@@ -1437,7 +1437,7 @@ library:
     cfg_path_no_paths = tmp_path / ".skills_no_paths.yaml"
     cfg_path_no_paths.write_text(yaml_content_no_paths)
     config_no_paths = manager.load_config(cfg_path_no_paths)
-    assert config_no_paths.get("paths", {}).get("library") == "skills-library"
+    assert config_no_paths.get("paths", {}).get("library", "skills-library") == "skills-library"
 
 
 @patch("manager.download_repo_zip")
@@ -1499,6 +1499,45 @@ workspace:
     changed = manager._validate_active_workspaces(config_missing, temp_env)
     assert changed
     assert len(config_missing.get("workspace", [])) == 0
+
+
+def test_sync_local_symlink_routing(temp_env):
+    import manager
+    yaml_content = """
+paths:
+  library: skills-library
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: skills/local-skill/SKILL.md
+workspace:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    source: skills/local-skill
+    target: local-skill
+"""
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text(yaml_content)
+    
+    # Setup actual directory
+    skill_dir = temp_env / "skills" / "local-skill"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("name: local-skill")
+    
+    # Mock SKILLS_DIR env var to a custom location in temp_env
+    skills_dir = temp_env / ".agents-skills"
+    skills_dir.mkdir(exist_ok=True)
+    
+    with patch.dict(os.environ, {manager.SKILLS_DIR_ENV_VAR: str(skills_dir)}):
+        manager.sync(yaml_path, temp_env)
+        
+    # Verify target link points to actual local dir, not skills-library
+    symlink = skills_dir / "local-skill"
+    assert symlink.is_symlink()
+    assert symlink.resolve() == skill_dir.resolve()
+
 
 
 

@@ -87,13 +87,18 @@ def _prune_obsolete_libs(library_dir: Path, active_libs: set):
                 except OSError:
                     pass  # Non-empty dir — expected, skip
 
-def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
-    """Rebuild symlinks in skills_dir pointing to library_dir."""
-    resolved_lib = library_dir.resolve()
+def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links: dict):
+    """Rebuild symlinks in skills_dir pointing to allowed base directories."""
+    resolved_bases = [b.resolve() for b in allowed_bases]
     for target, source_abs in target_links.items():
         resolved_src = source_abs.resolve()
-        if not resolved_src.is_relative_to(resolved_lib) or resolved_src == resolved_lib:
-            raise ValueError(f"Symlink target {resolved_src} is not strictly inside {resolved_lib}")
+        is_valid = False
+        for base in resolved_bases:
+            if resolved_src.is_relative_to(base) and resolved_src != base:
+                is_valid = True
+                break
+        if not is_valid:
+            raise ValueError(f"Symlink target {resolved_src} is not strictly inside allowed bases: {resolved_bases}")
 
     # Delete stale links/files in skills_dir (safe pruning)
     for item in os.listdir(skills_dir):
@@ -101,7 +106,8 @@ def _rebuild_symlinks(skills_dir: Path, library_dir: Path, target_links: dict):
         if item_path.is_symlink():
             try:
                 resolved_target = Path(os.readlink(item_path)).resolve()
-                if resolved_target.is_relative_to(resolved_lib):
+                is_in_any_base = any(resolved_target.is_relative_to(b) for b in resolved_bases)
+                if is_in_any_base:
                     if item not in target_links or resolved_target != target_links[item]:
                         print(f"Pruning stale symlink: {item}")
                         item_path.unlink()
@@ -173,16 +179,11 @@ def prompt_selection(candidates, format_fn, title_label, prompt_label):
 def load_config(path: Path) -> dict:
     yaml = get_yaml_parser()
     if not path.exists():
-        return {"paths": {"library": "skills-library"}, "library": [], "workspace": []}
+        return {"library": [], "workspace": []}
     with open(path, "r", encoding="utf-8-sig") as f:
         data = yaml.load(f)
     if not data:
-        return {"paths": {"library": "skills-library"}, "library": [], "workspace": []}
-    
-    if "paths" not in data:
-        data["paths"] = {"library": "skills-library"}
-    elif "library" not in data["paths"]:
-        data["paths"]["library"] = "skills-library"
+        return {"library": [], "workspace": []}
         
     _sanitize_config(data)
     return data
@@ -527,7 +528,8 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     print("Syncing skills...")
     config = load_config(config_path)
     repos_dir = root_path / REPOS_DIR_NAME
-    library_dir = root_path / LIBRARY_DIR_NAME
+    library_name = config.get("paths", {}).get("library", LIBRARY_DIR_NAME)
+    library_dir = root_path / library_name
     skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
     
     repos_dir.mkdir(parents=True, exist_ok=True)
@@ -549,14 +551,38 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     # Sync workspace links
     target_links = {}
     for repo in config.get("workspace", []):
+        repo_id = repo.get("repoId")
         for skill_item in repo.get("skills", []):
             source = skill_item["source"]
             target = skill_item["target"]
             if target in target_links:
                 raise ValueError(f"Duplicate target name: {target} in workspace configuration")
-            target_links[target] = (library_dir / source).resolve()
+            if repo_id == "LOCAL":
+                target_links[target] = (root_path / source).resolve()
+            else:
+                target_links[target] = (library_dir / source).resolve()
             
-    _rebuild_symlinks(skills_dir, library_dir, target_links)
+    # Populate allowed_bases dynamically based on LOCAL library skills
+    allowed_bases = [library_dir]
+    for repo in config.get("library", []):
+        if repo.get("repoId") == "LOCAL":
+            for skill_item in repo.get("skills", []):
+                path_str = skill_item.get("path", "")
+                if path_str:
+                    parts = Path(path_str).parts
+                    if parts:
+                        allowed_bases.append(root_path / parts[0])
+                        
+    # Deduplicate bases keeping order
+    seen = set()
+    deduped_bases = []
+    for b in allowed_bases:
+        resolved = b.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            deduped_bases.append(b)
+
+    _rebuild_symlinks(skills_dir, deduped_bases, target_links)
     print("Sync completed successfully.")
 
 
