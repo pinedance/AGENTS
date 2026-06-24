@@ -64,6 +64,7 @@ A utility for efficiently managing and synchronizing common Skills that can be i
 
 ```
 sync
+status
 library
 ├── add <owner/repo>
 ├── remove <owner/repo>
@@ -204,6 +205,21 @@ Manage which skills are active and symlinked in the global folder `~/.agents/ski
   ```bash
   uv run workspace remove <skill_name>
   ```
+
+---
+
+### 4. Status Check (`status`)
+
+Show the current state of repositories, libraries, and active workspace symlinks.
+
+```bash
+uv run status
+```
+
+* **Remote Repositories**: Compares the local cached zip comment hashes with remote commit hashes fetched via `git ls-remote` to determine if an update is required.
+* **Skills Library**: Lists available skills in the library, grouped by repository (displaying paths for the `LOCAL` repo).
+* **Workspace Symlinks**: Lists active symlinks in `~/.agents/skills/` and tags broken symlinks with `[BROKEN]`.
+
 
 ---
 
