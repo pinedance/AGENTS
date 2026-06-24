@@ -101,10 +101,7 @@ library:
   - name: watch
     path: SKILL.md
   commit: c333c2289e57bf040b32846f18d669e3f8edad9b
-- repoId: pinedance/AGENTS
-  repoType: github
-  repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: latest
+- repoId: LOCAL
   skills:
   - name: brainstorming
     path: skills/brainstorming/SKILL.md
@@ -477,49 +474,49 @@ library:
   - name: humanizer
     path: SKILL.md
 workspace:
-- repoId: pinedance/AGENTS
+- repoId: LOCAL
   skills:
   - name: brainstorming
-    source: pinedance/AGENTS/brainstorming
+    source: skills/brainstorming
     target: brainstorming
   - name: executing-plans
-    source: pinedance/AGENTS/executing-plans
+    source: skills/executing-plans
     target: executing-plans
   - name: receiving-code-review
-    source: pinedance/AGENTS/receiving-code-review
+    source: skills/receiving-code-review
     target: receiving-code-review
   - name: requesting-code-review
-    source: pinedance/AGENTS/requesting-code-review
+    source: skills/requesting-code-review
     target: requesting-code-review
   - name: subagent-driven-development
-    source: pinedance/AGENTS/subagent-driven-development
+    source: skills/subagent-driven-development
     target: subagent-driven-development
   - name: systematic-debugging
-    source: pinedance/AGENTS/systematic-debugging
+    source: skills/systematic-debugging
     target: systematic-debugging
   - name: test-driven-development
-    source: pinedance/AGENTS/test-driven-development
+    source: skills/test-driven-development
     target: test-driven-development
   - name: writing-plans
-    source: pinedance/AGENTS/writing-plans
+    source: skills/writing-plans
     target: writing-plans
   - name: my-code-review
-    source: pinedance/AGENTS/my-code-review
+    source: skills/my-code-review
     target: my-code-review
   - name: my-git-commit
-    source: pinedance/AGENTS/my-git-commit
+    source: skills/my-git-commit
     target: my-git-commit
   - name: my-new-session
-    source: pinedance/AGENTS/my-new-session
+    source: skills/my-new-session
     target: my-new-session
   - name: my-coding-guidelines
-    source: pinedance/AGENTS/my-coding-guidelines
+    source: skills/my-coding-guidelines
     target: my-coding-guidelines
   - name: my-skill-creator
-    source: pinedance/AGENTS/my-skill-creator
+    source: skills/my-skill-creator
     target: my-skill-creator
   - name: my-skill-updater
-    source: pinedance/AGENTS/my-skill-updater
+    source: skills/my-skill-updater
     target: my-skill-updater
 - repoId: anthropics/skills
   skills:
