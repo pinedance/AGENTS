@@ -898,8 +898,12 @@ def workspace_add(skill_name: str, new_name: str | None, config_path: Path, root
         repo_workspace = {"repoId": selected_repo_id, "skills": []}
         config["workspace"].append(repo_workspace)
         
-    # Source is repoId + skill_name
-    source_path = f"{selected_repo_id}/{skill_name}"
+    # Source is repoId + skill_name for remote repos,
+    # and the actual parent directory of the skill file for local repos.
+    if selected_repo_id == "LOCAL" or selected_repo_id.startswith("LOCAL/"):
+        source_path = Path(selected_skill["path"]).parent.as_posix()
+    else:
+        source_path = f"{selected_repo_id}/{skill_name}"
     
     repo_workspace["skills"].append({
         "name": skill_name,

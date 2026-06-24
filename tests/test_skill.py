@@ -1626,6 +1626,45 @@ def test_library_update_auto_register_local_repo(temp_env):
     assert any(s["name"] == "my-skill" and s["path"] == "skills-new/my-skill/SKILL.md" for s in local_entry["skills"])
 
 
+def test_workspace_add_local_repo_routing(temp_env):
+    import manager as skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # 1. Register a LOCAL/skills-new repo and create a dummy skill
+    config = skill.load_config(yaml_path)
+    config["library"] = [{
+        "repoId": "LOCAL/skills-new",
+        "skills": [{"name": "my-local-skill", "path": "skills-new/my-local-skill/SKILL.md"}]
+    }]
+    skill.save_config(config, yaml_path)
+    
+    local_skill_dir = temp_env / "skills-new" / "my-local-skill"
+    local_skill_dir.mkdir(parents=True, exist_ok=True)
+    (local_skill_dir / "SKILL.md").write_text("---\nname: my-local-skill\n---\n")
+
+    # Mock SKILLS_DIR env var to custom path
+    skills_dir = temp_env / ".agents-skills"
+    skills_dir.mkdir(exist_ok=True)
+
+    # 2. Call workspace_add for local skill
+    from unittest.mock import patch
+    with patch("builtins.input", return_value=""), \
+         patch.dict(os.environ, {skill.SKILLS_DIR_ENV_VAR: str(skills_dir)}):
+        skill.workspace_add("my-local-skill", None, yaml_path, temp_env)
+        
+    # 3. Assert config source path has NO "LOCAL/" prefix
+    config = skill.load_config(yaml_path)
+    workspace_entry = next(w for w in config["workspace"] if w["repoId"] == "LOCAL/skills-new")
+    added_skill = workspace_entry["skills"][0]
+    assert added_skill["source"] == "skills-new/my-local-skill"
+    
+    # Assert symlink is created and valid
+    symlink = skills_dir / "my-local-skill"
+    assert symlink.is_symlink()
+    assert symlink.resolve() == local_skill_dir.resolve()
+
+
 
 
 
