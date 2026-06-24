@@ -21,3 +21,17 @@ norecursedirs = [
     "skills-library",
 ]
 
+[project.scripts]
+sync = "manager:main"
+library = "manager:main"
+workspace = "manager:main"
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+py-modules = ["manager"]
+
+
+
+
