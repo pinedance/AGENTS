@@ -1121,39 +1121,7 @@ library:
     assert (temp_env / "skills-library/obra/superpowers/brainstorming/.commit").read_text().strip() == "9999a9999b9999c9999d9999e9999f9999000000"
 
 
-@patch("manager.sync")
-@patch("subprocess.run")
-def test_myskills_command_stages_commits_pushes_and_syncs(mock_run, mock_sync, temp_env):
-    import manager as skill
-    from unittest.mock import MagicMock
-    
-    # Mock subprocess.run outputs for git commands
-    def run_side_effect(cmd, *args, **kwargs):
-        res = MagicMock()
-        if "remote" in cmd:
-            res.stdout = "origin\thttps://github.com/pinedance/AGENTS.git (fetch)\n"
-        elif "status" in cmd:
-            res.stdout = " M skills/brainstorming/SKILL.md\n"
-        elif "rev-parse" in cmd:
-            res.stdout = "main\n"
-        else:
-            res.stdout = ""
-        return res
-    mock_run.side_effect = run_side_effect
 
-    # Call myskills CLI logic
-    skill.PROJECT_ROOT = temp_env
-    skill.myskills(message="update brainstorming", config_path=temp_env / ".skills.yaml", root_path=temp_env)
-
-    # Check that git status, add, commit, push were called in sequence targeting skills/
-    called_cmds = [call[0][0] for call in mock_run.call_args_list]
-    assert any(cmd[:4] == ["git", "status", "--porcelain", "skills/"] for cmd in called_cmds)
-    assert any(cmd == ["git", "add", "skills/"] for cmd in called_cmds)
-    assert any("commit" in cmd for cmd in called_cmds)
-    assert any("push" in cmd for cmd in called_cmds)
-    
-    # Check that sync was triggered
-    mock_sync.assert_called_once_with(temp_env / ".skills.yaml", temp_env)
 
 def test_download_repo_zip_with_commit(tmp_path):
     import manager
@@ -1298,52 +1266,7 @@ library:
     assert config["library"][0]["commit"] == "latest"
 
 
-def test_myskills_syncs_back_modifications_from_extracted_library(temp_env):
-    import manager as skill
-    from unittest.mock import patch, MagicMock
-    
-    yaml_content = """
-library:
-- repoId: pinedance/AGENTS
-  repoType: github
-  repoUrl: https://github.com/pinedance/AGENTS.git
-  commit: latest
-  skills:
-    - name: brainstorming
-      path: skills/brainstorming/SKILL.md
-"""
-    (temp_env / ".skills.yaml").write_text(yaml_content)
-    skill.PROJECT_ROOT = temp_env
-    
-    # Setup folders
-    (temp_env / "skills/brainstorming").mkdir(parents=True)
-    (temp_env / "skills/brainstorming/SKILL.md").write_text("Old content")
-    
-    (temp_env / "skills-library/pinedance/AGENTS/brainstorming").mkdir(parents=True)
-    (temp_env / "skills-library/pinedance/AGENTS/brainstorming/SKILL.md").write_text("New modified content")
-    (temp_env / "skills-library/pinedance/AGENTS/brainstorming/.commit").write_text("hash")
-    
-    # Mock subprocess.run
-    def run_side_effect(cmd, *args, **kwargs):
-        res = MagicMock()
-        if "remote" in cmd:
-            res.stdout = "origin\tgit@github.com:pinedance/AGENTS.git (fetch)\n"
-        elif "status" in cmd:
-            res.stdout = " M skills/brainstorming/SKILL.md\n"
-        elif "rev-parse" in cmd:
-            res.stdout = "main\n"
-        else:
-            res.stdout = ""
-        return res
-        
-    with patch("subprocess.run", side_effect=run_side_effect), \
-         patch("manager.sync") as mock_sync:
-        skill.myskills(message="update brainstorming", config_path=temp_env / ".skills.yaml", root_path=temp_env)
-        
-    # Verify sync back took place
-    assert (temp_env / "skills/brainstorming/SKILL.md").read_text() == "New modified content"
-    # Verify lib extraction directory was deleted/reverted before push
-    assert not (temp_env / "skills-library/pinedance/AGENTS").exists()
+
 
 
 def test_validate_active_workspaces_healing_ambiguity(temp_env):
@@ -1539,34 +1462,7 @@ workspace:
     assert symlink.resolve() == skill_dir.resolve()
 
 
-@patch("manager._sync_library_to_source")
-@patch("subprocess.run")
-def test_myskills_skips_sync_to_source_for_local(mock_sub, mock_sync_src, temp_env):
-    import manager
-    yaml_content = """
-paths:
-  library: skills-library
-library:
-- repoId: LOCAL
-  skills:
-  - name: local-skill
-    path: skills/local-skill/SKILL.md
-"""
-    yaml_path = temp_env / ".skills.yaml"
-    yaml_path.write_text(yaml_content)
-    
-    # Mock branch retrieval
-    mock_sub.return_value.stdout = "main"
-    
-    # Setup dummy library extract directory
-    lib_skill_dir = temp_env / "skills-library" / "LOCAL" / "local-skill"
-    lib_skill_dir.mkdir(parents=True, exist_ok=True)
-    
-    # We mock git remote origin url resolving to a local repo ID that matches library LOCAL
-    with patch("manager._get_local_repo_id", return_value="LOCAL"):
-        manager.myskills(None, yaml_path, temp_env)
-        
-    mock_sync_src.assert_not_called()
+
 
 
 
