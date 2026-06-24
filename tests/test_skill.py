@@ -32,6 +32,7 @@ def make_dummy_zip(
 def temp_env(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("SKILLS_DIR", str(tmp_path / "skills"))
+    monkeypatch.setattr(skill, "PROJECT_ROOT", tmp_path)
     # Setup temporary directory structure mirroring project
     yaml_content = """# Test comments
 library:
@@ -111,7 +112,6 @@ def test_sync_rebuilds_links_and_library(mock_download, temp_env):
     mock_download.side_effect = side_effect
 
     # Set paths in skill module dynamically or pass to sync
-    skill.PROJECT_ROOT = temp_env
     skill.sync(temp_env / ".skills.yaml", temp_env)
     
     # Verify zip downloaded
@@ -257,7 +257,6 @@ def test_sync_zip_slip_prevention(mock_download, temp_env):
 @patch("manager.download_repo_zip")
 def test_library_add_and_remove(mock_download, temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     
     # Mock download to write dummy zip
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -297,7 +296,6 @@ def test_library_add_and_remove(mock_download, temp_env):
 def test_library_add_no_skills(mock_download, temp_env):
     import manager as skill
     import pytest
-    skill.PROJECT_ROOT = temp_env
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
         make_dummy_zip(dest_path, {
@@ -315,7 +313,6 @@ def test_library_add_download_fails(mock_download, temp_env):
     import manager as skill
     import urllib.error
     import pytest
-    skill.PROJECT_ROOT = temp_env
     
     mock_download.side_effect = urllib.error.URLError("Connection refused")
     
@@ -329,7 +326,6 @@ def test_library_add_download_fails(mock_download, temp_env):
 def test_workspace_add_and_remove(mock_input, mock_download, temp_env):
     import manager as skill
     import zipfile
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -370,7 +366,6 @@ def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_downloa
     import manager as skill
     import os
     import zipfile
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -417,7 +412,6 @@ def test_workspace_add_multiple_matches_and_interactive(mock_input, mock_downloa
 
 def test_workspace_add_not_found(temp_env, capsys):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     skill.workspace_add("nonexistent", "some-target", yaml_path, temp_env)
@@ -427,7 +421,6 @@ def test_workspace_add_not_found(temp_env, capsys):
 
 def test_workspace_remove_not_active(temp_env, capsys):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     skill.workspace_remove("nonexistent", yaml_path, temp_env)
@@ -441,7 +434,6 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
     import manager as skill
     import os
     import zipfile
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -509,7 +501,6 @@ def test_workspace_remove_multiple_active(mock_input, mock_download, temp_env):
 def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_download, temp_env):
     import manager as skill
     import zipfile
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -563,7 +554,6 @@ def test_workspace_add_overwrites_global_duplicate_targets(mock_input, mock_down
 def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, temp_env, capsys):
     import manager as skill
     import zipfile
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     def side_effect(repo_id, dest_path, *args, **kwargs):
@@ -622,7 +612,6 @@ def test_workspace_add_and_remove_graceful_cancel(mock_input, mock_download, tem
 
 def test_cli_arg_parsing(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     # Test argparse parsing with library add
@@ -635,7 +624,6 @@ def test_cli_arg_parsing(temp_env):
 
 def test_cli_subcommands(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     with patch("manager.sync") as mock_sync:
@@ -668,7 +656,6 @@ def test_cli_subcommands(temp_env):
 
 def test_cli_config_root_overrides(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     
     custom_root = temp_env / "custom-root"
     custom_root.mkdir(parents=True, exist_ok=True)
@@ -1065,7 +1052,6 @@ workspace: []
             
     mock_download.side_effect = side_effect
     
-    skill.PROJECT_ROOT = temp_env
     skill.sync(yaml_path, temp_env)
     
     assert (temp_env / ".skills-repos/dummy/repo.zip").exists()
@@ -1106,7 +1092,6 @@ library:
 """
     (temp_env / ".skills.yaml").write_text(yaml_content)
     
-    skill.PROJECT_ROOT = temp_env
     skill.sync(temp_env / ".skills.yaml", temp_env)
     
     # Verify git ls-remote was called
@@ -1214,7 +1199,6 @@ library:
       path: skills/brainstorming/SKILL.md
 """
     (temp_env / ".skills.yaml").write_text(yaml_content)
-    skill.PROJECT_ROOT = temp_env
     
     # Mock zip scanning and download_repo_zip to write dummy zip
     with patch("manager.download_repo_zip") as mock_download, \
@@ -1246,7 +1230,6 @@ library:
       path: skills/brainstorming/SKILL.md
 """
     (temp_env / ".skills.yaml").write_text(yaml_content)
-    skill.PROJECT_ROOT = temp_env
     
     # Mock remote commit resolution
     with patch("manager.get_remote_commit_hash", return_value="some_hash"), \
@@ -1546,7 +1529,6 @@ workspace:
 
 def test_library_add_and_remove_local(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     # 1. Create a dummy local repository folder and skill files
@@ -1602,7 +1584,6 @@ def test_library_add_and_remove_local(temp_env):
 
 def test_library_update_auto_register_local_repo(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     # 1. Create a dummy local repo directory with a skill (NOT registered in .skills.yaml yet)
@@ -1628,7 +1609,6 @@ def test_library_update_auto_register_local_repo(temp_env):
 
 def test_workspace_add_local_repo_routing(temp_env):
     import manager as skill
-    skill.PROJECT_ROOT = temp_env
     yaml_path = temp_env / ".skills.yaml"
     
     # 1. Register a LOCAL/skills-new repo and create a dummy skill
