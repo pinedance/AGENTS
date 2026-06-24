@@ -463,13 +463,16 @@ def _extract_zip_members(zf: zipfile.ZipFile, skill_item: dict, dest_skill_dir: 
                     shutil.copyfileobj(source_f, target_f)
 
 
-def _validate_active_workspaces(config: dict) -> bool:
+def _validate_active_workspaces(config: dict, root_path: Path = PROJECT_ROOT) -> bool:
     """Validate and auto-heal active workspace mapping entries."""
     library_skills = {}
+    local_paths = {}
     for repo in config.get("library", []):
         r_id = repo["repoId"]
         for s in repo.get("skills", []):
             library_skills[(r_id, s["name"])] = s["path"]
+            if r_id == "LOCAL":
+                local_paths[s["name"]] = s["path"]
 
     valid_workspaces = []
     workspace_changed = False
@@ -479,6 +482,13 @@ def _validate_active_workspaces(config: dict) -> bool:
         for s in rw.get("skills", []):
             s_name = s["name"]
             if (r_id, s_name) in library_skills:
+                # Extra check for LOCAL repository: verify file existence
+                if r_id == "LOCAL":
+                    path_str = local_paths.get(s_name)
+                    if not path_str or not (root_path / path_str).exists():
+                        print(f"Warning: Local skill '{s_name}' is missing at source path. Removing from active workspace.")
+                        workspace_changed = True
+                        continue
                 valid_skills.append(s)
             else:
                 # Try auto-healing substring match
@@ -528,7 +538,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
     active_libs = set()
     
     config_changed = _resolve_and_download_repos(config, repos_dir, library_dir, check_remote, active_zips, active_libs)
-    config_changed |= _validate_active_workspaces(config)
+    config_changed |= _validate_active_workspaces(config, root_path)
     
     if config_changed:
         save_config(config, config_path)

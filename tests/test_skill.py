@@ -1462,5 +1462,45 @@ library:
     mock_extract.assert_not_called()
 
 
+def test_validate_workspace_for_local_repo(temp_env):
+    import manager
+    yaml_content = """
+paths:
+  library: skills-library
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: skills/local-skill/SKILL.md
+workspace:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    source: skills/local-skill
+    target: local-skill
+"""
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text(yaml_content)
+    
+    config = manager.load_config(yaml_path)
+    # Creating dummy local skill file
+    skill_dir = temp_env / "skills" / "local-skill"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text("name: local-skill")
+    
+    changed = manager._validate_active_workspaces(config, temp_env)
+    assert not changed # Should not filter out local-skill
+    assert len(config["workspace"][0]["skills"]) == 1
+
+    # If local file does not exist, it should prune
+    import shutil
+    shutil.rmtree(skill_dir)
+    config_missing = manager.load_config(yaml_path)
+    changed = manager._validate_active_workspaces(config_missing, temp_env)
+    assert changed
+    assert len(config_missing.get("workspace", [])) == 0
+
+
+
 
 
