@@ -936,7 +936,7 @@ def myskills(message: str | None, config_path: Path, root_path: Path):
     library_dir = root_path / LIBRARY_DIR_NAME
 
     local_repo_id = _get_local_repo_id()
-    if local_repo_id:
+    if local_repo_id and local_repo_id != "LOCAL":
         # Find matching repo in library config
         matching_repo = None
         for r in config.get("library", []):

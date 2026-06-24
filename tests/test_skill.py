@@ -1539,6 +1539,37 @@ workspace:
     assert symlink.resolve() == skill_dir.resolve()
 
 
+@patch("manager._sync_library_to_source")
+@patch("subprocess.run")
+def test_myskills_skips_sync_to_source_for_local(mock_sub, mock_sync_src, temp_env):
+    import manager
+    yaml_content = """
+paths:
+  library: skills-library
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: skills/local-skill/SKILL.md
+"""
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text(yaml_content)
+    
+    # Mock branch retrieval
+    mock_sub.return_value.stdout = "main"
+    
+    # Setup dummy library extract directory
+    lib_skill_dir = temp_env / "skills-library" / "LOCAL" / "local-skill"
+    lib_skill_dir.mkdir(parents=True, exist_ok=True)
+    
+    # We mock git remote origin url resolving to a local repo ID that matches library LOCAL
+    with patch("manager._get_local_repo_id", return_value="LOCAL"):
+        manager.myskills(None, yaml_path, temp_env)
+        
+    mock_sync_src.assert_not_called()
+
+
+
 
 
 
