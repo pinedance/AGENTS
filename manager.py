@@ -633,11 +633,83 @@ def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
     return skills_found, commit_hash
 
 
-def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool = True):
+def _read_skill_name_from_file(file_path: Path) -> str:
+    try:
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        return _extract_name_from_front_matter(content)
+    except OSError:
+        return ""
+
+
+def library_add(repo_id: str, config_path: Path, root_path: Path, local_path: str | None = None, _do_sync: bool = True):
+    config = load_config(config_path)
+
+    if repo_id == "LOCAL":
+        if not local_path:
+            raise ValueError("localPath is required when repoId is 'LOCAL'.")
+        
+        target_path = Path(local_path)
+        if not target_path.is_absolute():
+            target_path = root_path / target_path
+            
+        if target_path.is_dir():
+            target_file = target_path / SKILL_FILENAME
+        else:
+            target_file = target_path
+
+        if not target_file.exists():
+            raise ValueError(f"Local skill file not found at: {target_file}")
+            
+        skill_name = _read_skill_name_from_file(target_file)
+        if not skill_name:
+            skill_name = target_file.parent.name
+            
+        try:
+            rel_path = target_file.relative_to(root_path)
+            rel_path_str = rel_path.as_posix()
+        except ValueError:
+            rel_path_str = target_file.resolve().as_posix()
+
+        if "library" not in config:
+            config["library"] = []
+            
+        local_repo = None
+        for r in config["library"]:
+            if r["repoId"] == "LOCAL":
+                local_repo = r
+                break
+                
+        if not local_repo:
+            local_repo = {
+                "repoId": "LOCAL",
+                "skills": []
+            }
+            config["library"].append(local_repo)
+            
+        if "skills" not in local_repo:
+            local_repo["skills"] = []
+            
+        found = False
+        for s in local_repo["skills"]:
+            if s["name"] == skill_name:
+                s["path"] = rel_path_str
+                found = True
+                break
+        if not found:
+            local_repo["skills"].append({
+                "name": skill_name,
+                "path": rel_path_str
+            })
+            
+        save_config(config, config_path)
+        print(f"Added local skill '{skill_name}' (path: {rel_path_str}) to library.")
+        
+        if _do_sync:
+            sync(config_path, root_path)
+        return
+
     if not re.match(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$", repo_id):
         raise ValueError(f"Invalid repo_id format: {repo_id}. Must match 'owner/repo'.")
-
-    config = load_config(config_path)
     zip_path = root_path / REPOS_DIR_NAME / f"{repo_id}.zip"
 
     skills_found: list = []

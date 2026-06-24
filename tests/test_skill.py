@@ -1544,6 +1544,49 @@ workspace:
     assert "Workspace Symlinks" in captured
 
 
+def test_library_add_and_remove_local(temp_env):
+    import manager as skill
+    skill.PROJECT_ROOT = temp_env
+    yaml_path = temp_env / ".skills.yaml"
+    
+    # 1. Create a dummy local skill directory and file
+    local_skill_dir = temp_env / "skills" / "my-local-skill"
+    local_skill_dir.mkdir(parents=True, exist_ok=True)
+    skill_file = local_skill_dir / "SKILL.md"
+    skill_file.write_text("---\nname: my-local-skill\ndescription: A test local skill\n---\n")
+
+    # 2. Test library add LOCAL with path
+    skill.library_add("LOCAL", yaml_path, temp_env, local_path="skills/my-local-skill/SKILL.md")
+    
+    config = skill.load_config(yaml_path)
+    local_repo = next(r for r in config["library"] if r["repoId"] == "LOCAL")
+    assert any(s["name"] == "my-local-skill" and s["path"] == "skills/my-local-skill/SKILL.md" for s in local_repo["skills"])
+
+    # 3. Test library remove LOCAL with skill name
+    # First we activate it to workspace to verify it gets removed from workspace as well
+    config["workspace"].append({
+        "repoId": "LOCAL",
+        "skills": [{
+            "name": "my-local-skill",
+            "source": "skills/my-local-skill",
+            "target": "my-local-skill"
+        }]
+    })
+    skill.save_config(config, yaml_path)
+    
+    skill.library_remove("LOCAL", yaml_path, temp_env, local_skill_name="my-local-skill")
+    
+    config = skill.load_config(yaml_path)
+    local_repo = next(r for r in config["library"] if r["repoId"] == "LOCAL")
+    assert not any(s["name"] == "my-local-skill" for s in local_repo["skills"])
+    # Verify workspace entry also cleaned up
+    assert not any(
+        w["repoId"] == "LOCAL" and any(s["name"] == "my-local-skill" for s in w.get("skills", []))
+        for w in config.get("workspace", [])
+    )
+
+
+
 
 
 

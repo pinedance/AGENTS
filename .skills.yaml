@@ -533,11 +533,6 @@ workspace:
   - name: cheliped-browser
     source: tykimos/cheliped-browser/cheliped-browser
     target: cheliped-browser
-- repoId: obra/superpowers
-  skills:
-  - name: finishing-a-development-branch
-    source: obra/superpowers/finishing-a-development-branch
-    target: finishing-a-development-branch
 - repoId: K-Dense-AI/scientific-agent-skills
   skills:
   - name: database-lookup
