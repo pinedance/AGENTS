@@ -1492,6 +1492,58 @@ def test_cli_status_command_routing():
         mock_status.assert_called_once()
 
 
+@patch("manager.get_remote_commit_hash")
+def test_status_output_logic(mock_remote_hash, temp_env, capsys):
+    import manager
+    # Setup config
+    yaml_content = """
+paths:
+  library: skills-library
+library:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    path: skills/local-skill/SKILL.md
+- repoId: remote/repo
+  repoUrl: https://github.com/remote/repo.git
+  commit: cached_hash
+  skills:
+  - name: remote-skill
+    path: skills/remote-skill/SKILL.md
+workspace:
+- repoId: LOCAL
+  skills:
+  - name: local-skill
+    source: skills/local-skill
+    target: local-skill
+"""
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text(yaml_content)
+    
+    # Mock remote hash lookup: simulate remote/repo has newer commit
+    mock_remote_hash.return_value = "new_remote_hash"
+    
+    # Setup mock zip comment for cache check
+    repos_dir = temp_env / manager.REPOS_DIR_NAME
+    repos_dir.mkdir()
+    zip_path = repos_dir / "remote/repo.zip"
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
+    zip_path.write_text("dummy zip content")
+    
+    # Mock _get_zip_comment to return local cache hash
+    with patch("manager._get_zip_comment", return_value="cached_hash"):
+        # Run status
+        manager.status(yaml_path, temp_env)
+        
+    captured = capsys.readouterr().out
+    assert "Remote Repositories" in captured
+    assert "remote/repo" in captured
+    assert "Update Required" in captured
+    assert "Skills Library" in captured
+    assert "LOCAL" in captured
+    assert "Workspace Symlinks" in captured
+
+
 
 
 

@@ -896,7 +896,79 @@ def _get_local_repo_id() -> str | None:
 
 
 def status(config_path: Path, root_path: Path):
-    pass
+    config = load_config(config_path)
+    repos_dir = root_path / REPOS_DIR_NAME
+    library_name = config.get("paths", {}).get("library", LIBRARY_DIR_NAME)
+    library_dir = root_path / library_name
+    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
+    
+    # 1. Remote repositories check
+    print("┌── Remote Repositories (.skills-repos) ──────────────────────────┐")
+    for repo in config.get("library", []):
+        repo_id = repo.get("repoId", "")
+        if repo_id == "LOCAL":
+            continue
+        
+        repo_url = repo.get("repoUrl", "")
+        zip_path = repos_dir / f"{repo_id}.zip"
+        local_hash = _get_zip_comment(zip_path) if zip_path.exists() else ""
+        
+        remote_hash = ""
+        if repo_url:
+            remote_hash = get_remote_commit_hash(repo_url)
+            
+        if not local_hash:
+            status_str = "Not Cached"
+        elif remote_hash and local_hash != remote_hash:
+            status_str = f"Update Required (local: {local_hash[:7]}, remote: {remote_hash[:7]})"
+        else:
+            status_str = "Up-to-date"
+            
+        print(f"│  • {repo_id:30} [{status_str}]")
+    print("└─────────────────────────────────────────────────────────────────┘")
+    print()
+    
+    # 2. Library skills list
+    print("┌── Skills Library (skills-library & LOCAL) ──────────────────────┐")
+    for repo in config.get("library", []):
+        repo_id = repo.get("repoId", "")
+        print(f"│  [{repo_id}]")
+        for skill_item in repo.get("skills", []):
+            s_name = skill_item.get("name", "")
+            s_path = skill_item.get("path", "")
+            if repo_id == "LOCAL":
+                print(f"│    - {s_name:25} ({s_path})")
+            else:
+                print(f"│    - {s_name}")
+    print("└─────────────────────────────────────────────────────────────────┘")
+    print()
+    
+    # 3. Workspace links check
+    print("┌── Workspace Symlinks (~/.agents/skills/) ────────────────────────┐")
+    if not skills_dir.exists():
+        print("│  (skills directory does not exist)")
+    else:
+        # Match configured workspace symlinks
+        configured_targets = {}
+        for repo in config.get("workspace", []):
+            for s in repo.get("skills", []):
+                configured_targets[s["target"]] = s["source"]
+                
+        for item in sorted(os.listdir(skills_dir)):
+            item_path = skills_dir / item
+            if item_path.is_symlink():
+                try:
+                    resolved_target = Path(os.readlink(item_path)).resolve()
+                    exists = resolved_target.exists()
+                    status_icon = "✔" if exists else "✗ [BROKEN]"
+                except OSError:
+                    status_icon = "✗ [BROKEN]"
+                    resolved_target = "Unknown"
+                
+                # Check if it's managed by workspace configuration
+                managed = " (managed)" if item in configured_targets else " (unmanaged)"
+                print(f"│  {status_icon} {item:20} ──▶ {str(resolved_target)}{managed}")
+    print("└─────────────────────────────────────────────────────────────────┘")
 
 
 def main(config_path: Path | None = None, root_path: Path | None = None):
