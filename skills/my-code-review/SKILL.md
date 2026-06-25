@@ -161,13 +161,13 @@ For each finding, include:
      3. For each finding, quote the relevant code snippet and explain why it is an issue.
      4. Minimum depth standard: surface at least one finding per 100 lines of code reviewed,
         OR explicitly state "No issues found in <file>" after reading it.
-     5. Save your results to: .skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md
+     5. Save your results to: .agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md
 
      Do not review other dimensions. Do not summarize or skip — read every line.
      ```
 
 3. **Save Individual Findings**:
-   - Each subagent writes its findings to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
+   - Each subagent writes its findings to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
    - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
    - Each file must use the following format:
 
@@ -190,13 +190,13 @@ For each finding, include:
    - **Evidence rule**: Every finding must quote the exact code snippet. No vague claims.
 
 4. **Consolidate Findings**:
-   - Read all generated dimension files from `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/`.
+   - Read all generated dimension files from `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/`.
    - Consolidate and de-duplicate findings across dimensions.
-   - Save the consolidated report (following the **Output Format** section) to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
+   - Save the consolidated report (following the **Output Format** section) to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
 
 5. **Create & Execute Action Tasks**:
    - Translate **ALL findings** from `consolidated.md` into tasks — including low-severity ones. Do not silently drop any finding.
-   - Save this checklist to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md`
+   - Save this checklist to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md`
    - Use the following template for each task:
 
      ```
