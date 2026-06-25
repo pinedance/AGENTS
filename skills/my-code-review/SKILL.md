@@ -41,7 +41,35 @@ Be specific: quote the line or snippet and explain *why* it is an error.
 
 ### 3. Code Quality Evaluation (코드 퀄리티 평가)
 
-Assess maintainability, readability, and naming conventions strictly against the standards defined in the [my-coding-guidelines](../my-coding-guidelines/SKILL.md) skill.
+Assess maintainability, readability, and naming conventions against the standards in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Key checks:
+
+**Architecture & Design**:
+- SRP violated? (module/class/function doing more than one thing)
+- Tight coupling? (component accessing internal state of another)
+- YAGNI violated? (abstractions or layers not yet needed)
+- Side effects in constructors? (I/O, DB, network inside `__init__`)
+
+**Coding Style**:
+- Functions exceeding 30–40 lines?
+- Nesting depth exceeding 2 levels? (missing early returns / guard clauses)
+- SLAP violated? (mixing high-level orchestration with low-level detail in one function)
+- Magic values instead of named constants?
+- Implicit types or dynamic type tricks?
+- Inline imports inside functions or classes?
+- Nested helper functions (non-closure/decorator)?
+- Dead code: unreachable branches, unused variables/imports?
+- File layout violates layer-based order (Constants → Helpers → Core → Orchestration)?
+
+**Naming**:
+- Functions missing verb-noun prefix (`calculate_`, `fetch_`, etc.)?
+- Boolean variables/functions missing `is_`/`has_`/`can_` prefix?
+- Vague or filler names (`data`, `info`, `temp`, `value`, `my...`)?
+- Non-standard abbreviations invented by the author?
+- Collection variables not pluralized?
+- Asymmetric antonym pairs (`open/remove`, `start/cancel`)?
+
+**Documentation**:
+- Comments explaining *what* instead of *why*?
 
 ### 4. Duplicate Code Evaluation (중복 코드 평가)
 
@@ -57,7 +85,15 @@ When flagging duplication, point to *all* locations and suggest the consolidatio
 
 ### 5. Fast-Fail & Exception Handling Review (fast fail 위배 / 과도한 예외처리 검토)
 
-Evaluate the exception handling design and state validation flow strictly against the **Fast-Fail & Exception Safety** guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md).
+Evaluate the exception handling design and state validation flow against the **Error Handling & Reliability** guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Key checks:
+
+- **Fast-Fail missing**: Invalid arguments, wrong types, or invalid internal state at entry points not immediately halted with an exception?
+- **Exception swallowing**: Empty `except`/`catch` blocks, or over-broad catches (e.g., `except Exception`) that mask bugs?
+- **Silent fallbacks**: Functions returning `null`, `-1`, or empty defaults on failure where callers cannot distinguish from a valid result?
+- **Stack trace lost**: Exceptions re-thrown without preserving original context (e.g., `raise Exception(str(e))` losing the traceback)?
+- **Oversized try blocks**: `try` wrapping unrelated logic, masking which line actually raises?
+- **Operational errors unhandled**: Network, DB, I/O calls with no try-catch, risking uncontrolled crashes?
+- **Boundary states not guarded**: Missing checks for empty collections, None inputs, or off-by-one at function boundaries?
 
 ---
 
@@ -99,27 +135,63 @@ For each finding, include:
 
 ## Review Process
 
-1. **Allocate Dimensions to Subagents**:
+1. **Confirm Scope**:
+   - If the user specifies a file, module, or feature, use that as the review scope.
+   - If the scope is the entire project, start with entry points and high-traffic paths.
+   - **If scope is unclear**, ask the user which files or features to prioritize before proceeding.
+   - Record the agreed scope at the top of every dimension file and `consolidated.md`.
+
+2. **Allocate Dimensions to Subagents**:
+   - Generate a single `YYYYMMDD_HHMMSS` timestamp now (e.g., `20260625_132000`). This timestamp is the session ID for all files in this review.
+   - Pass the timestamp and the agreed scope to each subagent as input.
    - Assign each of the 5 Review Dimensions to an independent subagent.
    - Each subagent performs a focused review for its assigned dimension on the target codebase/files.
 
-2. **Save Individual Findings**:
-   - Each subagent writes its findings to a markdown file at: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/<dimension-name>.md`
-   - Path format:
-     - `YYYYMMDD_HHMMSS`: Current local timestamp of review start (e.g., `20260625_132000`)
-     - `<dimension-name>`: One of `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
-   - Each file must list the findings with location, issue detail, suggested fix, and severity (🔴 Critical, 🟡 Warning, 🔵 Suggestion).
+3. **Save Individual Findings**:
+   - Each subagent writes its findings to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
+   - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
+   - Each file must use the following format:
 
-3. **Consolidate Findings**:
-   - Read all generated markdown files from `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/`.
-   - Consolidate and summarize the findings. Remove overlaps.
-   - Save the consolidated report (following the **Output Format** section) to: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/consolidated.md`
+     ```
+     # <Dimension Name> Review
+     Scope: <agreed scope>
 
-4. **Create & Execute Action Tasks**:
-   - Translate the priority action items from `consolidated.md` into discrete tasks with statuses (TODO, IN_PROGRESS, DONE).
-   - Save this checklist to: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/tasks.md`
-   - Read `tasks.md` to execute tasks step-by-step. Update the file after each task is completed. Do not rely on memory.
+     ## Findings
 
-5. **Post-Review Verification**:
-   - Once all tasks in `tasks.md` are marked DONE, verify all modifications to ensure correctness and that no regressions or side effects were introduced.
-   - Document the verification results at the bottom of `tasks.md`.
+     ### [🔴/🟡/🔵] Finding Title
+     - **Location**: file path + line number or function name
+     - **Issue**: what is wrong and why
+     - **Suggestion**: concrete fix or direction
+     ```
+
+   - Skip findings with no evidence. Quote the relevant code snippet for each issue.
+
+4. **Consolidate Findings**:
+   - Read all generated dimension files from `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/`.
+   - Consolidate and de-duplicate findings across dimensions.
+   - Save the consolidated report (following the **Output Format** section) to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
+
+5. **Create & Execute Action Tasks**:
+   - Translate the priority action items from `consolidated.md` into discrete tasks.
+   - Save this checklist to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md`
+   - Use the following template for each task:
+
+     ```
+     ## Tasks
+
+     - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line>
+       - What: <what to fix>
+       - Why: <why it matters>
+       - Verify: <command or check to confirm fix is correct>
+
+     ---
+     ## Verification Results
+     (filled after all tasks are DONE)
+     ```
+
+   - Work through tasks one at a time. After completing each task, mark it `[x] DONE` and update the file before moving to the next. Do not rely on memory.
+
+6. **Post-Review Verification**:
+   - Once all tasks in `tasks.md` are marked `[x] DONE`, run the verification command listed in each task.
+   - Confirm no regressions or side effects were introduced.
+   - Document the results in the `## Verification Results` section of `tasks.md`.
