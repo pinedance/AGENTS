@@ -113,11 +113,13 @@ For each finding, include:
 3. **Consolidate Findings**:
    - Read all generated markdown files from `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/`.
    - Consolidate and summarize the findings. Remove overlaps.
-   - Format the final output according to the **Output Format** section.
+   - Save the consolidated report (following the **Output Format** section) to: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/consolidated.md`
 
 4. **Create & Execute Action Tasks**:
-   - Divide the priority action items into discrete, step-by-step tasks.
-   - Implement the fix for each task and verify correctness individually.
+   - Translate the priority action items from `consolidated.md` into discrete tasks with statuses (TODO, IN_PROGRESS, DONE).
+   - Save this checklist to: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/tasks.md`
+   - Read `tasks.md` to execute tasks step-by-step. Update the file after each task is completed. Do not rely on memory.
 
 5. **Post-Review Verification**:
-   - Once all tasks are completed, verify all modifications to ensure correctness and that no regressions or side effects were introduced.
+   - Once all tasks in `tasks.md` are marked DONE, verify all modifications to ensure correctness and that no regressions or side effects were introduced.
+   - Document the verification results at the bottom of `tasks.md`.
