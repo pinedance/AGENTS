@@ -195,12 +195,13 @@ For each finding, include:
    - Save the consolidated report (following the **Output Format** section) to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
 
 5. **Create & Execute Action Tasks**:
-   - Translate the priority action items from `consolidated.md` into discrete tasks.
+   - Translate **ALL findings** from `consolidated.md` into tasks — including low-severity ones. Do not silently drop any finding.
    - Save this checklist to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md`
    - Use the following template for each task:
 
      ```
      ## Tasks
+     Total: <N> | Done: 0 | Skipped: 0 | Remaining: <N>
 
      - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line>
        - What: <what to fix>
@@ -209,10 +210,17 @@ For each finding, include:
 
      ---
      ## Verification Results
-     (filled after all tasks are DONE)
+     (filled after all tasks are DONE or SKIPPED)
      ```
 
-   - Work through tasks one at a time. After completing each task, mark it `[x] DONE` and update the file before moving to the next. Do not rely on memory.
+   - **Execution loop** — repeat until no TODO remains:
+     1. Read `tasks.md` to find the next `TODO` task.
+     2. Execute the fix.
+     3. Update the task status in `tasks.md` **before moving to the next task**:
+        - `[x] DONE` — fix applied and verified.
+        - `[-] SKIPPED: <reason>` — intentionally skipped. Reason is mandatory. No silent skips.
+     4. Update the `Total / Done / Skipped / Remaining` counters.
+   - Every task must end as either DONE or SKIPPED. No task may remain TODO at termination.
 
 6. **Post-Review Verification**:
    - Once all tasks in `tasks.md` are marked `[x] DONE`, run the verification command listed in each task.
