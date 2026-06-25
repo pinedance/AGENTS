@@ -475,6 +475,133 @@ library:
     path: skills/test-driven-development/SKILL.md
   - name: writing-plans
     path: skills/writing-plans/SKILL.md
+- repoId: nextlevelbuilder/ui-ux-pro-max-skill
+  repoType: github
+  repoUrl: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+  commit: 232f201dfa3ec3d74af5dff80ec61eb8144c7507
+  skills:
+  - name: banner-design
+    path: .claude/skills/banner-design/SKILL.md
+  - name: brand
+    path: .claude/skills/brand/SKILL.md
+  - name: design-system
+    path: .claude/skills/design-system/SKILL.md
+  - name: design
+    path: .claude/skills/design/SKILL.md
+  - name: slides
+    path: .claude/skills/slides/SKILL.md
+  - name: ui-styling
+    path: .claude/skills/ui-styling/SKILL.md
+  - name: ui-ux-pro-max
+    path: .claude/skills/ui-ux-pro-max/SKILL.md
+- repoId: epoko77-ai/im-not-ai
+  repoType: github
+  repoUrl: https://github.com/epoko77-ai/im-not-ai.git
+  commit: 14aeb52d13e737beb4e999cb7cb92275d0969689
+  skills:
+  - name: humanize-korean
+    path: .claude/skills/humanize-korean/SKILL.md
+  - name: humanize-redo
+    path: .claude/skills/humanize-redo/SKILL.md
+  - name: humanize
+    path: .claude/skills/humanize/SKILL.md
+  - name: humanize-korean
+    path: codex/skills/humanize-korean/SKILL.md
+- repoId: coreyhaines31/marketingskills
+  repoType: github
+  repoUrl: https://github.com/coreyhaines31/marketingskills.git
+  commit: 8bfcdffb655f16e713940cd04fb08891899c47db
+  skills:
+  - name: ab-testing
+    path: skills/ab-testing/SKILL.md
+  - name: ad-creative
+    path: skills/ad-creative/SKILL.md
+  - name: ads
+    path: skills/ads/SKILL.md
+  - name: ai-seo
+    path: skills/ai-seo/SKILL.md
+  - name: analytics
+    path: skills/analytics/SKILL.md
+  - name: aso
+    path: skills/aso/SKILL.md
+  - name: churn-prevention
+    path: skills/churn-prevention/SKILL.md
+  - name: co-marketing
+    path: skills/co-marketing/SKILL.md
+  - name: cold-email
+    path: skills/cold-email/SKILL.md
+  - name: community-marketing
+    path: skills/community-marketing/SKILL.md
+  - name: competitor-profiling
+    path: skills/competitor-profiling/SKILL.md
+  - name: competitors
+    path: skills/competitors/SKILL.md
+  - name: content-strategy
+    path: skills/content-strategy/SKILL.md
+  - name: copy-editing
+    path: skills/copy-editing/SKILL.md
+  - name: copywriting
+    path: skills/copywriting/SKILL.md
+  - name: cro
+    path: skills/cro/SKILL.md
+  - name: customer-research
+    path: skills/customer-research/SKILL.md
+  - name: directory-submissions
+    path: skills/directory-submissions/SKILL.md
+  - name: emails
+    path: skills/emails/SKILL.md
+  - name: free-tools
+    path: skills/free-tools/SKILL.md
+  - name: image
+    path: skills/image/SKILL.md
+  - name: launch
+    path: skills/launch/SKILL.md
+  - name: lead-magnets
+    path: skills/lead-magnets/SKILL.md
+  - name: marketing-ideas
+    path: skills/marketing-ideas/SKILL.md
+  - name: marketing-plan
+    path: skills/marketing-plan/SKILL.md
+  - name: marketing-psychology
+    path: skills/marketing-psychology/SKILL.md
+  - name: offers
+    path: skills/offers/SKILL.md
+  - name: onboarding
+    path: skills/onboarding/SKILL.md
+  - name: paywalls
+    path: skills/paywalls/SKILL.md
+  - name: popups
+    path: skills/popups/SKILL.md
+  - name: pricing
+    path: skills/pricing/SKILL.md
+  - name: product-marketing
+    path: skills/product-marketing/SKILL.md
+  - name: programmatic-seo
+    path: skills/programmatic-seo/SKILL.md
+  - name: prospecting
+    path: skills/prospecting/SKILL.md
+  - name: public-relations
+    path: skills/public-relations/SKILL.md
+  - name: referrals
+    path: skills/referrals/SKILL.md
+  - name: revops
+    path: skills/revops/SKILL.md
+  - name: sales-enablement
+    path: skills/sales-enablement/SKILL.md
+  - name: schema
+    path: skills/schema/SKILL.md
+  - name: seo-audit
+    path: skills/seo-audit/SKILL.md
+  - name: signup
+    path: skills/signup/SKILL.md
+  - name: site-architecture
+    path: skills/site-architecture/SKILL.md
+  - name: sms
+    path: skills/sms/SKILL.md
+  - name: social
+    path: skills/social/SKILL.md
+  - name: video
+    path: skills/video/SKILL.md
 workspace:
 - repoId: LOCAL/skills
   skills:
