@@ -23,7 +23,8 @@ This skill defines the core development principles, coding style, naming convent
 
 ## 2. Error Handling & Reliability
 
-*   **Fast-Fail (for Programming Errors)**: Halt execution immediately (e.g., by throwing exceptions) upon encountering invalid arguments, incorrect types, or invalid internal states at entry points to prevent corrupted state propagation.
+*   **Fail-Fast (for Programming Errors)**: Halt execution immediately (e.g., by throwing exceptions) upon encountering invalid arguments, incorrect types, or invalid internal states at entry points to prevent corrupted state propagation.
+  -   **Configuration Fail-Fast**: Validate all required configuration settings at startup or instantiation. Raise explicit exceptions on missing settings and ban hardcoding fallback values in the codebase.
 *   **Graceful Operational Error Handling**: Wrap volatile operational tasks (e.g., network, database, I/O) in try-catch blocks to handle or propagate failures gracefully without collapsing the application state.
 *   **Exception Swallowing Prevention**: Ban empty catch blocks or over-broad catches (e.g., `catch (Exception e)`) that mask unexpected runtime bugs.
 *   **Explicit Failure over Silent Fallbacks**: Reject returning ambiguous default values (e.g., `null`, `-1`) on failure if they cannot be distinguished from valid successful states.

@@ -137,7 +137,7 @@ Output: feat(auth): implement JWT-based authentication
 ### Writing Style
 
 - **Explain the Why**: Explain to the model why things are important in lieu of heavy-handed musty MUSTs. Use theory of mind and try to make the skill general and not super-narrow to specific examples. Start by writing a draft and then look at it with fresh eyes and improve it.
-- **LLM-Native Jargon Enforce**: Write instructions using precise, high-density industry standard terms (e.g., *YAGNI*, *SLAP*, *SRP*, *Fast-Fail*) to formulate rule constraints. Ban verbose, conversational explanations or human-centric fillers to minimize token usage and maximize AI compliance.
+- **LLM-Native Jargon Enforce**: Write instructions using precise, high-density industry standard terms (e.g., *YAGNI*, *SLAP*, *SRP*, *Fail-Fast*) to formulate rule constraints. Ban verbose, conversational explanations or human-centric fillers to minimize token usage and maximize AI compliance.
 
 ### Test Cases
 

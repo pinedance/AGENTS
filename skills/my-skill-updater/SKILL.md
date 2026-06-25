@@ -19,7 +19,7 @@ This skill defines the protocol for updating and refining existing coding guidel
 
 ## 2. Abstraction & Rephrasing
 
-*   **LLM-Native Jargon**: Translate conversational or verbose human instructions into precise, high-density industry standard terms (e.g., *SRP*, *YAGNI*, *SLAP*, *Fast-Fail*, *SSoT*, *DIP*, *Exception Swallowing*, *Pure Functions*).
+*   **LLM-Native Jargon**: Translate conversational or verbose human instructions into precise, high-density industry standard terms (e.g., *SRP*, *YAGNI*, *SLAP*, *Fail-Fast*, *SSoT*, *DIP*, *Exception Swallowing*, *Pure Functions*).
 *   **Conciseness over Explanation**: Minimize prose. AI models understand standard software engineering terms directly. Write rules as actionable constraints, not tutorials.
 
 ---

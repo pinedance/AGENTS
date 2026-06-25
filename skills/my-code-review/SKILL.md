@@ -1,7 +1,7 @@
 ---
 name: my-code-review
 description: >
-   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates fast-fail principles. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
+   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates Fail-Fast principles. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
 ---
 
 # Code Review
@@ -83,11 +83,11 @@ Identify repetition that increases maintenance burden:
 
 When flagging duplication, point to *all* locations and suggest the consolidation target.
 
-### 5. Fast-Fail & Exception Handling Review (fast fail 위배 / 과도한 예외처리 검토)
+### 5. Fail-Fast & Exception Handling Review (fast fail 위배 / 과도한 예외처리 검토)
 
 Evaluate the exception handling design and state validation flow against the **Error Handling & Reliability** guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Key checks:
 
-- **Fast-Fail missing**: Invalid arguments, wrong types, or invalid internal state at entry points not immediately halted with an exception?
+- **Fail-Fast missing**: Invalid arguments, wrong types, or invalid internal state at entry points not immediately halted with an exception?
 - **Exception swallowing**: Empty `except`/`catch` blocks, or over-broad catches (e.g., `except Exception`) that mask bugs?
 - **Silent fallbacks**: Functions returning `null`, `-1`, or empty defaults on failure where callers cannot distinguish from a valid result?
 - **Stack trace lost**: Exceptions re-thrown without preserving original context (e.g., `raise Exception(str(e))` losing the traceback)?
@@ -119,7 +119,7 @@ One paragraph: overall health of the code, most critical issues, general impress
 ### 4. Duplicate Code
 [findings or omit section]
 
-### 5. Fast-Fail & Exception Handling
+### 5. Fail-Fast & Exception Handling
 [findings or omit section]
 
 ### Priority Action Items
@@ -168,7 +168,7 @@ For each finding, include:
 
 3. **Save Individual Findings**:
    - Each subagent writes its findings to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
-   - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
+   - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `Fail-Fast`
    - Each file must use the following format:
 
      ```
