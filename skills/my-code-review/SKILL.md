@@ -104,15 +104,14 @@ For each finding, include:
    - Each subagent performs a focused review for its assigned dimension on the target codebase/files.
 
 2. **Save Individual Findings**:
-   - Each subagent writes its findings to a markdown file at: `.skills/docs/my-code-review/yyyy-mm-dd-<id>-<dimension-name>.md`
+   - Each subagent writes its findings to a markdown file at: `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/<dimension-name>.md`
    - Path format:
-     - `yyyy-mm-dd`: Current local date (e.g., `2026-06-25`)
-     - `<id>`: Unique task name, commit hash, or session ID
+     - `YYYYMMDD_HHMMSS`: Current local timestamp of review start (e.g., `20260625_132000`)
      - `<dimension-name>`: One of `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
    - Each file must list the findings with location, issue detail, suggested fix, and severity (🔴 Critical, 🟡 Warning, 🔵 Suggestion).
 
 3. **Consolidate Findings**:
-   - Read all generated markdown files from `.skills/docs/my-code-review/`.
+   - Read all generated markdown files from `.skills/docs/my-code-review/YYYYMMDD_HHMMSS/`.
    - Consolidate and summarize the findings. Remove overlaps.
    - Format the final output according to the **Output Format** section.
 
