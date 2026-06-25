@@ -99,17 +99,26 @@ For each finding, include:
 
 ## Review Process
 
-1. **Understand scope first.** If the user specifies a file, module, or feature, focus there. If the scope is the entire project, start with entry points and high-traffic paths.
+1. **Allocate Dimensions to Subagents**:
+   - Assign each of the 5 Review Dimensions to an independent subagent.
+   - Each subagent performs a focused review for its assigned dimension on the target codebase/files.
 
-2. **Read before writing.** Scan the full target before making any judgments. Patterns that look wrong in isolation may be intentional.
+2. **Save Individual Findings**:
+   - Each subagent writes its findings to a markdown file at: `.skills/docs/my-code-review/yyyy-mm-dd-<id>-<dimension-name>.md`
+   - Path format:
+     - `yyyy-mm-dd`: Current local date (e.g., `2026-06-25`)
+     - `<id>`: Unique task name, commit hash, or session ID
+     - `<dimension-name>`: One of `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fast-fail`
+   - Each file must list the findings with location, issue detail, suggested fix, and severity (🔴 Critical, 🟡 Warning, 🔵 Suggestion).
 
-3. **Be proportionate.** A 50-line utility script and a 5,000-line service have different thresholds. Calibrate severity accordingly.
+3. **Consolidate Findings**:
+   - Read all generated markdown files from `.skills/docs/my-code-review/`.
+   - Consolidate and summarize the findings. Remove overlaps.
+   - Format the final output according to the **Output Format** section.
 
-4. **Distinguish severity:**
-   - 🔴 **Critical** — bugs, security issues, data loss risk
-   - 🟡 **Warning** — maintainability problems, latent risks
-   - 🔵 **Suggestion** — improvements worth considering
+4. **Create & Execute Action Tasks**:
+   - Divide the priority action items into discrete, step-by-step tasks.
+   - Implement the fix for each task and verify correctness individually.
 
-5. **Back claims with evidence.** Quote code when flagging an issue. Don't make vague claims like "this could be improved."
-
-6. **If scope is unclear**, ask the user which files or features to prioritize rather than guessing.
+5. **Post-Review Verification**:
+   - Once all tasks are completed, verify all modifications to ensure correctness and that no regressions or side effects were introduced.
