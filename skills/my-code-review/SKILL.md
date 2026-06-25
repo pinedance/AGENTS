@@ -143,9 +143,28 @@ For each finding, include:
 
 2. **Allocate Dimensions to Subagents**:
    - Generate a single `YYYYMMDD_HHMMSS` timestamp now (e.g., `20260625_132000`). This timestamp is the session ID for all files in this review.
-   - Pass the timestamp and the agreed scope to each subagent as input.
-   - Assign each of the 5 Review Dimensions to an independent subagent.
-   - Each subagent performs a focused review for its assigned dimension on the target codebase/files.
+   - Invoke 5 subagents in parallel, one per dimension. Pass the following to each subagent:
+     - The agreed scope (file list or module boundary)
+     - The session timestamp (`YYYYMMDD_HHMMSS`)
+     - The dimension name and its checklist from this skill
+   - Use this prompt template for each subagent invocation:
+
+     ```
+     You are performing a focused code review for the **<Dimension Name>** dimension only.
+
+     Session ID: <YYYYMMDD_HHMMSS>
+     Scope: <agreed scope — list of files or module path>
+
+     Your job:
+     1. Read EVERY file in the scope completely. Do not sample or skip files.
+     2. Apply the checklist for <Dimension Name> from the my-code-review skill.
+     3. For each finding, quote the relevant code snippet and explain why it is an issue.
+     4. Minimum depth standard: surface at least one finding per 100 lines of code reviewed,
+        OR explicitly state "No issues found in <file>" after reading it.
+     5. Save your results to: .skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md
+
+     Do not review other dimensions. Do not summarize or skip — read every line.
+     ```
 
 3. **Save Individual Findings**:
    - Each subagent writes its findings to: `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
@@ -156,6 +175,9 @@ For each finding, include:
      # <Dimension Name> Review
      Scope: <agreed scope>
 
+     ## Files Reviewed
+     - path/to/file.py — <line count> lines
+
      ## Findings
 
      ### [🔴/🟡/🔵] Finding Title
@@ -164,7 +186,8 @@ For each finding, include:
      - **Suggestion**: concrete fix or direction
      ```
 
-   - Skip findings with no evidence. Quote the relevant code snippet for each issue.
+   - **Coverage rule**: Every file in scope must appear under `## Files Reviewed`, even if no issues were found.
+   - **Evidence rule**: Every finding must quote the exact code snippet. No vague claims.
 
 4. **Consolidate Findings**:
    - Read all generated dimension files from `.skills/docs/my-code-review/<YYYYMMDD_HHMMSS>/`.
