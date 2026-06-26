@@ -1,7 +1,7 @@
 ---
 name: my-code-review
 description: >
-   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates Fail-Fast principles. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
+   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates Fail-Fast principles. Evaluates code quality, duplication, and exception handling strictly against the standards defined in the my-coding-guidelines skill. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
 ---
 
 # Code Review
@@ -10,7 +10,7 @@ Perform a comprehensive, multi-dimensional review of the target codebase or file
 
 ## Review Dimensions
 
-Perform the review across the following five dimensions. For dimensions 3, 4, and 5, evaluate the code strictly against the standards defined in the [my-coding-guidelines](../my-coding-guidelines/SKILL.md) skill.
+Perform the review across the following five dimensions. Each dimension specifies its evaluation standard and detection focus areas inline.
 
 ### 1. Execution Logic Evaluation (실행 로직 평가)
 
@@ -20,7 +20,7 @@ Trace the actual execution flow and reason about correctness:
 - Are data transformations preserving meaning at each step?
 - Are state mutations happening in the right order?
 - Are async operations (promises, threads, coroutines) sequenced correctly?
-- Are boundary conditions handled (empty collections, null inputs, off-by-one)?
+- Are boundary conditions handled correctly at the *logic level* (empty collections, null inputs, off-by-one)? (Input-validation guards belong to dimension 5.)
 - Are return values and side effects consistent with what callers expect?
 
 Flag logic bugs with a concrete example of how they would manifest (e.g., "when input list is empty, `reduce()` on line 42 throws — no guard exists").
@@ -41,59 +41,35 @@ Be specific: quote the line or snippet and explain *why* it is an error.
 
 ### 3. Code Quality Evaluation (코드 퀄리티 평가)
 
-Assess maintainability, readability, and naming conventions against the standards in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Key checks:
+Assess maintainability, readability, and naming conventions strictly against the **Architecture & Design Principles**, **Coding Style & Clean Code**, **Naming Conventions**, and **Documentation** sections defined in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Read that file before evaluating. Detection focus areas (standards defined in my-coding-guidelines):
 
-**Architecture & Design**:
-- SRP violated? (module/class/function doing more than one thing)
-- Tight coupling? (component accessing internal state of another)
-- YAGNI violated? (abstractions or layers not yet needed)
-- Side effects in constructors? (I/O, DB, network inside `__init__`)
-
-**Coding Style**:
-- Functions exceeding 30–40 lines?
-- Nesting depth exceeding 2 levels? (missing early returns / guard clauses)
-- SLAP violated? (mixing high-level orchestration with low-level detail in one function)
-- Magic values instead of named constants?
-- Implicit types or dynamic type tricks?
-- Inline imports inside functions or classes?
-- Nested helper functions (non-closure/decorator)?
-- Dead code: unreachable branches, unused variables/imports?
-- File layout violates layer-based order (Constants → Helpers → Core → Orchestration)?
-
-**Naming**:
-- Functions missing verb-noun prefix (`calculate_`, `fetch_`, etc.)?
-- Boolean variables/functions missing `is_`/`has_`/`can_` prefix?
-- Vague or filler names (`data`, `info`, `temp`, `value`, `my...`)?
-- Non-standard abbreviations invented by the author?
-- Collection variables not pluralized?
-- Asymmetric antonym pairs (`open/remove`, `start/cancel`)?
-
-**Documentation**:
-- Comments explaining *what* instead of *why*?
+- **Architecture**: SRP violations, tight coupling, YAGNI violations, constructor side-effects
+- **Coding Style**: function length >30–40 lines, nesting >2 levels, SLAP violations, magic values, implicit types, inline imports, nested helpers, dead code, file layout order
+- **Naming**: missing verb-noun prefix, missing boolean prefix (`is_`/`has_`/`can_`), vague names, non-standard abbreviations, non-plural collections, asymmetric antonyms
+- **Documentation**: comments explaining *what* instead of *why*
 
 ### 4. Duplicate Code Evaluation (중복 코드 평가)
 
-Identify repetition that increases maintenance burden:
+Identify repetition that increases maintenance burden, evaluated against the **Single Source of Truth (SSoT)** and **DRY** principles in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Read that file before evaluating. The following are *detection patterns* — the evaluation standard is my-coding-guidelines:
 
 - **Near-identical blocks**: Differ only by a variable or constant → suggest extracting into a parameterized function.
 - **Copy-pasted logic**: Duplicated code that should be shared → suggest extracting to a utility or base class.
 - **Multiple implementations**: Same concept implemented in different parts of the codebase → suggest consolidating.
 - **Similar data structures**: Structures representing the same domain concept → suggest unifying.
-- **DRY (Don't Repeat Yourself) principle**: Evaluate compliance against the SSoT guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md).
 
 When flagging duplication, point to *all* locations and suggest the consolidation target.
 
 ### 5. Fail-Fast & Exception Handling Review (fast fail 위배 / 과도한 예외처리 검토)
 
-Evaluate the exception handling design and state validation flow against the **Error Handling & Reliability** guidelines in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Key checks:
+Evaluate the exception handling design and state validation flow strictly against the **Error Handling & Reliability** section in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Read that file before evaluating. Detection focus areas (standards defined in my-coding-guidelines):
 
-- **Fail-Fast missing**: Invalid arguments, wrong types, or invalid internal state at entry points not immediately halted with an exception?
-- **Exception swallowing**: Empty `except`/`catch` blocks, or over-broad catches (e.g., `except Exception`) that mask bugs?
-- **Silent fallbacks**: Functions returning `null`, `-1`, or empty defaults on failure where callers cannot distinguish from a valid result?
-- **Stack trace lost**: Exceptions re-thrown without preserving original context (e.g., `raise Exception(str(e))` losing the traceback)?
-- **Oversized try blocks**: `try` wrapping unrelated logic, masking which line actually raises?
-- **Operational errors unhandled**: Network, DB, I/O calls with no try-catch, risking uncontrolled crashes?
-- **Boundary states not guarded**: Missing checks for empty collections, None inputs, or off-by-one at function boundaries?
+- **Fail-Fast missing**: entry points not immediately halting on invalid args, wrong types, or invalid state
+- **Exception swallowing**: empty `except`/`catch` or over-broad catches (e.g., `except Exception`) that mask bugs
+- **Silent fallbacks**: returning `null`, `-1`, or empty defaults on failure indistinguishable from valid results
+- **Stack trace lost**: re-throwing without preserving original context (e.g., `raise Exception(str(e))`)
+- **Oversized try blocks**: `try` wrapping unrelated logic, masking which line actually raises
+- **Operational errors unhandled**: network, DB, I/O calls with no try-catch
+- **Boundary states not guarded**: missing *defensive validation* at function entry points (empty collections, None inputs, off-by-one); logic-level boundary errors are covered in dimension 1
 
 ---
 
@@ -126,10 +102,24 @@ One paragraph: overall health of the code, most critical issues, general impress
 Numbered list: most impactful fixes first. Each item: what to fix, where, why it matters.
 ```
 
+**Severity levels**:
+- 🔴 **Critical**: runtime failures, data corruption, unhandled exceptions, Fail-Fast violations
+- 🟡 **Major**: maintainability degradation, naming violations, significant duplication, logic smell
+- 🔵 **Minor**: documentation, style, low-impact improvements
+
 For each finding, include:
 - **Location**: file path + line number or function name
 - **Issue**: what is wrong and why
+- **Guideline**: which my-coding-guidelines rule was violated (for dimensions 3, 4, 5)
 - **Suggestion**: concrete fix or direction
+
+Example:
+
+> #### 🔴 Missing Fail-Fast at entry point
+> - **Location**: `src/service.py:42` — `process_order()`
+> - **Issue**: `order_id` is not validated for `None`; downstream `db.fetch(order_id)` raises unhandled `TypeError`.
+> - **Guideline**: Error Handling & Reliability — Fail-Fast (for Programming Errors)
+> - **Suggestion**: Add `if order_id is None: raise ValueError("order_id must not be None")` at function entry.
 
 ---
 
@@ -146,7 +136,7 @@ For each finding, include:
    - Invoke 5 subagents in parallel, one per dimension. Pass the following to each subagent:
      - The agreed scope (file list or module boundary)
      - The session timestamp (`YYYYMMDD_HHMMSS`)
-     - The dimension name and its checklist from this skill
+     - The dimension name to substitute as `<Dimension Name>` in the prompt template below
    - Use this prompt template for each subagent invocation:
 
      ```
@@ -156,19 +146,23 @@ For each finding, include:
      Scope: <agreed scope — list of files or module path>
 
      Your job:
-     1. Read EVERY file in the scope completely. Do not sample or skip files.
-     2. Apply the checklist for <Dimension Name> from the my-code-review skill.
-     3. For each finding, quote the relevant code snippet and explain why it is an issue.
-     4. Minimum depth standard: surface at least one finding per 100 lines of code reviewed,
+     1. Read `.agents/skills/my-coding-guidelines/SKILL.md` in full — all quality, duplication,
+        and exception-handling judgements must be grounded in that document.
+     2. Read `.agents/skills/my-code-review/SKILL.md` and locate the evaluation criteria
+        for <Dimension Name>.
+     3. Read EVERY file in the scope completely. Do not sample or skip files.
+     4. For each finding, quote the relevant code snippet and explain why it is an issue,
+        citing the specific guideline it violates.
+     5. Minimum depth standard: surface at least one finding per 100 lines of code reviewed,
         OR explicitly state "No issues found in <file>" after reading it.
-     5. Save your results to: .agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md
+     6. Save your results to: .agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md
 
      Do not review other dimensions. Do not summarize or skip — read every line.
      ```
 
 3. **Save Individual Findings**:
    - Each subagent writes its findings to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/<dimension-name>.md`
-   - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `Fail-Fast`
+   - `<dimension-name>` is one of: `execution-logic`, `code-errors`, `code-quality`, `duplicate-code`, `fail-fast`
    - Each file must use the following format:
 
      ```
@@ -177,12 +171,14 @@ For each finding, include:
 
      ## Files Reviewed
      - path/to/file.py — <line count> lines
+     - path/to/clean.py — <line count> lines — ✅ No issues found
 
      ## Findings
 
      ### [🔴/🟡/🔵] Finding Title
      - **Location**: file path + line number or function name
      - **Issue**: what is wrong and why
+     - **Guideline**: which my-coding-guidelines rule was violated (for dimensions 3, 4, 5)
      - **Suggestion**: concrete fix or direction
      ```
 
@@ -206,7 +202,7 @@ For each finding, include:
      - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line>
        - What: <what to fix>
        - Why: <why it matters>
-       - Verify: <command or check to confirm fix is correct>
+       - Verify: <shell command — if not automatable, write `manual: <what to inspect>`>
 
      ---
      ## Verification Results
@@ -215,7 +211,7 @@ For each finding, include:
 
    - **Execution loop** — repeat until no TODO remains:
      1. Read `tasks.md` to find the next `TODO` task.
-     2. Execute the fix.
+     2. Apply the fix directly to the codebase.
      3. Update the task status in `tasks.md` **before moving to the next task**:
         - `[x] DONE` — fix applied and verified.
         - `[-] SKIPPED: <reason>` — intentionally skipped. Reason is mandatory. No silent skips.
@@ -224,5 +220,6 @@ For each finding, include:
 
 6. **Post-Review Verification**:
    - Once all tasks in `tasks.md` are marked `[x] DONE`, run the verification command listed in each task.
+   - For `manual:` verify entries, perform the described inspection and record the result.
    - Confirm no regressions or side effects were introduced.
    - Document the results in the `## Verification Results` section of `tasks.md`.
