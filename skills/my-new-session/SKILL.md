@@ -66,9 +66,18 @@ Perform the following git workspace checks and operations:
      /caveman full Korean
      ```
      to switch communication style to Korean Caveman Mode as preferred by the user.
-2. **Apply Other Custom Session Settings**:
+2. **Model Selection**:
+   - Ask the user whether they want to change the active model before starting work.
+   - If the `ask_question` tool is available, use it to check if they want to change the model, and if so, what they want to change it to. Example question & options:
+     - **Question**: "Would you like to change the model before we begin?"
+     - **Options**:
+       - `(Recommended) Keep using the current model`
+       - `Change model to Gemini 1.5 Pro`
+       - `Change model to Gemini 1.5 Flash`
+       - `Change model to Gemini 3.5 Flash (High)`
+3. **Apply Other Custom Session Settings**:
    - Verify and apply any other session-start configurations, workspace preferences, or automation tools as requested by the user.
-3. **Response & Execution Strategy**:
+4. **Response & Execution Strategy**:
    - If the user asks a question, answer it fully and propose relevant actions.
    - **CRITICAL**: Do not begin modifying the codebase or writing code changes without explicit, direct approval from the user.
 
@@ -115,3 +124,10 @@ Always adhere to the core development principles defined in the [my-coding-guide
 9. **Agent**:
    - Runs `git checkout -b optimize-db-latency`
    - Activates caveman mode: `/caveman full Korean`
+   - Calls `ask_question` to ask about model selection:
+     - **Question**: "Would you like to change the model before we begin?"
+     - **Options**:
+       - `(Recommended) Keep using the current model`
+       - `Change model to Gemini 1.5 Pro`
+       - `Change model to Gemini 1.5 Flash`
+       - `Change model to Gemini 3.5 Flash (High)`
