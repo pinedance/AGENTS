@@ -457,6 +457,8 @@ library:
     path: skills/my-coding-guidelines/SKILL.md
   - name: my-git-commit
     path: skills/my-git-commit/SKILL.md
+  - name: my-models
+    path: skills/my-models/SKILL.md
   - name: my-new-session
     path: skills/my-new-session/SKILL.md
   - name: my-skill-creator
@@ -650,6 +652,9 @@ workspace:
   - name: finishing-a-development-branch
     source: skills/finishing-a-development-branch
     target: finishing-a-development-branch
+  - name: my-models
+    source: skills/my-models
+    target: my-models
 - repoId: anthropics/skills
   skills:
   - name: pdf

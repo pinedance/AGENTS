@@ -21,7 +21,7 @@ Every project goes through this process. A todo list, a single-function utility,
 
 You MUST create a task for each of these items and complete them in order:
 
-1. **Model selection check** — ask the user if they want to change the active LLM model before starting the brainstorming work
+1. **Model selection check** — invoke **my-models** skill: ask if user wants to change model; if yes, instruct user to run `/model` and wait for reply
 2. **Explore project context** — check files, docs, recent commits
 3. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
@@ -31,7 +31,7 @@ You MUST create a task for each of these items and complete them in order:
 8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 9. **User reviews written spec** — ask user to review the spec file before proceeding
 10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
-11. **Post-plan execution model check** — after the plan is completed and before execution, ask the user if they want to change the active LLM model to be used for executing the plan
+11. **Post-plan execution model check** — invoke **my-models** skill: ask if user wants to change model for execution phase; wait for reply before starting
 
 ## Process Flow
 
@@ -77,7 +77,7 @@ digraph brainstorming {
 
 **Understanding the idea:**
 
-- **Model Selection Check**: Ask the user if they want to change the active LLM model before starting the brainstorming work. If `ask_question` is available, present options to switch or keep the current model.
+- **Model Selection Check**: Invoke **my-models** skill — ask if user wants to change model before brainstorming. If yes, instruct user to run `/model` and wait for reply before continuing.
 - Check out the current project state first (files, docs, recent commits)
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
@@ -141,8 +141,8 @@ Wait for the user's response. If they request changes, make them and re-run the 
 **Implementation & Execution Model Check:**
 
 - Invoke the writing-plans skill to create a detailed implementation plan.
-- **Execution Model Check**: After the implementation plan is fully written and approved, and before executing any plan steps, check if the user wants to change the LLM model to be used for the execution/coding phase. Use the `ask_question` tool to prompt the user with model switch choices (e.g., Keep using current, Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 3.5 Flash (High)).
-- Do NOT invoke any other skill. writing-plans is the next step.
+- **Execution Model Check**: After the plan is fully written and approved, and before executing any plan steps, invoke **my-models** skill — ask if user wants to change the model for the execution/coding phase. Wait for reply before proceeding.
+- Do NOT invoke any other skill directly. Order: writing-plans (plan) → my-models (model check) → execution.
 
 ## Key Principles
 
