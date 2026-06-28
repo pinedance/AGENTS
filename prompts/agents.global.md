@@ -5,9 +5,11 @@
 * **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without planning and obtaining explicit user approval:
   > Plan → Approval → Execute
 * **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
+* **Safe Command Execution:** Do not execute commands with potentially destructive or high-risk flags (e.g., `-f`, `--force`, `rm -rf`) without obtaining explicit user approval first.
 * **Workspace Discovery:**
+  * If [local rules](file:.agents/agents.local.md) exists, read and adhere to them.
+  * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local rules.
   * Read [README.md](file:README.md) to comprehend the project's nature, scope, and technical details.
-  * If [agents.local.md](file:.agents/agents.local.md) exists, read and adhere to its local rules.
 
 ## Guidelines
 
