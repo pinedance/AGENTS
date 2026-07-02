@@ -5,6 +5,7 @@
 * **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without planning and obtaining explicit user approval:
   > Plan → Approval → Execute
 * **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
+* **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Command Execution:** Do not execute commands with potentially destructive or high-risk flags (e.g., `-f`, `--force`, `rm -rf`) without obtaining explicit user approval first.
 * **Workspace Discovery:**
   * If [local rules](file:.agents/agents.local.md) exists, read and adhere to them.
@@ -33,4 +34,8 @@
 ### Key Indicators & Tradeoffs
 * **How to Know It's Working:** Minimal diffs, simpler code on first try, clarifying questions asked beforehand, and clean PRs.
 * **Tradeoff:** Caution over speed. Not required for trivial tasks (e.g., simple typos or obvious one-liners), but essential for non-trivial tasks.
+
+### 5. Temporary Scratch Directories
+* **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.dev/scratch/` or `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
+
 
