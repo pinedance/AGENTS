@@ -8,7 +8,7 @@
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Command Execution:** Do not execute commands with potentially destructive or high-risk flags (e.g., `-f`, `--force`, `rm -rf`) without obtaining explicit user approval first.
 * **Workspace Discovery:**
-  * If [local rules](file:.agents/agents.local.md) exists, read and adhere to them.
+  * If [local rules](file:.agents/AGENTS.local.md) exists, read and adhere to them.
   * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local rules.
   * Read [README.md](file:README.md) to comprehend the project's nature, scope, and technical details.
 
