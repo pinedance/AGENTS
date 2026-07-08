@@ -7,6 +7,8 @@
 * **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Command Execution:** Do not execute commands with potentially destructive or high-risk flags (e.g., `-f`, `--force`, `rm -rf`) without obtaining explicit user approval first.
+  * **No Direct Permanent Deletion:** Never permanently delete files or directories using `rm -rf` or `git clean -fd` without explicit instruction.
+  * **Temporary Backup/Trash Priority:** For cleanup or deletion tasks, always move the targets to a temporary backup directory (e.g., `/tmp/agent_backup_<timestamp>/`) or use a system trash command (e.g., `gio trash`) to ensure the operation is fully reversible.
 * **Workspace Discovery:**
   * If [local rules](file:.agents/AGENTS.local.md) exists, read and adhere to them.
   * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local rules.
