@@ -47,7 +47,6 @@ This skill defines the core development principles, coding style, naming convent
 *   **Top-Level Imports**: Ban inline imports inside functions or classes. Place all module imports at the very top of the file to maintain clear visibility of dependencies.
 *   **No Nested Functions**: Avoid declaring nested helper functions inside another function, except for decorators, closures, or function factories where returning a nested function is structurally necessary. Extract standard helper logic to module-level functions with explicit parameters to ensure testability and readability.
 *   **Layer-Based Layout**: Organize code blocks sequentially within a file based on their logical abstraction layer and execution flow (e.g., Constants/Regex -> Utility Helpers -> Pre-processing -> Generation/Core -> Post-processing -> Orchestration/Main). Ensure the file reads naturally from top to bottom.
-*   **Conventional Commits**: Enforce Conventional Commits specification (e.g., `feat:`, `fix:`, `refactor:`, `test:`, `chore:`) for all git commit messages.
 
 ---
 

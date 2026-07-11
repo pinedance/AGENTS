@@ -1,118 +1,102 @@
 ---
 name: my-git-commit
 description: >
-  변경된 파일들을 내용별로 분석하여 논리적 그룹으로 나누고, 각 그룹마다 적절한 커밋 메시지를 붙여 순차적으로 커밋하는 스킬.
-  "git commit 해줘", "커밋해줘", "변경사항 커밋해줘", "commit the changes", "commit 분리해서 해줘" 같은 요청에 반드시 사용한다.
-  단순히 git commit을 하라는 요청이 오면 이 스킬을 사용해서 내용별로 나누어 커밋한다.
+  Analyze modified files, split them into logical groups, and commit them sequentially with descriptive commit messages.
+  Must be triggered when user requests "git commit", "commit", "commit changes", etc.
+  If a simple git commit is requested, use this skill to split changes logically.
 ---
 
 # Git Smart Commit
 
-변경사항을 내용별로 분석해 논리적으로 나누어 커밋한다.
-무조건 하나의 `git add -A && git commit`으로 묶지 말 것.
+Analyze changes, group them logically, and commit sequentially.
+Do not squash all changes into a single `git add -A && git commit` unless it represents a single logical unit.
 
-## 프로세스
+## Process
 
-### 1단계: 현황 파악
+### Step 1: Analyze Status
 
 ```bash
 git status --short
 git diff --stat
-git diff          # 추적 중인 파일 변경사항
-git diff --cached # 이미 staged된 파일 변경사항
+git diff          # Tracked files changes
+git diff --cached # Staged files changes
 ```
 
-untracked 파일은 `git diff`에 나오지 않으므로 내용을 직접 읽어 파악한다.
+For untracked files, manually read their content to understand their purpose since they do not appear in `git diff`.
 
-### 2단계: 변경사항 분석 및 그룹핑
+### Step 2: Categorization & Grouping
 
-각 파일의 변경 내용을 파악한 후, **변경의 목적과 영역**을 기준으로 그룹을 나눈다.
+Determine the **purpose and domain** of each change, then group files accordingly.
 
-**그룹핑 기준**:
-- 같은 기능/버그에 속하는 파일들 → 하나의 커밋
-- 서로 다른 목적의 변경 → 별도 커밋
+**Grouping Criteria**:
+- Files belonging to the same feature/bugfix → Single commit
+- Distinct modifications with different goals → Separate commits
 
-**전형적인 분리 패턴**:
+**Standard Prefixes**:
 
-| 변경 유형 | prefix | 예시 파일 |
-|-----------|--------|-----------|
-| 새 기능 추가 | `feat:` | 새 모듈, 새 컴포넌트 |
-| 버그 수정 | `fix:` | 로직 오류 수정 |
-| 문서 | `docs:` | README.md, 주석, 문서 파일 |
-| CI/CD 파이프라인 | `ci:` | `.github/workflows/`, `Dockerfile` |
-| 빌드/설정 | `chore:` | `pyproject.toml`, `package.json`, `.gitignore` |
-| 리팩터링 | `refactor:` | 기능 변화 없는 코드 구조 변경 |
-| 스타일 | `style:` | CSS, 포맷팅 |
-| 테스트 | `test:` | 테스트 파일 |
+| Prefix | Description | Example Files |
+|-----------|------------------|-------------------|
+| `feat:` | New feature | New modules, components |
+| `fix:` | Bug fix | Logic error fixes |
+| `docs:` | Documentation | README.md, comments |
+| `ci:` | CI/CD pipeline | `.github/workflows/`, `Dockerfile` |
+| `chore:` | Build/Config/Deps| `pyproject.toml`, `package.json`, `.gitignore` |
+| `refactor:`| Code refactoring | Structural change without behavior change |
+| `style:` | Code style/format| CSS, Prettier formatting |
+| `test:` | Testing | Test scripts |
 
-하나의 파일이 여러 목적에 걸쳐있다면 가장 주된 목적으로 분류한다.
+If a file contains changes for multiple purposes, categorize it under the primary purpose.
 
-### 3단계: 커밋 계획 수립 → 사용자 승인 대기
+### Step 3: Establish Commit Plan & User Approval
 
-> **커밋 실행 전 반드시 사용자 승인을 받는다. 승인 없이 절대 커밋하지 말 것.**
+> **Always obtain explicit user approval before executing any commits. Never commit without approval.**
 
-계획을 아래 형식으로 보여주고 명시적으로 승인을 요청한다:
+Present the plan in the following format and ask for confirmation:
 
 ```
-아래 순서로 커밋하겠습니다. 진행할까요?
+I will proceed with the following commits. Do you approve?
 
-커밋 1: ci: schedule/push 트리거 활성화
+Commit 1: ci: enable schedule/push triggers
   → .github/workflows/deploy.yml
 
-커밋 2: feat: Amplify 빌드 설정 및 on_post_build hook 추가
+Commit 2: feat: add Amplify build config and on_post_build hook
   → amplify.yml, hooks/copy_amplify.py, mkdocs.yml
 
-커밋 3: docs: README 개편
+Commit 3: docs: revamp README
   → README.md
 ```
 
-사용자가 수정을 요청하면 그룹/메시지를 조정한 뒤 다시 계획을 보여준다.
-사용자가 승인하면 4단계로 진행한다.
+If the user requests adjustments, update the grouping/messages and present the plan again.
+Once approved, proceed to Step 4.
 
+### Step 4: Sequential Execution
 
-### 4단계: 순차 커밋 실행
-
-각 그룹별로:
+For each group:
 
 ```bash
-git add <파일1> <파일2> ...
-git commit -m "<prefix>: <제목>
+git add <file1> <file2> ...
+git commit -m "<prefix>: <title>
 
-<필요시 본문 — 무엇을, 왜 변경했는지>"
+<Optional description of what was changed and why>"
 ```
 
-**커밋 메시지 규칙**:
-- Conventional Commits 형식 사용
-- 제목은 50자 이내 권장
-- 언어는 프로젝트 언어 따름 (한국어 프로젝트면 한국어 OK)
-- 여러 변경사항이 있으면 본문에 bullet로 나열
+**Commit Message Rules**:
+- Enforce Conventional Commits specification (e.g., `feat:`, `fix:`, `refactor:`, `test:`, `chore:`)
+- Keep titles under 50 characters.
+- Match the primary language of the codebase (English by default, Korean if project language is Korean).
+- Enumerate multiple changes as bullet points in the commit body.
 
-**실행 후 확인**:
+**Verification**:
 
 ```bash
 git log --oneline -5
 ```
 
-커밋 결과를 사용자에게 요약해서 보여준다.
+Show a summary of the resulting commits to the user.
 
-## 예외 처리
+## Exception Handling
 
-- **변경사항이 없음**: `git status`가 clean이면 "커밋할 변경사항이 없습니다" 안내.
-- **이미 staged된 파일이 있음**: staged 상태를 존중하되 사용자에게 알린다.
-- **그룹이 1개뿐**: 나눌 필요 없으면 단일 커밋으로 진행 (단, 사용자에게 알림).
-- **충돌/미해결 파일**: 커밋 전에 사용자에게 알리고 중단.
-
-## 예시
-
-**상황**: README 수정 + 새 기능 파일 + CI 설정 변경
-
-```
-커밋 1: docs: README에 설치 가이드 추가
-  → README.md
-
-커밋 2: feat: 사용자 인증 모듈 추가
-  → src/auth.py, src/models/user.py
-
-커밋 3: ci: GitHub Actions 배포 워크플로우 추가
-  → .github/workflows/deploy.yml
-```
+- **No Changes**: If `git status` is clean, notify the user: "No changes to commit."
+- **Pre-existing Staged Files**: Respect current staged state, but notify the user.
+- **Single Logical Group**: If all changes belong to a single logical group, perform a single commit (notify the user of the single group).
+- **Merge Conflicts / Unresolved Files**: Halt execution, notify the user, and request manual resolution.
