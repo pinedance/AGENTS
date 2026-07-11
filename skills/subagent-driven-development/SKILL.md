@@ -271,6 +271,7 @@ Done!
 - **superpowers:writing-plans** - Creates the plan this skill executes
 - **superpowers:requesting-code-review** - Code review template for reviewer subagents
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
+- **my-git-commit** - Use when a git commit is required during execution
 
 **Subagents should use:**
 - **superpowers:test-driven-development** - Subagents follow TDD for each task
