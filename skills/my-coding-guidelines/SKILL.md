@@ -13,7 +13,8 @@ This skill defines the core development principles, coding style, naming convent
 
 *   **Single Source of Truth (SSoT)**: Maintain a single, unambiguous representation of data, logic, and configuration to prevent duplication and inconsistency.
 *   **Principle of Least Surprise**: Maintain architectural and design consistency with the existing codebase to ensure predictable behavior.
-*   **Single Responsibility Principle (SRP)**: Restrict each module, class, and function to a single logical responsibility.
+*   **Single Responsibility Principle (SRP)**: Every module, class, or function has exactly one reason to change. Separate units must own data acquisition, target calculation, weighting, and orchestration independently.
+*   **Separation of Concerns (SoC)**: Partition code into non-overlapping axes (e.g., business logic, data access, presentation) so a change in one concern does not cascade into others. SRP is the per-module instantiation of this principle. See also: Layer-Based Layout (§3), SLAP (§3).
 *   **Loose Coupling**: Minimize dependencies between modules; prevent components from accessing or knowing internal states of others.
 *   **Dependency Inversion (DIP)**: Decouple business logic from concrete external resources (e.g., databases, networks) using interfaces and dependency injection to enable isolated unit testing.
 *   **YAGNI (You Aren't Gonna Need It)**: Reject implementing features, abstractions, or layers before they are explicitly required. Prioritize the simplest design that meets the current specification.
