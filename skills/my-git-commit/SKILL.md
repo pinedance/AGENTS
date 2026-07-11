@@ -100,3 +100,7 @@ Show a summary of the resulting commits to the user.
 - **Pre-existing Staged Files**: Respect current staged state, but notify the user.
 - **Single Logical Group**: If all changes belong to a single logical group, perform a single commit (notify the user of the single group).
 - **Merge Conflicts / Unresolved Files**: Halt execution, notify the user, and request manual resolution.
+
+## Exclusions
+
+- **Design & Planning Documents**: Design and planning documents (specs, plans, and other `.md` files) are not subject to git add/commit and must be excluded from commits.
