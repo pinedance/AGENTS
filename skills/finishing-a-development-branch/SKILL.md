@@ -9,7 +9,7 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify tests → Verify workspace is clean → Detect environment → Present options → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -37,7 +37,24 @@ Stop. Don't proceed to Step 2.
 
 **If tests pass:** Continue to Step 2.
 
-### Step 2: Detect Environment
+### Step 2: Verify Workspace is Clean
+
+Check for uncommitted modifications before finishing the branch:
+
+```bash
+git status --porcelain
+```
+
+**If there are uncommitted changes:**
+Ask the user: "I found uncommitted changes in the workspace. Would you like to commit them or stash them first?"
+Options:
+- `(Recommended) Commit changes using my-git-commit skill` -> Trigger the **my-git-commit** skill.
+- `Stash changes` -> Run `git stash`.
+- `Proceed with dirty workspace (not recommended)` -> Proceed to Step 3.
+
+**If workspace is clean or action resolved:** Continue to Step 3.
+
+### Step 3: Detect Environment
 
 **Determine workspace state before presenting options:**
 
@@ -51,10 +68,10 @@ This determines which menu to show and how cleanup works:
 | State | Menu | Cleanup |
 |-------|------|---------|
 | `GIT_DIR == GIT_COMMON` (normal repo) | Standard 4 options | No worktree to clean up |
-| `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 6) |
+| `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 7) |
 | `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
 
-### Step 3: Determine Base Branch
+### Step 4: Determine Base Branch
 
 ```bash
 # Try common base branches
@@ -63,7 +80,7 @@ git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 
 Or ask: "This branch split from main - is that correct?"
 
-### Step 4: Present Options
+### Step 5: Present Options
 
 **Normal repo and named-branch worktree — present exactly these 4 options:**
 
@@ -92,7 +109,7 @@ Which option?
 
 **Don't add explanation** - keep options concise.
 
-### Step 5: Execute Choice
+### Step 6: Execute Choice
 
 #### Option 1: Keep As-Is
 
@@ -115,10 +132,10 @@ git merge <feature-branch>
 # Verify tests on merged result
 <test command>
 
-# Only after merge succeeds: cleanup worktree (Step 6), then delete branch
+# Only after merge succeeds: cleanup worktree (Step 7), then delete branch
 ```
 
-Then: Cleanup worktree (Step 6), then delete branch:
+Then: Cleanup worktree (Step 7), then delete branch:
 
 ```bash
 git branch -d <feature-branch>
@@ -157,12 +174,12 @@ MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-tople
 cd "$MAIN_ROOT"
 ```
 
-Then: Cleanup worktree (Step 6), then force-delete branch:
+Then: Cleanup worktree (Step 7), then force-delete branch:
 ```bash
 git branch -D <feature-branch>
 ```
 
-### Step 6: Cleanup Workspace
+### Step 7: Cleanup Workspace
 
 **Only runs for Options 2 and 4.** Options 1 and 3 always preserve the worktree.
 
