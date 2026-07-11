@@ -1,7 +1,7 @@
 ---
 name: my-code-review
 description: >
-   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates Fail-Fast principles. Evaluates code quality, duplication, and exception handling strictly against the standards defined in the my-coding-guidelines skill. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
+   Review project codebase thoroughly across multiple dimensions: execution logic correctness, code errors, code quality, duplicate code, and excessive exception handling that violates Fail-Fast principles. Evaluates code quality, duplication, and exception handling strictly against the standards defined in the 'my-coding-guidelines' skill. Use this skill whenever the user asks to review code, check code quality, find bugs, audit a codebase, look for duplicates, evaluate exception handling, or wants any kind of systematic code analysis — even if they don't explicitly say "code review".
 ---
 
 # Code Review
@@ -43,7 +43,7 @@ Be specific: quote the line or snippet and explain *why* it is an error.
 
 Assess maintainability, readability, and naming conventions strictly against the **Architecture & Design Principles**, **Coding Style & Clean Code**, **Naming Conventions**, and **Documentation** sections defined in [my-coding-guidelines](../my-coding-guidelines/SKILL.md). Read that file before evaluating. Detection focus areas (standards defined in my-coding-guidelines):
 
-- **Architecture**: SRP violations, tight coupling, YAGNI violations, constructor side-effects
+- **Architecture**: SRP violations, SoC violations, DIP violations, tight coupling, YAGNI violations, constructor side-effects
 - **Coding Style**: function length >30–40 lines, nesting >2 levels, SLAP violations, magic values, implicit types, inline imports, nested helpers, dead code, file layout order
 - **Naming**: missing verb-noun prefix, missing boolean prefix (`is_`/`has_`/`can_`), vague names, non-standard abbreviations, non-plural collections, asymmetric antonyms
 - **Documentation**: comments explaining *what* instead of *why*
