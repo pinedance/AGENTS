@@ -73,27 +73,6 @@ library:
   - name: template-skill
     path: template/SKILL.md
   commit: 57546260929473d4e0d1c1bb75297be2fdfa1949
-- repoId: Lum1104/Understand-Anything
-  repoType: github
-  repoUrl: https://github.com/Lum1104/Understand-Anything.git
-  skills:
-  - name: understand-chat
-    path: understand-anything-plugin/skills/understand-chat/SKILL.md
-  - name: understand-dashboard
-    path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
-  - name: understand-diff
-    path: understand-anything-plugin/skills/understand-diff/SKILL.md
-  - name: understand-domain
-    path: understand-anything-plugin/skills/understand-domain/SKILL.md
-  - name: understand-explain
-    path: understand-anything-plugin/skills/understand-explain/SKILL.md
-  - name: understand-knowledge
-    path: understand-anything-plugin/skills/understand-knowledge/SKILL.md
-  - name: understand-onboard
-    path: understand-anything-plugin/skills/understand-onboard/SKILL.md
-  - name: understand
-    path: understand-anything-plugin/skills/understand/SKILL.md
-  commit: 7f5a717694d3a94f19f523b375c777eb21548ff5
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
@@ -604,6 +583,29 @@ library:
     path: skills/social/SKILL.md
   - name: video
     path: skills/video/SKILL.md
+- repoId: Egonex-AI/Understand-Anything
+  repoType: github
+  repoUrl: https://github.com/Egonex-AI/Understand-Anything.git
+  commit: 6da0fbd255ee0e55789f41c047b767ad01519d14
+  skills:
+  - name: understand-chat
+    path: understand-anything-plugin/skills/understand-chat/SKILL.md
+  - name: understand-dashboard
+    path: understand-anything-plugin/skills/understand-dashboard/SKILL.md
+  - name: understand-diff
+    path: understand-anything-plugin/skills/understand-diff/SKILL.md
+  - name: understand-domain
+    path: understand-anything-plugin/skills/understand-domain/SKILL.md
+  - name: understand-explain
+    path: understand-anything-plugin/skills/understand-explain/SKILL.md
+  - name: understand-figma
+    path: understand-anything-plugin/skills/understand-figma/SKILL.md
+  - name: understand-knowledge
+    path: understand-anything-plugin/skills/understand-knowledge/SKILL.md
+  - name: understand-onboard
+    path: understand-anything-plugin/skills/understand-onboard/SKILL.md
+  - name: understand
+    path: understand-anything-plugin/skills/understand/SKILL.md
 workspace:
 - repoId: LOCAL/skills
   skills:
@@ -680,3 +682,8 @@ workspace:
   - name: humanizer
     source: blader/humanizer/humanizer
     target: humanizer
+- repoId: Egonex-AI/Understand-Anything
+  skills:
+  - name: understand
+    source: Egonex-AI/Understand-Anything/understand
+    target: understand
