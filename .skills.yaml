@@ -606,6 +606,251 @@ library:
     path: understand-anything-plugin/skills/understand-onboard/SKILL.md
   - name: understand
     path: understand-anything-plugin/skills/understand/SKILL.md
+- repoId: NomaDamas/k-skill
+  repoType: github
+  repoUrl: https://github.com/NomaDamas/k-skill.git
+  commit: 0c1bcdc9288545297897b0eee349d30ab2e1b230
+  skills:
+  - name: assembly-bill-vote-search
+    path: assembly-bill-vote-search/SKILL.md
+  - name: biz-health-check
+    path: biz-health-check/SKILL.md
+  - name: bunjang-search
+    path: bunjang-search/SKILL.md
+  - name: catchtable-sniper
+    path: catchtable-sniper/SKILL.md
+  - name: cheap-gas-nearby
+    path: cheap-gas-nearby/SKILL.md
+  - name: corporate-registration-consulting
+    path: corporate-registration-consulting/SKILL.md
+  - name: coupang-product-search
+    path: coupang-product-search/SKILL.md
+  - name: court-auction-notice-search
+    path: court-auction-notice-search/SKILL.md
+  - name: court-payment-order-assistant
+    path: court-payment-order-assistant/SKILL.md
+  - name: d2b-notice-search
+    path: d2b-notice-search/SKILL.md
+  - name: daangn-cars-search
+    path: daangn-cars-search/SKILL.md
+  - name: daangn-jobs-search
+    path: daangn-jobs-search/SKILL.md
+  - name: daangn-realty-search
+    path: daangn-realty-search/SKILL.md
+  - name: daangn-used-goods-search
+    path: daangn-used-goods-search/SKILL.md
+  - name: daishin-report-search
+    path: daishin-report-search/SKILL.md
+  - name: daiso-product-search
+    path: daiso-product-search/SKILL.md
+  - name: danawa-price-search
+    path: danawa-price-search/SKILL.md
+  - name: delivery-tracking
+    path: delivery-tracking/SKILL.md
+  - name: donation-place-search
+    path: donation-place-search/SKILL.md
+  - name: emergency-room-beds
+    path: emergency-room-beds/SKILL.md
+  - name: express-bus-booking
+    path: express-bus-booking/SKILL.md
+  - name: fine-dust-location
+    path: fine-dust-location/SKILL.md
+  - name: flight-ticket-search
+    path: flight-ticket-search/SKILL.md
+  - name: foresttrip-vacancy
+    path: foresttrip-vacancy/SKILL.md
+  - name: fsc-corporate-info
+    path: fsc-corporate-info/SKILL.md
+  - name: g2b-order-plan-search
+    path: g2b-order-plan-search/SKILL.md
+  - name: g2b-sanctioned-supplier
+    path: g2b-sanctioned-supplier/SKILL.md
+  - name: gangnamunni-clinic-search
+    path: gangnamunni-clinic-search/SKILL.md
+  - name: geeknews-search
+    path: geeknews-search/SKILL.md
+  - name: gongsijiga-search
+    path: gongsijiga-search/SKILL.md
+  - name: han-river-water-level
+    path: han-river-water-level/SKILL.md
+  - name: hipass-receipt
+    path: hipass-receipt/SKILL.md
+  - name: hola-poke-yeoksam
+    path: hola-poke-yeoksam/SKILL.md
+  - name: household-waste-info
+    path: household-waste-info/SKILL.md
+  - name: hwp
+    path: hwp/SKILL.md
+  - name: intercity-bus-booking
+    path: intercity-bus-booking/SKILL.md
+  - name: iros-registry-automation
+    path: iros-registry-automation/SKILL.md
+  - name: job-posting-match
+    path: job-posting-match/SKILL.md
+  - name: jobkorea-talent-search
+    path: jobkorea-talent-search/SKILL.md
+  - name: joseon-sillok-search
+    path: joseon-sillok-search/SKILL.md
+  - name: k-dart
+    path: k-dart/SKILL.md
+  - name: k-schoollunch-menu
+    path: k-schoollunch-menu/SKILL.md
+  - name: k-skill-cleaner
+    path: k-skill-cleaner/SKILL.md
+  - name: k-skill-setup
+    path: k-skill-setup/SKILL.md
+  - name: kakao-bar-nearby
+    path: kakao-bar-nearby/SKILL.md
+  - name: kakao-map
+    path: kakao-map/SKILL.md
+  - name: kakaotalk-mac
+    path: kakaotalk-mac/SKILL.md
+  - name: kbl-results
+    path: kbl-results/SKILL.md
+  - name: kbo-results
+    path: kbo-results/SKILL.md
+  - name: kleague-results
+    path: kleague-results/SKILL.md
+  - name: kopis-performance-search
+    path: kopis-performance-search/SKILL.md
+  - name: korea-weather
+    path: korea-weather/SKILL.md
+  - name: korean-character-count
+    path: korean-character-count/SKILL.md
+  - name: korean-cinema-search
+    path: korean-cinema-search/SKILL.md
+  - name: korean-holiday-calendar
+    path: korean-holiday-calendar/SKILL.md
+  - name: korean-humanizer
+    path: korean-humanizer/SKILL.md
+  - name: korean-jangbu-for
+    path: korean-jangbu-for/SKILL.md
+  - name: korean-law-search
+    path: korean-law-search/SKILL.md
+  - name: korean-marathon-schedule
+    path: korean-marathon-schedule/SKILL.md
+  - name: korean-middle-korean
+    path: korean-middle-korean/SKILL.md
+  - name: korean-patent-search
+    path: korean-patent-search/SKILL.md
+  - name: korean-privacy-terms
+    path: korean-privacy-terms/SKILL.md
+  - name: korean-scholarship-search
+    path: korean-scholarship-search/SKILL.md
+  - name: korean-slang-writing
+    path: korean-slang-writing/SKILL.md
+  - name: korean-spell-check
+    path: korean-spell-check/SKILL.md
+  - name: korean-stock-search
+    path: korean-stock-search/SKILL.md
+  - name: korean-transit-route
+    path: korean-transit-route/SKILL.md
+  - name: kosis-stats
+    path: kosis-stats/SKILL.md
+  - name: kr-whois-lookup
+    path: kr-whois-lookup/SKILL.md
+  - name: kstartup-search
+    path: kstartup-search/SKILL.md
+  - name: ktx-booking
+    path: ktx-booking/SKILL.md
+  - name: lck-analytics
+    path: lck-analytics/SKILL.md
+  - name: blue-ribbon-nearby
+    path: legacy/unsupported-skills/blue-ribbon-nearby/SKILL.md
+  - name: naver-map-route
+    path: legacy/unsupported-skills/naver-map-route/SKILL.md
+  - name: lh-notice-search
+    path: lh-notice-search/SKILL.md
+  - name: library-book-search
+    path: library-book-search/SKILL.md
+  - name: local-election-candidate-search
+    path: local-election-candidate-search/SKILL.md
+  - name: localdata-business-status
+    path: localdata-business-status/SKILL.md
+  - name: lotto-results
+    path: lotto-results/SKILL.md
+  - name: lovebug-report
+    path: lovebug-report/SKILL.md
+  - name: market-kurly-search
+    path: market-kurly-search/SKILL.md
+  - name: mfds-drug-safety
+    path: mfds-drug-safety/SKILL.md
+  - name: mfds-food-safety
+    path: mfds-food-safety/SKILL.md
+  - name: myrealtrip-search
+    path: myrealtrip-search/SKILL.md
+  - name: naming-house
+    path: naming-house/SKILL.md
+  - name: national-pension-workplace
+    path: national-pension-workplace/SKILL.md
+  - name: naver-ad-performance
+    path: naver-ad-performance/SKILL.md
+  - name: naver-blog-research
+    path: naver-blog-research/SKILL.md
+  - name: naver-news-search
+    path: naver-news-search/SKILL.md
+  - name: naver-shopping-search
+    path: naver-shopping-search/SKILL.md
+  - name: nhis-care-checkup-search
+    path: nhis-care-checkup-search/SKILL.md
+  - name: nts-business-registration
+    path: nts-business-registration/SKILL.md
+  - name: nts-tax-delinquency
+    path: nts-tax-delinquency/SKILL.md
+  - name: ohou-today-deal
+    path: ohou-today-deal/SKILL.md
+  - name: olive-young-search
+    path: olive-young-search/SKILL.md
+  - name: parking-lot-search
+    path: parking-lot-search/SKILL.md
+  - name: popbill
+    path: popbill/SKILL.md
+  - name: public-restroom-nearby
+    path: public-restroom-nearby/SKILL.md
+  - name: real-estate-search
+    path: real-estate-search/SKILL.md
+  - name: rhwp-advanced
+    path: rhwp-advanced/SKILL.md
+  - name: rhwp-edit
+    path: rhwp-edit/SKILL.md
+  - name: s2b-notice-search
+    path: s2b-notice-search/SKILL.md
+  - name: saju-fortune
+    path: saju-fortune/SKILL.md
+  - name: saramin-talent-search
+    path: saramin-talent-search/SKILL.md
+  - name: seoul-bike
+    path: seoul-bike/SKILL.md
+  - name: seoul-density
+    path: seoul-density/SKILL.md
+  - name: seoul-subway-arrival
+    path: seoul-subway-arrival/SKILL.md
+  - name: sh-notice-search
+    path: sh-notice-search/SKILL.md
+  - name: srt-booking
+    path: srt-booking/SKILL.md
+  - name: subway-lost-property
+    path: subway-lost-property/SKILL.md
+  - name: ticket-availability
+    path: ticket-availability/SKILL.md
+  - name: blue-ribbon-nearby
+    path: tools/k-skill-qa-bot/test/fixtures/skills/blue-ribbon-nearby/SKILL.md
+  - name: cheap-gas-nearby
+    path: tools/k-skill-qa-bot/test/fixtures/skills/cheap-gas-nearby/SKILL.md
+  - name: k-dart
+    path: tools/k-skill-qa-bot/test/fixtures/skills/k-dart/SKILL.md
+  - name: kbo-results
+    path: tools/k-skill-qa-bot/test/fixtures/skills/kbo-results/SKILL.md
+  - name: ktx-booking
+    path: tools/k-skill-qa-bot/test/fixtures/skills/ktx-booking/SKILL.md
+  - name: toss-securities
+    path: toss-securities/SKILL.md
+  - name: used-car-price-search
+    path: used-car-price-search/SKILL.md
+  - name: yebigun-training
+    path: yebigun-training/SKILL.md
+  - name: zipcode-search
+    path: zipcode-search/SKILL.md
 workspace:
 - repoId: LOCAL/skills
   skills:
@@ -687,3 +932,8 @@ workspace:
   - name: understand
     source: Egonex-AI/Understand-Anything/understand
     target: understand
+- repoId: NomaDamas/k-skill
+  skills:
+  - name: korean-humanizer
+    source: NomaDamas/k-skill/korean-humanizer
+    target: korean-humanizer

@@ -40,4 +40,7 @@
 ### 5. Temporary Scratch Directories
 * **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.dev/scratch/` or `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
 
+### 6. Document Generation Directory
+* **Document Paths:** When generating documents (e.g., md files) during tasks, use the path `<proj root>/.agents/docs/user/`.
+
 
