@@ -851,6 +851,91 @@ library:
     path: yebigun-training/SKILL.md
   - name: zipcode-search
     path: zipcode-search/SKILL.md
+- repoId: mattpocock/skills
+  repoType: github
+  repoUrl: https://github.com/mattpocock/skills.git
+  commit: e9fcdf95b402d360f90f1db8d776d5dd450f9234
+  skills:
+  - name: design-an-interface
+    path: skills/deprecated/design-an-interface/SKILL.md
+  - name: qa
+    path: skills/deprecated/qa/SKILL.md
+  - name: request-refactor-plan
+    path: skills/deprecated/request-refactor-plan/SKILL.md
+  - name: ubiquitous-language
+    path: skills/deprecated/ubiquitous-language/SKILL.md
+  - name: ask-matt
+    path: skills/engineering/ask-matt/SKILL.md
+  - name: code-review
+    path: skills/engineering/code-review/SKILL.md
+  - name: codebase-design
+    path: skills/engineering/codebase-design/SKILL.md
+  - name: diagnosing-bugs
+    path: skills/engineering/diagnosing-bugs/SKILL.md
+  - name: domain-modeling
+    path: skills/engineering/domain-modeling/SKILL.md
+  - name: grill-with-docs
+    path: skills/engineering/grill-with-docs/SKILL.md
+  - name: implement
+    path: skills/engineering/implement/SKILL.md
+  - name: improve-codebase-architecture
+    path: skills/engineering/improve-codebase-architecture/SKILL.md
+  - name: prototype
+    path: skills/engineering/prototype/SKILL.md
+  - name: research
+    path: skills/engineering/research/SKILL.md
+  - name: resolving-merge-conflicts
+    path: skills/engineering/resolving-merge-conflicts/SKILL.md
+  - name: setup-matt-pocock-skills
+    path: skills/engineering/setup-matt-pocock-skills/SKILL.md
+  - name: tdd
+    path: skills/engineering/tdd/SKILL.md
+  - name: to-spec
+    path: skills/engineering/to-spec/SKILL.md
+  - name: to-tickets
+    path: skills/engineering/to-tickets/SKILL.md
+  - name: triage
+    path: skills/engineering/triage/SKILL.md
+  - name: wayfinder
+    path: skills/engineering/wayfinder/SKILL.md
+  - name: claude-handoff
+    path: skills/in-progress/claude-handoff/SKILL.md
+  - name: loop-me
+    path: skills/in-progress/loop-me/SKILL.md
+  - name: setup-ts-deep-modules
+    path: skills/in-progress/setup-ts-deep-modules/SKILL.md
+  - name: to-questionnaire
+    path: skills/in-progress/to-questionnaire/SKILL.md
+  - name: wizard
+    path: skills/in-progress/wizard/SKILL.md
+  - name: writing-beats
+    path: skills/in-progress/writing-beats/SKILL.md
+  - name: writing-fragments
+    path: skills/in-progress/writing-fragments/SKILL.md
+  - name: writing-shape
+    path: skills/in-progress/writing-shape/SKILL.md
+  - name: git-guardrails-claude-code
+    path: skills/misc/git-guardrails-claude-code/SKILL.md
+  - name: migrate-to-shoehorn
+    path: skills/misc/migrate-to-shoehorn/SKILL.md
+  - name: scaffold-exercises
+    path: skills/misc/scaffold-exercises/SKILL.md
+  - name: setup-pre-commit
+    path: skills/misc/setup-pre-commit/SKILL.md
+  - name: edit-article
+    path: skills/personal/edit-article/SKILL.md
+  - name: obsidian-vault
+    path: skills/personal/obsidian-vault/SKILL.md
+  - name: grill-me
+    path: skills/productivity/grill-me/SKILL.md
+  - name: grilling
+    path: skills/productivity/grilling/SKILL.md
+  - name: handoff
+    path: skills/productivity/handoff/SKILL.md
+  - name: teach
+    path: skills/productivity/teach/SKILL.md
+  - name: writing-great-skills
+    path: skills/productivity/writing-great-skills/SKILL.md
 workspace:
 - repoId: LOCAL/skills
   skills:
