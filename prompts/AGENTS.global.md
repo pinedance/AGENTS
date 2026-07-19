@@ -8,7 +8,7 @@
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Command Execution:** Do not execute commands with potentially destructive or high-risk flags (e.g., `-f`, `--force`, `rm -rf`) without obtaining explicit user approval first.
   * **No Direct Permanent Deletion:** Never permanently delete files or directories using `rm -rf` or `git clean -fd` without explicit instruction.
-  * **Temporary Backup/Trash Priority:** For cleanup or deletion tasks, always move the targets to a temporary backup directory (e.g., `/tmp/agent_backup_<timestamp>/`) or use a system trash command (e.g., `gio trash`) to ensure the operation is fully reversible.
+  * **Temporary Backup/Trash Priority:** For cleanup or deletion tasks, always move the targets to a temporary backup directory (e.g., `/tmp/agent_backup_<timestamp>/`) to ensure the operation is fully reversible.
 * **Workspace Discovery:**
   * If [local rules](file:.agents/AGENTS.local.md) exists, read and adhere to them.
   * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local rules.
@@ -38,7 +38,7 @@
 * **Tradeoff:** Caution over speed. Not required for trivial tasks (e.g., simple typos or obvious one-liners), but essential for non-trivial tasks.
 
 ### 5. Temporary Scratch Directories
-* **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.dev/scratch/` or `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
+* **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
 
 ### 6. Document Generation Directory
 * **Document Paths:** When generating documents (e.g., md files) during tasks, use the path `<proj root>/.agents/docs/user/`.
