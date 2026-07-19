@@ -5,10 +5,22 @@ description: Automates workspace and git setup at the start of a new coding sess
 
 # My New Session Initialization
 
-This skill guides the agent to automatically prepare the git repository and set up the workspace at the start of a new task or coding session.
+This skill gates every new session on a Pre-flight check, then prepares the git repository and workspace.
 
-Follow the steps below in order.
+---
 
+## Pre-flight
+
+Run **before any other step**; gates all downstream actions.
+
+1. **Load workspace root policy.** Read `<project_root>/.agents/AGENTS.md` and conform to its directives. If `AGENTS.local.md` or `.agents/memory/*.md` exists, read those too.
+2. **Activate Caveman Mode**:
+   - Check if the `/caveman` slash command or the `caveman` skill is available in the current environment.
+   - If available, automatically run the command:
+     ```
+     /caveman full
+     ```
+     to switch communication style to Caveman Mode as preferred by the user.
 ---
 
 ## Step 1: Request Task Description & Generate Task Name
@@ -16,8 +28,8 @@ Follow the steps below in order.
 1. **Ask the User**: Ask the user to briefly describe the task they plan to work on (e.g., to generate appropriate branch names, task IDs, or documentation filenames).
 2. **Generate Task Name**: Based on the user's response, generate a clean `task-name` using lowercase alphanumeric characters, numbers, and hyphens (e.g., `refactor-login-auth`, `fix-db-leak`). Show this name to the user.
 3. **Harness Question-Answering Guidelines**:
-   - Whenever you need to ask for user input, preference, or confirmation (e.g., confirming task name, committing changes, syncing remote, checking out branch), check if the `ask_question` tool is available in your tool declaration.
-   - If `ask_question` is available, **always use it** instead of relying solely on plain text questions.
+   - Whenever you need to ask for user input, preference, or confirmation (e.g., confirming task name, committing changes, syncing remote, checking out branch), check if the **structured user-input tool** is available in your tool declaration.
+   - If **structured user-input tool** is available, **always use it** instead of relying solely on plain text questions.
    - Design options that represent the user's direct response (e.g., "(Recommended) Yes, create and switch to branch '<task-name>'").
    - The UI automatically provides a write-in ("Other") option, so the user can type a custom response if none of the suggested choices fit.
 
@@ -29,7 +41,7 @@ Perform the following git workspace checks and operations:
 
 1. **Check for Uncommitted Changes**:
    - Run `git status --porcelain` to check if there are uncommitted modifications.
-   - If there are uncommitted changes, ask the user what to do. If the `ask_question` tool is available, use it with options like:
+   - If there are uncommitted changes, ask the user what to do. If the **structured user-input tool** is available, use it with options like:
      - `(Recommended) Commit the changes first`
      - `Stash the changes`
      - `Proceed without committing`
@@ -41,7 +53,7 @@ Perform the following git workspace checks and operations:
      - Fetch remote branch state (`git fetch`) or run `git status -uno` to see if the branch is ahead or behind.
      - **If local is ahead of remote**: The local repository has newer commits that need to be pushed. Offer to run `git push`.
      - **If local is behind remote**: The remote has newer commits. Offer to run `git pull`.
-     - If the `ask_question` tool is available, present the appropriate synchronization options based on the sync status:
+     - If the **structured user-input tool** is available, present the appropriate synchronization options based on the sync status:
        - `(Recommended) Push local changes to remote` (if local is ahead)
        - `(Recommended) Pull remote changes to local` (if local is behind)
        - `Sync both (pull then push)` (if applicable)
@@ -50,7 +62,7 @@ Perform the following git workspace checks and operations:
 
 3. **Checkout Task Branch**:
    - Recommend creating and switching to a new branch for the task: `git checkout -b <task-name>`.
-   - If the `ask_question` tool is available, use it to confirm the checkout:
+   - If the **structured user-input tool** is available, use it to confirm the checkout:
      - `(Recommended) Create and switch to '<task-name>' branch`
      - `Keep working on the current branch`
    - If approved, run the command to checkout the branch.
@@ -59,20 +71,12 @@ Perform the following git workspace checks and operations:
 
 ## Step 3: Configure Communication Style & Session Settings
 
-1. **Activate Caveman Mode**:
-   - Check if the `/caveman` slash command or the `caveman` skill is available in the current environment.
-   - If available, automatically run the command:
-     ```
-     /caveman full Korean
-     ```
-     to switch communication style to Korean Caveman Mode as preferred by the user.
-2. **Model Selection**:
+1. **Model Selection**:
    - **Invoke `my-models` skill** to handle model selection.
    - Follow the my-models protocol exactly (ask → if change requested, instruct user to run `/model` and wait for reply).
-   - Do not hardcode model names. Do not proceed until the model selection gate is resolved.
-3. **Apply Other Custom Session Settings**:
+2. **Apply Other Custom Session Settings**:
    - Verify and apply any other session-start configurations, workspace preferences, or automation tools as requested by the user.
-4. **Response & Execution Strategy**:
+3. **Response & Execution Strategy**:
    - If the user asks a question, answer it fully and propose relevant actions.
    - **CRITICAL**: Do not begin modifying the codebase or writing code changes without explicit, direct approval from the user.
 
@@ -92,7 +96,7 @@ Always adhere to the core development principles defined in the [my-coding-guide
 3. **Agent**: 
    - Generates a task name: `optimize-db-latency`.
    - Runs `git status --porcelain` and finds uncommitted changes in `src/db.py`.
-   - Calls `ask_question`:
+   - Calls **structured user-input tool**:
      - **Question**: "I found uncommitted changes in [db.py](file:///absolute/path/to/src/db.py). How would you like to handle them?"
      - **Options**:
        - `(Recommended) Commit the changes first`
@@ -102,7 +106,7 @@ Always adhere to the core development principles defined in the [my-coding-guide
 5. **Agent**: 
    - Runs `git commit` with a conventional message.
    - Runs `git status` or `git cherry -v` and finds that the local branch is ahead of the remote repository by 1 commit.
-   - Calls `ask_question`:
+   - Calls **structured user-input tool**`:
      - **Question**: "Your local branch is ahead of the remote repository. Would you like to push the changes?"
      - **Options**:
        - `(Recommended) Push local changes to remote`
@@ -110,7 +114,7 @@ Always adhere to the core development principles defined in the [my-coding-guide
 6. **User** selects: `Push local changes to remote`
 7. **Agent**:
    - Runs `git push`
-   - Calls `ask_question` to confirm branch checkout:
+   - Calls **structured user-input tool** to confirm branch checkout:
      - **Question**: "I recommend switching to a new branch for this task. Shall I create and checkout to branch `optimize-db-latency`?"
      - **Options**:
        - `(Recommended) Create and switch to 'optimize-db-latency' branch`
