@@ -1060,6 +1060,9 @@ workspace:
   - name: database-lookup
     source: K-Dense-AI/scientific-agent-skills/database-lookup
     target: database-lookup
+  - name: markitdown
+    source: K-Dense-AI/scientific-agent-skills/markitdown
+    target: markitdown
 - repoId: blader/humanizer
   skills:
   - name: humanizer
