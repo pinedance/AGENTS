@@ -161,13 +161,18 @@ uv run sync
 
 ### 2. Library Management (`library`)
 
-Manage the remote GitHub repositories cached in your local library.
+Manage the remote GitHub repositories cached in your local library or scan local custom skill directories.
 
 * **Add Repository (`add`)**
-  Adds a remote repository to your configuration. If the zip file already exists in local cache, it skips the download.
+  Adds a remote GitHub repository or scans a local custom directory to your configuration.
   ```bash
+  # Add remote GitHub repository
   uv run library add <owner/repo>
   # Example: uv run library add obra/superpowers
+
+  # Add/Scan local skill directory (e.g. skills/)
+  uv run library add LOCAL/<dir_name>
+  # Example: uv run library add LOCAL/skills
   ```
 
 * **Remove Repository (`remove`)**
@@ -208,7 +213,24 @@ Manage which skills are active and symlinked in the global folder `~/.agents/ski
 
 ---
 
-### 4. Status Check (`status`)
+### 4. Local Custom Skill Workflow
+
+To add and activate a newly created local custom skill (e.g., `skills/my-project-rules/SKILL.md`):
+
+1. **Create Skill File**: Place your skill in a subdirectory with a `SKILL.md` file (e.g., `skills/<skill_name>/SKILL.md`).
+2. **Scan & Register to Library**:
+   ```bash
+   uv run library add LOCAL/skills
+   ```
+3. **Activate in Workspace & Create Symlink**:
+   ```bash
+   uv run workspace add <skill_name>
+   # Example: uv run workspace add my-project-rules
+   ```
+
+---
+
+### 5. Status Check (`status`)
 
 Show the current state of repositories, libraries, and active workspace symlinks.
 
@@ -219,6 +241,7 @@ uv run status
 * **Remote Repositories**: Compares the local cached zip comment hashes with remote commit hashes fetched via `git ls-remote` to determine if an update is required.
 * **Skills Library**: Lists available skills in the library, grouped by repository (displaying paths for the `LOCAL` repo).
 * **Workspace Symlinks**: Lists active symlinks in `~/.agents/skills/` and tags broken symlinks with `[BROKEN]`.
+
 
 
 ---
