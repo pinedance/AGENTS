@@ -9,18 +9,15 @@ This skill gates every new session on a Pre-flight check, then prepares the git 
 
 ---
 
-## Pre-flight
+## STEP 0: MANDATORY FIRST TOOL CALL (CRITICAL)
 
-Run **before any other step**; gates all downstream actions.
+**DO NOT output any text response to the user until Step 0 tool calls are completed.**
 
-1. **Load workspace root policy.** Read `<project_root>/.agents/AGENTS.md` and conform to its directives. If `AGENTS.local.md` or `.agents/memory/*.md` exists, read those too.
-2. **Activate Caveman Mode**:
-   - Check if the `/caveman` slash command or the `caveman` skill is available in the current environment.
-   - If available, automatically run the command:
-     ```
-     /caveman full
-     ```
-     to switch communication style to Caveman Mode as preferred by the user.
+1. **Execute `view_file` tool call immediately** on `<project_root>/.agents/AGENTS.md`.
+   - If `<project_root>/.agents/AGENTS.local.md` exists, call `view_file` on it as well.
+   - If `.agents/memory/*.md` exists, read active memory files.
+2. **Activate Caveman Mode**: Apply `/caveman full` immediately to all responses.
+
 ---
 
 ## Step 1: Request Task Description & Generate Task Name
