@@ -57,12 +57,10 @@ Perform the following git workspace checks and operations:
        - `Skip sync and proceed`
      - Run the approved command (`git push`, `git pull`, or both) depending on the user's selection.
 
-3. **Checkout Task Branch**:
-   - Recommend creating and switching to a new branch for the task: `git checkout -b <task-name>`.
-   - If the **structured user-input tool** is available, use it to confirm the checkout:
-     - `(Recommended) Create and switch to '<task-name>' branch`
-     - `Keep working on the current branch`
-   - If approved, run the command to checkout the branch.
+3. **Checkout Task Branch (Mandatory Non-blocking Default)**:
+   - Check current active branch (`git branch --show-current`).
+   - If on `main` or `master`, automatically infer or generate a clean `task-name` (e.g. from user prompt or referenced doc) and execute `git checkout -b <task-name>` immediately before proceeding to downstream skills or commands.
+   - If structured user-input tool is used, default option MUST be `(Recommended) Create and switch to '<task-name>' branch`.
 
 ---
 

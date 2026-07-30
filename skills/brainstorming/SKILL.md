@@ -22,7 +22,8 @@ Every project goes through this process. A todo list, a single-function utility,
 You MUST create a task for each of these items and complete them in order:
 
 1. **Model selection check** — invoke **my-models** skill: ask if user wants to change model; if yes, instruct user to run `/model` and wait for reply
-2. **Explore project context** — check files, docs, recent commits
+2. **Branch safety check** — verify active git branch (`git branch --show-current`). If on `main` or `master`, automatically create and switch to a task branch (`git checkout -b <task-name>`) before creating specs or modifying files.
+3. **Explore project context** — check files, docs, recent commits
 3. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 5. **Propose 2-3 approaches** — with trade-offs and your recommendation
