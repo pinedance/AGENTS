@@ -107,6 +107,12 @@ Numbered list: most impactful fixes first. Each item: what to fix, where, why it
 - 🟡 **Major**: maintainability degradation, naming violations, significant duplication, logic smell
 - 🔵 **Minor**: documentation, style, low-impact improvements
 
+**Side-Effect Risk Ratings (부작용 가능성)**:
+- 🔴 **상 (신중 / High)**: 3개 이상 모듈 연동, 공통 인프라/데이터 구조 변경, 파이프라인 전체 흐름 영향. 신중한 정밀 검증 필요.
+- 🟡 **중 (판단 필요 / Medium)**: 단일 모듈 내 예외 처리 및 로직 수정. 엣지 케이스 및 경계 조건 검증 필요.
+- 🟢 **하 (바로 수정 / Low)**: 독립적 수정, 단순 주석/문서 정리, 매직 상수 정의, 단일 헬퍼 함수 추출 등. 부작용 위험 낮음.
+
+
 For each finding, include:
 - **Location**: file path + line number or function name
 - **Issue**: what is wrong and why
@@ -188,18 +194,21 @@ Example:
 4. **Consolidate Findings**:
    - Read all generated dimension files from `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/`.
    - Consolidate and de-duplicate findings across dimensions.
+   - **Ordering Rule**: Group and order findings by **"공통 모듈 (Common/Shared Utilities) → 개별 모듈/파일 (Individual Modules) → 엔트리포인트 (Entry Points)"** execution flow.
+   - **Side-Effect Analysis**: Assign a Side-Effect Risk Rating (`🔴 상 (신중)`, `🟡 중 (판단 필요)`, `🟢 하 (바로 수정)`) to every finding based on its potential ripple effect on other modules or system state.
    - Save the consolidated report (following the **Output Format** section) to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
 
 5. **Create & Execute Action Tasks**:
    - Translate **ALL findings** from `consolidated.md` into tasks — including low-severity ones. Do not silently drop any finding.
-   - Save this checklist to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md`
+   - Structure tasks in execution order (**공통 모듈 선행 → 개별 모듈 → 파이프라인 메인**).
+   - Save this checklist to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md` (and `task2.md` if re-organizing existing reviews).
    - Use the following template for each task:
 
      ```
      ## Tasks
      Total: <N> | Done: 0 | Skipped: 0 | Remaining: <N>
 
-     - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line>
+     - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line> | [🔴상/🟡중/🟢하]
        - What: <what to fix>
        - Why: <why it matters>
        - Verify: <shell command — if not automatable, write `manual: <what to inspect>`>

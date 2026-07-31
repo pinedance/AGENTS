@@ -436,6 +436,8 @@ library:
     path: skills/finishing-a-development-branch/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
+  - name: my-code-review-executor
+    path: skills/my-code-review-executor/SKILL.md
   - name: my-coding-guidelines
     path: skills/my-coding-guidelines/SKILL.md
   - name: my-git-commit
@@ -1045,6 +1047,9 @@ workspace:
   - name: my-models
     source: skills/my-models
     target: my-models
+  - name: my-code-review-executor
+    source: skills/my-code-review-executor
+    target: my-code-review-executor
 - repoId: anthropics/skills
   skills:
   - name: pdf
