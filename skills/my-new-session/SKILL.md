@@ -13,9 +13,7 @@ This skill gates every new session on a Pre-flight check, then prepares the git 
 
 **DO NOT output any text response to the user until Step 0 tool calls are completed.**
 
-1. **Execute `view_file` tool call immediately** on `<project_root>/.agents/AGENTS.md`.
-   - If `<project_root>/.agents/AGENTS.local.md` exists, call `view_file` on it as well.
-   - If `.agents/memory/*.md` exists, read active memory files.
+1. **Invoke `my-begin` skill**: Execute the [my-begin](../my-begin/SKILL.md) protocol immediately to load and strictly enforce all project directives (`AGENTS.md`, `AGENTS.local.md`, active memories).
 2. **Activate Caveman Mode**: Apply `/caveman full` immediately to all responses.
 
 ---

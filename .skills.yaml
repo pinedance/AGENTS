@@ -434,6 +434,8 @@ library:
     path: skills/executing-plans/SKILL.md
   - name: finishing-a-development-branch
     path: skills/finishing-a-development-branch/SKILL.md
+  - name: my-begin
+    path: skills/my-begin/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
   - name: my-code-review-executor
@@ -1050,6 +1052,9 @@ workspace:
   - name: my-code-review-executor
     source: skills/my-code-review-executor
     target: my-code-review-executor
+  - name: my-begin
+    source: skills/my-begin
+    target: my-begin
 - repoId: anthropics/skills
   skills:
   - name: pdf
