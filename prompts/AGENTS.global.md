@@ -2,8 +2,14 @@
 
 ## General Principles
 
-* **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without planning and obtaining explicit user approval:
-  > Plan → Approval → Execute
+* **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without detailed planning and obtaining explicit user approval:
+  > Option/Direction Selection → Detailed Plan (Files, Diffs, Verification) → Explicit Plan Approval → Execute
+  * **Option Selection is NOT Plan Approval:** User selecting a high-level option (e.g., "방법 1") is ONLY direction alignment, NOT approval to edit code.
+  * **Mandatory Detailed Plan Requirements:** Before asking for execution approval, you MUST present a concrete plan including:
+    1. Exact target file paths
+    2. Exact line numbers and planned code diffs
+    3. Concrete verification commands (unit tests, build checks)
+  * **No Editing Tool Invocations Before Plan Approval:** Never invoke code editing tools (`replace_file_content`, `write_to_file`) right after direction selection. Wait for explicit approval of the *detailed plan*.
 * **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
 * **Mandatory Evidence:** Never make assertions about system paths, CLI features, configurations, or environment behavior without executing verification commands first. Every technical claim MUST be backed by exact command output or inspectable file snippets as proof.
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
