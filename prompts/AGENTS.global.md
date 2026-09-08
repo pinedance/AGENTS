@@ -3,11 +3,11 @@
 ## General Principles
 
 * **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without detailed planning and obtaining explicit user approval:
-  > Option/Direction Selection → Detailed Plan (Files, Diffs, Verification) → Explicit Plan Approval → Execute
+  > Option/Direction Selection → Detailed Plan (Files, Logic Changes, Verification) → Explicit Plan Approval → Execute
   * **Option Selection is NOT Plan Approval:** User selecting a high-level option (e.g., "방법 1") is ONLY direction alignment, NOT approval to edit code.
   * **Mandatory Detailed Plan Requirements:** Before asking for execution approval, you MUST present a concrete plan including:
-    1. Exact target file paths
-    2. Exact line numbers and planned code diffs
+    1. Exact target file paths & target ranges (function/class or line range)
+    2. Core logic changes and summary of modifications (avoid full text diffs)
     3. Concrete verification commands (unit tests, build checks)
   * **No Editing Tool Invocations Before Plan Approval:** Never invoke code editing tools (`replace_file_content`, `write_to_file`) right after direction selection. Wait for explicit approval of the *detailed plan*.
 * **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
