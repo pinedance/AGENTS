@@ -10,7 +10,8 @@
     2. Core logic changes and summary of modifications (avoid full text diffs)
     3. Concrete verification commands (unit tests, build checks)
   * **No Editing Tool Invocations Before Plan Approval:** Never invoke code editing tools (`replace_file_content`, `write_to_file`) right after direction selection. Wait for explicit approval of the *detailed plan*.
-* **No Speculation:** Do not make assumptions when uncertain; always stop and ask the user for clarification.
+* **No Speculation & Mandatory User Interview:** Do not make assumptions when uncertain. If context, scope, or requirements are insufficient at any point during a task, never speculate or proceed on assumptions; always stop and conduct a user interview to clarify.
+  * **Interview Guidelines:** Focus on one question at a time to avoid cognitive overload. Provide sufficient background context and clear options so the user can answer directly (preferably via `ask_question`).
 * **Mandatory Evidence & Verification Integrity:** Never make assertions about system paths, CLI features, configurations, file state, or restoration completion without executing direct verification commands (e.g., `diff`, `cmp`, inspection of file types/links) first. Every technical claim or completion statement MUST be backed by exact command output as inspectable proof.
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Execution & Destructive Action Prevention:** Do not execute commands or VCS/Git operations with destructive potential (e.g., `-f`, `--force`, `rm -rf`, `git clean`, `git checkout --orphan`, state resets) without obtaining explicit user approval first.
@@ -18,16 +19,15 @@
   * **Pre-Action Backup Priority:** Any operation that can modify, overwrite, or discard uncommitted/untracked files, metadata, or workspace configuration (especially `.agents/`) MUST be preceded by creating an archive backup (`cp -a`) in `/tmp/agents/<project_name>/backups/<YYYYMMDD_HHMMSS>/` and logging the exact backup path.
   * **Preserve Workspace Invariants:** Maintain workspace structural invariants, such as symbolic links (`AGENTS.md`, `skills`), without flattening them into plain files.
 * **Workspace Discovery:**
-  * If [local rule files](file:.agents/rules/*.md) exist, read and adhere to its local rules.
-  * if [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local memory.
+  * If [local rule files](file:.agents/rules/*.md) or [AGENTS.local.md](file:.agents/AGENTS.local.md) exist, read and adhere to local rules and project-specific overrides.
+  * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local memory.
   * Read [README.md](file:README.md) to comprehend the project's nature, scope, and technical details.
 
 ## Guidelines
 
 ### 1. Think Before Coding
-* **Avoid Assumptions:** Explicitly state assumptions and surface tradeoffs. Do not silently pick one interpretation.
-* **Stop & Ask:** If something is unclear or confusing, stop and ask the user.
 * **Push for Simplicity:** Propose simpler approaches and push back on complexity when warranted.
+* **Surface Tradeoffs:** Present clear architectural tradeoffs and side effects before deciding on an implementation path.
 
 ### 2. Simplicity First
 * **Minimalistic Code:** Implement only the minimum code required to solve the problem. Avoid speculative features, abstractions for single-use code, or unrequested configuration.
@@ -43,7 +43,7 @@
 
 ### Key Indicators & Tradeoffs
 * **How to Know It's Working:** Minimal diffs, simpler code on first try, clarifying questions asked beforehand, and clean PRs.
-* **Tradeoff:** Caution over speed. Not required for trivial tasks (e.g., simple typos or obvious one-liners), but essential for non-trivial tasks.
+* **Tradeoff Priority:** Caution over speed. Detailed planning and verification apply to all non-trivial logic changes. (For purely cosmetic one-liners like simple typos, state the fix and verify immediately).
 
 ### 5. Temporary Scratch Directories
 * **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
