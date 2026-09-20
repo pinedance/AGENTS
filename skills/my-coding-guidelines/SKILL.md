@@ -1,6 +1,6 @@
 ---
 name: my-coding-guidelines
-description: Defines the project's core coding principles, architectural standards, naming conventions, and code quality guidelines. Referenced by workspace automation and code review skills.
+description: Defines the project's core coding principles, architectural standards, configuration rules, naming conventions, and code quality guidelines. Must be referenced during initial code planning, implementation, and code reviews.
 ---
 
 # My Coding Guidelines
@@ -12,6 +12,7 @@ This skill defines the core development principles, coding style, naming convent
 ## 1. Architecture & Design Principles
 
 *   **Single Source of Truth (SSoT)**: Maintain a single, unambiguous representation of data, logic, and configuration to prevent duplication and inconsistency.
+  -   **Centralized Configuration SSoT**: Ban hardcoding user-configurable parameters across the codebase. Consolidate and manage all user-managed configuration parameters in a single designated configuration file (e.g., `settings.yml`).
 *   **Principle of Least Surprise**: Maintain architectural and design consistency with the existing codebase to ensure predictable behavior.
 *   **Single Responsibility Principle (SRP)**: Every module, class, or function has exactly one reason to change. Separate units must own data acquisition, target calculation, weighting, and orchestration independently.
 *   **Separation of Concerns (SoC)**: Partition code into non-overlapping axes (e.g., business logic, data access, presentation) so a change in one concern does not cascade into others. SRP is the per-module instantiation of this principle. See also: Layer-Based Layout (§3), SLAP (§3).
@@ -25,7 +26,7 @@ This skill defines the core development principles, coding style, naming convent
 ## 2. Error Handling & Reliability
 
 *   **Fail-Fast (for Programming Errors)**: Halt execution immediately (e.g., by throwing exceptions) upon encountering invalid arguments, incorrect types, or invalid internal states at entry points to prevent corrupted state propagation.
-  -   **Configuration Fail-Fast**: Validate all required configuration settings at startup or instantiation. Raise explicit exceptions on missing settings and ban hardcoding fallback values in the codebase.
+  -   **Configuration Fail-Fast**: Validate all required configuration settings at startup or instantiation. Raise explicit exceptions immediately on missing or empty settings; strictly ban fallback default values inside the code (e.g., `config.get("KEY", default)`).
 *   **Graceful Operational Error Handling**: Wrap volatile operational tasks (e.g., network, database, I/O) in try-catch blocks to handle or propagate failures gracefully without collapsing the application state.
 *   **Exception Swallowing Prevention**: Ban empty catch blocks or over-broad catches (e.g., `catch (Exception e)`) that mask unexpected runtime bugs.
 *   **Explicit Failure over Silent Fallbacks**: Reject returning ambiguous default values (e.g., `null`, `-1`) on failure if they cannot be distinguished from valid successful states.
@@ -43,6 +44,7 @@ This skill defines the core development principles, coding style, naming convent
 *   **Function Size Limit**: Limit functions to a maximum of 30–40 lines. Scrutinize and refactor functions exceeding this threshold.
 *   **Single Level of Abstraction Principle (SLAP)**: Ensure a single function orchestrates logic at a uniform level of abstraction; do not mix high-level orchestration with low-level implementation details.
 *   **Constants over Magic Values**: Replace raw literals (numbers, strings) in logic with descriptive named constants.
+  -   **Configuration vs. Constant Separation**: Distinguish user-managed parameters from internal constants. If user management is unnecessary, define as top-level constants (`UPPER_SNAKE_CASE`) at the head of the file. If user management is required, delegate to centralized configuration (`settings.yml`). If ambiguity exists regarding whether a value is user-managed, conduct a user interview (`ask_question`) before implementation.
 *   **Dead Code Elimination**: Remove unreachable branches, unused variables, functions, and imports immediately.
 *   **Top-Level Imports**: Ban inline imports inside functions or classes. Place all module imports at the very top of the file to maintain clear visibility of dependencies.
 *   **No Nested Functions**: Avoid declaring nested helper functions inside another function, except for decorators, closures, or function factories where returning a nested function is structurally necessary. Extract standard helper logic to module-level functions with explicit parameters to ensure testability and readability.
