@@ -199,19 +199,38 @@ Example:
    - Save the consolidated report (following the **Output Format** section) to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/consolidated.md`
 
 5. **Create & Execute Action Tasks**:
-   - Translate **ALL findings** from `consolidated.md` into tasks — including low-severity ones. Do not silently drop any finding.
-   - Structure tasks in execution order (**공통 모듈 선행 → 개별 모듈 → 파이프라인 메인**).
+   - **Clustering over Fragmentation (TASK 군집화 원칙)**:
+     - Do NOT mechanically map findings 1:1 into isolated micro-tasks.
+     - **군집화 기준 (Homogeneous Clustering)**: **"성격이 같아서 한 번에 수정할 수 있는 문제들"**을 단일 작업 패키지(Work Package)로 묶는다.
+       1. *동일 스코프/함수 결함 군집 (Co-located Scope Fixes)*: 특정 함수 또는 코드 블록 내에 얽힌 계산 오류, 경계값 결함, NaN/Inf 마스킹, 내부 중복, 인라인 임포트 등 함께 열어 한 번에 해결할 수 있는 항목들.
+       2. *동일 계약/방어 패턴 군집 (Fail-Fast & Boundary Guards)*: 모듈 내 여러 함수의 인자 유효성 검증, 타입/범위 가드, 침묵 폴백(Silent Fallback) 제거 등 동일 성격의 방어 로직 일괄 보강.
+       3. *특정 중복 단일 공통화 군집 (Dedicated DRY Extraction)*: 여러 파일/함수에 흩어진 동일 알고리즘/루프/정렬 로직(예: 빈도 정렬, 레이아웃 렌더링 루프 등)을 단일 공통 함수/헬퍼로 통합하는 독립 리팩토링.
+       4. *기계적 클린코드/린트 군집 (Mechanical Cleanup)*: 미사용 임포트/로거 제거, `__all__` 선언, 비표준 변수명 치환, 타입 힌트 구체화, dead code 주석 제거 등 부작용 없는 표면적 정돈.
+       5. *전역 상태/동시성 격리 군집 (State & Concurrency Isolation)*: 전역 PRNG(난수 시드) 오염 격리, 멀티프로세스 캐시 레이스 방지, 생성자 I/O 분리 등 런타임 안정성 관련 구조 개선.
+   - **해결 순서 기준 (Severity-First Ordering)**:
+     - 군집화된 태스크들의 실행 순서는 **중요도(Severity / Impact)**를 최우선 기준으로 정렬한다.
+       1. `[🔴 상]` 군집 (데이터 무결성 왜곡, 계산 버그, 전역 오염, Fail-Fast 위반)
+       2. `[🟡 중]` 군집 (DRY 공통화, SLAP 함수 분할, 구조 개선)
+       3. `[🟢 하]` 군집 (표면적 클린코드, 스타일, 타이핑)
+     - 동 순위 내에서는 의존성 위계(**공통 모듈 선행 → 개별 모듈 → 파이프라인 메인**)를 적용한다.
+   - **Finding 전수 보존 원칙 (Findings Conservation Rule)**:
+     - 군집화하더라도 `consolidated.md`의 모든 finding 항목이 각 태스크 하위의 `Included Review Items` 서브 체크리스트로 100% 매핑 보존되어야 한다 (누락 금지).
    - Save this checklist to: `.agents/docs/my-code-review/<YYYYMMDD_HHMMSS>/tasks.md` (and `task2.md` if re-organizing existing reviews).
-   - Use the following template for each task:
+   - Use the following template for each clustered task:
 
      ```
      ## Tasks
-     Total: <N> | Done: 0 | Skipped: 0 | Remaining: <N>
+     Total Work Packages: <N> | Total Sub-tasks: <M> | Done: 0 | Skipped: 0 | Remaining: <N>
 
-     - [ ] TODO | [🔴/🟡/🔵] <Task Title> | <file:line> | [🔴상/🟡중/🟢하]
-       - What: <what to fix>
-       - Why: <why it matters>
-       - Verify: <shell command — if not automatable, write `manual: <what to inspect>`>
+     - [ ] TODO | [🔴/🟡/🔵] [WP-XX] <군집 태스크명> | `<target_file>` | [🔴상/🟡중/🟢하]
+       - Core: <한 번에 수정할 동질적 작업 내용 및 성격 요약>
+       - Priority Reason: <중요도 책정 이유>
+       - Included Review Items (<K> items):
+         - [ ] [Finding 제목] (`<file:line>`)
+           - What: <수정 내용 요약>
+           - Fix: <구체적 수정 방안>
+           - Dims: <평가 차원 및 가이드라인 규칙>
+       - Verify: <단일 실행 CLI 검증 커맨드>
 
      ---
      ## Verification Results
