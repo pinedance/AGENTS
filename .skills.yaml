@@ -33,7 +33,7 @@ library:
     path: skills/writing-plans/SKILL.md
   - name: writing-skills
     path: skills/writing-skills/SKILL.md
-  commit: 5bf4e78011075bcfc0dc295f0724994cd123ee71
+  commit: 8ca22dba9a94f28898bbce59f2537ff4d87c747d
 - repoId: anthropics/skills
   repoType: github
   repoUrl: https://github.com/anthropics/skills.git
@@ -78,18 +78,18 @@ library:
     path: skills/xlsx/SKILL.md
   - name: template-skill
     path: template/SKILL.md
-  commit: 34040c9c568585f6929bedeaad110ad08f079624
+  commit: 8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
   skills:
   - name: watch
     path: skills/watch/SKILL.md
-  commit: 83da59fa78c3eee9e20f515fe75c438bb5166efd
+  commit: 03ceb42f7fa2c4439aca01752118044baabffb8f
 - repoId: JuliusBrussee/caveman
   repoType: github
   repoUrl: https://github.com/JuliusBrussee/caveman.git
-  commit: ab5f6ced16d2f0fc36bfdd22ecf74f7607c276c1
+  commit: f5d729488caa8f6a5b6c8086fe2cccd3e8a63f91
   skills:
   - name: cavecrew
     path: plugins/caveman/skills/cavecrew/SKILL.md
@@ -151,8 +151,10 @@ library:
 - repoId: K-Dense-AI/scientific-agent-skills
   repoType: github
   repoUrl: https://github.com/K-Dense-AI/scientific-agent-skills.git
-  commit: 330c8e764435a731eff571e3efdda70b363d0792
+  commit: 91497e335489dcb544ec8ddc8f6b7ce5fd6d1121
   skills:
+  - name: 13c-metabolic-flux
+    path: skills/13c-metabolic-flux/SKILL.md
   - name: adaptyv
     path: skills/adaptyv/SKILL.md
   - name: aeon
@@ -183,6 +185,10 @@ library:
     path: skills/bioservices/SKILL.md
   - name: bulk-rnaseq
     path: skills/bulk-rnaseq/SKILL.md
+  - name: cantera
+    path: skills/cantera/SKILL.md
+  - name: cellprofiler
+    path: skills/cellprofiler/SKILL.md
   - name: cellxgene-census
     path: skills/cellxgene-census/SKILL.md
   - name: cirq
@@ -231,8 +237,12 @@ library:
     path: skills/experimental-design/SKILL.md
   - name: exploratory-data-analysis
     path: skills/exploratory-data-analysis/SKILL.md
+  - name: fictiv
+    path: skills/fictiv/SKILL.md
   - name: flowio
     path: skills/flowio/SKILL.md
+  - name: flowkit
+    path: skills/flowkit/SKILL.md
   - name: fluidsim
     path: skills/fluidsim/SKILL.md
   - name: folklore-variant-evidence
@@ -287,6 +297,10 @@ library:
     path: skills/liteparse/SKILL.md
   - name: literature-review
     path: skills/literature-review/SKILL.md
+  - name: mageck
+    path: skills/mageck/SKILL.md
+  - name: marine-carbonate-chemistry
+    path: skills/marine-carbonate-chemistry/SKILL.md
   - name: markdown-mermaid-writing
     path: skills/markdown-mermaid-writing/SKILL.md
   - name: market-research-reports
@@ -317,6 +331,10 @@ library:
     path: skills/neuropixels-analysis/SKILL.md
   - name: nextflow
     path: skills/nextflow/SKILL.md
+  - name: nmrglue
+    path: skills/nmrglue/SKILL.md
+  - name: nwb-conversion
+    path: skills/nwb-conversion/SKILL.md
   - name: omero-integration
     path: skills/omero-integration/SKILL.md
   - name: onekgpd
@@ -369,10 +387,16 @@ library:
     path: skills/pptx/SKILL.md
   - name: primekg
     path: skills/primekg/SKILL.md
+  - name: primer-design
+    path: skills/primer-design/SKILL.md
   - name: protocolsio-integration
     path: skills/protocolsio-integration/SKILL.md
   - name: pufferlib
     path: skills/pufferlib/SKILL.md
+  - name: pybamm
+    path: skills/pybamm/SKILL.md
+  - name: pycalphad
+    path: skills/pycalphad/SKILL.md
   - name: pydeseq2
     path: skills/pydeseq2/SKILL.md
   - name: pydicom
@@ -397,12 +421,16 @@ library:
     path: skills/pytorch-lightning/SKILL.md
   - name: pyzotero
     path: skills/pyzotero/SKILL.md
+  - name: qiime2-amplicon
+    path: skills/qiime2-amplicon/SKILL.md
   - name: qiskit
     path: skills/qiskit/SKILL.md
   - name: qutip
     path: skills/qutip/SKILL.md
   - name: rdkit
     path: skills/rdkit/SKILL.md
+  - name: relion
+    path: skills/relion/SKILL.md
   - name: relsa-severity-assessment
     path: skills/relsa-severity-assessment/SKILL.md
   - name: research-grants
@@ -455,6 +483,8 @@ library:
     path: skills/sympy/SKILL.md
   - name: tamarind
     path: skills/tamarind/SKILL.md
+  - name: tellurium
+    path: skills/tellurium/SKILL.md
   - name: tiledbvcf
     path: skills/tiledbvcf/SKILL.md
   - name: timesfm-forecasting
@@ -488,7 +518,7 @@ library:
 - repoId: blader/humanizer
   repoType: github
   repoUrl: https://github.com/blader/humanizer.git
-  commit: 9862685f575c65a8247f90369951df1b3416e3d6
+  commit: 225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8
   skills:
   - name: humanizer
     path: SKILL.md
@@ -535,7 +565,7 @@ library:
 - repoId: nextlevelbuilder/ui-ux-pro-max-skill
   repoType: github
   repoUrl: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
-  commit: de5f12b400775997d213524ef02a7c7d2746806f
+  commit: 09170eec67eefd46a7ae85de61b40c194020f997
   skills:
   - name: banner-design
     path: .claude/skills/banner-design/SKILL.md
@@ -566,14 +596,20 @@ library:
 - repoId: epoko77-ai/im-not-ai
   repoType: github
   repoUrl: https://github.com/epoko77-ai/im-not-ai.git
-  commit: 9747f036cdc28a1a8aea4dc71fef1f7846eb96f7
+  commit: 2f3d943d08056b612a92e12bfb72ea94dd2acd18
   skills:
   - name: humanize-korean
     path: codex/skills/humanize-korean/SKILL.md
   - name: humanize-korean
+    path: copilot/skills/humanize-korean/SKILL.md
+  - name: commit-ko
+    path: extras/skills/commit-ko/SKILL.md
+  - name: humanize-korean
     path: skills/humanize-korean/SKILL.md
   - name: humanize-redo
     path: skills/humanize-redo/SKILL.md
+  - name: humanize-scan
+    path: skills/humanize-scan/SKILL.md
   - name: humanize
     path: skills/humanize/SKILL.md
 - repoId: coreyhaines31/marketingskills
@@ -684,7 +720,7 @@ library:
 - repoId: Egonex-AI/Understand-Anything
   repoType: github
   repoUrl: https://github.com/Egonex-AI/Understand-Anything.git
-  commit: 6df3065f1d8ddc2ce3615314d1d493f36d6b1c80
+  commit: b05cc3b20990afca537b4fc0a49b4d7fbdc65bb0
   skills:
   - name: understand-chat
     path: understand-anything-plugin/skills/understand-chat/SKILL.md
@@ -966,7 +1002,7 @@ library:
 - repoId: mattpocock/skills
   repoType: github
   repoUrl: https://github.com/mattpocock/skills.git
-  commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+  commit: d81f3a183412e71a5b1e84ca21bc1a35eea03a60
   skills:
   - name: ask-matt
     path: skills/engineering/ask-matt/SKILL.md
@@ -980,16 +1016,20 @@ library:
     path: skills/engineering/domain-modeling/SKILL.md
   - name: grill-with-docs
     path: skills/engineering/grill-with-docs/SKILL.md
+  - name: implement-spec
+    path: skills/engineering/implement-spec/SKILL.md
   - name: implement
     path: skills/engineering/implement/SKILL.md
   - name: improve-codebase-architecture
     path: skills/engineering/improve-codebase-architecture/SKILL.md
+  - name: pr
+    path: skills/engineering/pr/SKILL.md
   - name: prototype
     path: skills/engineering/prototype/SKILL.md
   - name: research
     path: skills/engineering/research/SKILL.md
-  - name: resolving-merge-conflicts
-    path: skills/engineering/resolving-merge-conflicts/SKILL.md
+  - name: retro
+    path: skills/engineering/retro/SKILL.md
   - name: setup-matt-pocock-skills
     path: skills/engineering/setup-matt-pocock-skills/SKILL.md
   - name: tdd
@@ -1006,14 +1046,8 @@ library:
     path: skills/engineering/wizard/SKILL.md
   - name: claude-handoff
     path: skills/in-progress/claude-handoff/SKILL.md
-  - name: implement-spec
-    path: skills/in-progress/implement-spec/SKILL.md
   - name: loop-me
     path: skills/in-progress/loop-me/SKILL.md
-  - name: pr
-    path: skills/in-progress/pr/SKILL.md
-  - name: retro
-    path: skills/in-progress/retro/SKILL.md
   - name: setup-ts-deep-modules
     path: skills/in-progress/setup-ts-deep-modules/SKILL.md
   - name: writing-beats
@@ -1156,6 +1190,9 @@ workspace:
   - name: markitdown
     source: K-Dense-AI/scientific-agent-skills/markitdown
     target: markitdown
+  - name: scientific-slides
+    source: K-Dense-AI/scientific-agent-skills/scientific-slides
+    target: scientific-slides
 - repoId: blader/humanizer
   skills:
   - name: humanizer
@@ -1191,3 +1228,8 @@ workspace:
   - name: ponytail-help
     source: DietrichGebert/ponytail/ponytail-help
     target: ponytail-help
+- repoId: nextlevelbuilder/ui-ux-pro-max-skill
+  skills:
+  - name: slides
+    source: nextlevelbuilder/ui-ux-pro-max-skill/slides
+    target: slides
