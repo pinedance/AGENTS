@@ -540,6 +540,8 @@ library:
     path: skills/my-coding-guidelines/SKILL.md
   - name: my-git-commit
     path: skills/my-git-commit/SKILL.md
+  - name: my-md2hwpx
+    path: skills/my-md2hwpx/SKILL.md
   - name: my-models
     path: skills/my-models/SKILL.md
   - name: my-new-session
@@ -1167,6 +1169,9 @@ workspace:
   - name: my-begin
     source: skills/my-begin
     target: my-begin
+  - name: my-md2hwpx
+    source: skills/my-md2hwpx
+    target: my-md2hwpx
 - repoId: anthropics/skills
   skills:
   - name: pdf
