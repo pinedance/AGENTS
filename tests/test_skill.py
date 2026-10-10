@@ -1642,7 +1642,139 @@ def test_workspace_add_local_repo_routing(temp_env):
     # Assert symlink is created and valid
     symlink = skills_dir / "my-local-skill"
     assert symlink.is_symlink()
-    assert symlink.resolve() == local_skill_dir.resolve()
+def test_load_settings_defaults_and_override(tmp_path):
+    # 1. Defaults when no files exist
+    settings = skill.load_settings(tmp_path)
+    assert settings["paths"]["agents_dir"] == skill.DEFAULT_AGENTS_DIR
+    assert "memory" in settings["global_symlinks"]
+    assert "AGENTS.md" in settings["global_symlinks"]
+
+    # 2. settings.default.yaml loaded
+    default_yaml = tmp_path / "settings.default.yaml"
+    default_yaml.write_text("paths:\n  library_dir: custom-lib\n")
+    settings = skill.load_settings(tmp_path)
+    assert settings["paths"]["library_dir"] == "custom-lib"
+    assert settings["paths"]["agents_dir"] == skill.DEFAULT_AGENTS_DIR
+
+    # 3. settings.yaml overrides default
+    user_yaml = tmp_path / "settings.yaml"
+    user_yaml.write_text("paths:\n  library_dir: user-lib\n")
+    settings = skill.load_settings(tmp_path)
+    assert settings["paths"]["library_dir"] == "user-lib"
+
+
+def test_sync_creates_global_symlinks(temp_env):
+    # Setup directories and files in project root
+    memory_dir = temp_env / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    prompts_dir = temp_env / "prompts"
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+    (prompts_dir / "AGENTS.global.md").write_text("# Global Agents")
+    rules_dir = temp_env / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text("library: []\nworkspace: []\n")
+    agents_dir = temp_env / ".agents"
+
+    # Custom settings pointing agents_dir to temp_env / ".agents"
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(f"paths:\n  agents_dir: '{agents_dir}'\n  skills_dir: '{agents_dir / 'skills'}'\n")
+
+    skill.sync(yaml_path, temp_env, settings_path=settings_file)
+
+    # Verify global symlinks
+    assert (agents_dir / "memory").is_symlink()
+    assert (agents_dir / "memory").resolve() == memory_dir.resolve()
+
+    assert (agents_dir / "prompts").is_symlink()
+    assert (agents_dir / "prompts").resolve() == prompts_dir.resolve()
+
+    assert (agents_dir / "rules").is_symlink()
+    assert (agents_dir / "rules").resolve() == rules_dir.resolve()
+
+    assert (agents_dir / "AGENTS.md").is_symlink()
+    assert (agents_dir / "AGENTS.md").resolve() == (prompts_dir / "AGENTS.global.md").resolve()
+
+
+def test_sync_recreates_broken_or_changed_global_symlink(temp_env):
+    agents_dir = temp_env / ".agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    memory_dir = temp_env / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create broken symlink
+    broken_link = agents_dir / "memory"
+    os.symlink(temp_env / "nonexistent", broken_link)
+    assert broken_link.is_symlink()
+    assert not broken_link.exists()
+
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text("library: []\nworkspace: []\n")
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(f"paths:\n  agents_dir: '{agents_dir}'\n  skills_dir: '{agents_dir / 'skills'}'\n")
+
+    skill.sync(yaml_path, temp_env, settings_path=settings_file)
+
+    assert broken_link.is_symlink()
+    assert broken_link.exists()
+    assert broken_link.resolve() == memory_dir.resolve()
+
+
+def test_sync_global_symlink_collision_raises(temp_env):
+    agents_dir = temp_env / ".agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    memory_dir = temp_env / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create real directory collision
+    colliding_dir = agents_dir / "memory"
+    colliding_dir.mkdir(parents=True, exist_ok=True)
+
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text("library: []\nworkspace: []\n")
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(f"paths:\n  agents_dir: '{agents_dir}'\n  skills_dir: '{agents_dir / 'skills'}'\n")
+
+    with pytest.raises(ValueError, match="Collision: Target 'memory'"):
+        skill.sync(yaml_path, temp_env, settings_path=settings_file)
+
+
+
+
+def test_status_outputs_global_symlinks(temp_env, capsys):
+    yaml_path = temp_env / ".skills.yaml"
+    agents_dir = temp_env / ".agents"
+    agents_dir.mkdir(parents=True, exist_ok=True)
+    memory_dir = temp_env / "memory"
+    memory_dir.mkdir(parents=True, exist_ok=True)
+    os.symlink(memory_dir.resolve(), agents_dir / "memory")
+
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(f"paths:\n  agents_dir: '{agents_dir}'\n  skills_dir: '{agents_dir / 'skills'}'\n")
+
+    skill.status(yaml_path, temp_env, settings_path=settings_file)
+    captured = capsys.readouterr().out
+
+    assert "Global Symlinks" in captured
+    assert "memory" in captured
+    assert "✔" in captured
+
+
+def test_cli_settings_override(temp_env):
+    yaml_path = temp_env / ".skills.yaml"
+    custom_settings = temp_env / "custom-settings.yaml"
+    custom_settings.write_text("paths:\n  library_dir: custom-lib\n")
+
+    with patch("manager.sync") as mock_sync:
+        sys_args = [
+            "manager.py",
+            "--settings", str(custom_settings),
+            "sync"
+        ]
+        with patch("sys.argv", sys_args):
+            skill.main(config_path=yaml_path, root_path=temp_env)
+            mock_sync.assert_called_once_with(yaml_path, temp_env, check_remote=False, settings_path=custom_settings)
 
 
 

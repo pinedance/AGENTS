@@ -1,5 +1,6 @@
 .skills-repos/
 skills-library/
+settings.yaml
 
 # DEV
 .dev/

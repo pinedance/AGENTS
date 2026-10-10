@@ -1,0 +1,23 @@
+paths:
+  agents_dir: "~/.agents"
+  skills_dir: "~/.agents/skills"
+  library_dir: "skills-library"
+  repos_dir: ".skills-repos"
+  config_file: ".skills.yaml"
+
+global_symlinks:
+  AGENTS.md: "{agents_dir}/prompts/AGENTS.global.md"
+  memory: "{root_path}/memory"
+  prompts: "{root_path}/prompts"
+  rules: "{root_path}/rules"
+
+filenames:
+  skill: "SKILL.md"
+  commit: ".commit"
+
+network:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  zip_url_templates:
+    - "https://github.com/{repo_id}/archive/refs/heads/main.zip"
+    - "https://github.com/{repo_id}/archive/refs/heads/master.zip"
+  repo_url_template: "https://github.com/{repo_id}.git"

@@ -13,6 +13,9 @@ from ruamel.yaml import YAML, YAMLError
 
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
+DEFAULT_SETTINGS_DEFAULT_NAME = "settings.default.yaml"
+DEFAULT_SETTINGS_NAME = "settings.yaml"
+DEFAULT_AGENTS_DIR = "~/.agents"
 DEFAULT_SKILLS_DIR = "~/.agents/skills"
 DEFAULT_CONFIG_NAME = ".skills.yaml"
 SKILL_FILENAME = "SKILL.md"
@@ -32,6 +35,125 @@ def get_yaml_parser():
     yaml.preserve_quotes = True
     yaml.indent(mapping=2, sequence=2, offset=0)
     return yaml
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Recursively merge override dictionary into base dictionary."""
+    result = dict(base)
+    for k, v in override.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+def load_settings(root_path: Path, settings_path: Path | None = None) -> dict:
+    """Load settings from settings.default.yaml and merge optional settings.yaml."""
+    yaml = get_yaml_parser()
+    defaults = {
+        "paths": {
+            "agents_dir": DEFAULT_AGENTS_DIR,
+            "skills_dir": DEFAULT_SKILLS_DIR,
+            "library_dir": LIBRARY_DIR_NAME,
+            "repos_dir": REPOS_DIR_NAME,
+            "config_file": DEFAULT_CONFIG_NAME,
+        },
+        "global_symlinks": {
+            "memory": "{root_path}/memory",
+            "prompts": "{root_path}/prompts",
+            "rules": "{root_path}/rules",
+            "AGENTS.md": "{agents_dir}/prompts/AGENTS.global.md",
+        },
+        "filenames": {
+            "skill": SKILL_FILENAME,
+            "commit": COMMIT_FILENAME,
+        },
+        "network": {
+            "user_agent": USER_AGENT,
+            "zip_url_templates": list(GITHUB_ZIP_URL_TEMPLATES),
+            "repo_url_template": GITHUB_REPO_URL_TEMPLATE,
+        },
+    }
+
+    default_file = root_path / DEFAULT_SETTINGS_DEFAULT_NAME
+    if default_file.exists():
+        try:
+            with open(default_file, "r", encoding="utf-8") as f:
+                loaded_default = yaml.load(f)
+                if loaded_default and isinstance(loaded_default, dict):
+                    defaults = _deep_merge(defaults, loaded_default)
+        except Exception as e:
+            print(f"Warning: Failed to load {default_file}: {e}", file=sys.stderr)
+
+    user_file = settings_path or (root_path / DEFAULT_SETTINGS_NAME)
+    if user_file.exists():
+        try:
+            with open(user_file, "r", encoding="utf-8") as f:
+                loaded_user = yaml.load(f)
+                if loaded_user and isinstance(loaded_user, dict):
+                    defaults = _deep_merge(defaults, loaded_user)
+        except Exception as e:
+            print(f"Warning: Failed to load {user_file}: {e}", file=sys.stderr)
+
+    if SKILLS_DIR_ENV_VAR in os.environ:
+        defaults.setdefault("paths", {})["skills_dir"] = os.environ[SKILLS_DIR_ENV_VAR]
+
+    return defaults
+
+def _resolve_path_template(path_str: str, context: dict) -> Path:
+    """Resolve a template path string with context variables and user expansion."""
+    expanded = path_str.format(**context)
+    return Path(os.path.expanduser(expanded))
+
+def _sync_global_symlinks(root_path: Path, settings: dict):
+    """Synchronize global root symlinks (e.g., AGENTS.md, memory, prompts, rules) under agents_dir."""
+    paths_cfg = settings.get("paths", {})
+    skills_dir_raw = paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR)
+    skills_dir = Path(os.path.expanduser(skills_dir_raw))
+    agents_dir_raw = paths_cfg.get("agents_dir", str(skills_dir.parent))
+    agents_dir = Path(os.path.expanduser(agents_dir_raw)).resolve()
+
+    agents_dir.mkdir(parents=True, exist_ok=True)
+
+    context = {
+        "root_path": str(root_path.resolve()),
+        "agents_dir": str(agents_dir),
+        "skills_dir": str(skills_dir),
+    }
+
+    global_symlinks = settings.get("global_symlinks", {})
+    for name, source_tpl in global_symlinks.items():
+        source_path = _resolve_path_template(str(source_tpl), context)
+        link_path = agents_dir / name
+
+        # Only create if the source path exists
+        if not source_path.exists():
+            continue
+
+        source_target = source_path.resolve() if name != "AGENTS.md" else source_path
+
+        if link_path.is_symlink():
+            try:
+                curr_target = Path(os.readlink(link_path))
+                if (curr_target == source_target or curr_target == source_path) and link_path.exists():
+                    continue
+                print(f"Recreating global symlink: {name} -> {source_target}")
+                link_path.unlink()
+                os.symlink(source_target, link_path)
+            except OSError as e:
+                try:
+                    link_path.unlink()
+                    os.symlink(source_target, link_path)
+                except OSError as inner_e:
+                    raise OSError(f"Failed to recreate symlink '{name}' -> {source_target}: {inner_e}") from inner_e
+        elif link_path.exists():
+            raise ValueError(f"Collision: Target '{name}' in '{agents_dir}' already exists and is not a symlink")
+        else:
+            print(f"Creating global symlink: {name} -> {source_target}")
+            try:
+                os.symlink(source_target, link_path)
+            except OSError as e:
+                raise OSError(f"Failed to create symlink '{name}' -> {source_target}: {e}") from e
+
 
 def _sanitize_config(data: dict) -> None:
     for key in ("library", "workspace"):
@@ -524,13 +646,17 @@ def _validate_active_workspaces(config: dict, root_path: Path = PROJECT_ROOT) ->
     return workspace_changed
 
 
-def sync(config_path: Path, root_path: Path, check_remote: bool = False):
+def sync(config_path: Path, root_path: Path, check_remote: bool = False, settings_path: Path | None = None):
     print("Syncing skills...")
+    settings = load_settings(root_path, settings_path)
     config = load_config(config_path)
-    repos_dir = root_path / REPOS_DIR_NAME
-    library_name = config.get("paths", {}).get("library", LIBRARY_DIR_NAME)
+    paths_cfg = settings.get("paths", {})
+    repos_name = paths_cfg.get("repos_dir", REPOS_DIR_NAME)
+    repos_dir = root_path / repos_name
+    library_name = config.get("paths", {}).get("library", paths_cfg.get("library_dir", LIBRARY_DIR_NAME))
     library_dir = root_path / library_name
-    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
+    skills_dir_raw = paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR)
+    skills_dir = Path(os.path.expanduser(skills_dir_raw))
     
     repos_dir.mkdir(parents=True, exist_ok=True)
     library_dir.mkdir(parents=True, exist_ok=True)
@@ -547,6 +673,9 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False):
         
     _prune_obsolete_zips(repos_dir, active_zips)
     _prune_obsolete_libs(library_dir, active_libs)
+    
+    # Sync global agent symlinks (AGENTS.md, memory, prompts, rules)
+    _sync_global_symlinks(root_path, settings)
     
     # Sync workspace links
     target_links = {}
@@ -974,12 +1103,18 @@ def _get_local_repo_id() -> str | None:
 
 
 
-def status(config_path: Path, root_path: Path):
+def status(config_path: Path, root_path: Path, settings_path: Path | None = None):
+    settings = load_settings(root_path, settings_path)
     config = load_config(config_path)
-    repos_dir = root_path / REPOS_DIR_NAME
-    library_name = config.get("paths", {}).get("library", LIBRARY_DIR_NAME)
+    paths_cfg = settings.get("paths", {})
+    repos_name = paths_cfg.get("repos_dir", REPOS_DIR_NAME)
+    repos_dir = root_path / repos_name
+    library_name = config.get("paths", {}).get("library", paths_cfg.get("library_dir", LIBRARY_DIR_NAME))
     library_dir = root_path / library_name
-    skills_dir = Path(os.environ.get(SKILLS_DIR_ENV_VAR, DEFAULT_SKILLS_DIR)).expanduser()
+    skills_dir_raw = paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR)
+    skills_dir = Path(os.path.expanduser(skills_dir_raw))
+    agents_dir_raw = paths_cfg.get("agents_dir", str(skills_dir.parent))
+    agents_dir = Path(os.path.expanduser(agents_dir_raw)).resolve()
     
     # 1. Remote repositories check
     print("┌── Remote Repositories (.skills-repos) ──────────────────────────┐")
@@ -1048,9 +1183,39 @@ def status(config_path: Path, root_path: Path):
                 managed = " (managed)" if item in configured_targets else " (unmanaged)"
                 print(f"│  {status_icon} {item:20} ──▶ {str(resolved_target)}{managed}")
     print("└─────────────────────────────────────────────────────────────────┘")
+    print()
+
+    # 4. Global Symlinks (~/.agents/)
+    header_title = f"┌── Global Symlinks ({agents_dir}) "
+    border_len = max(0, 67 - len(header_title))
+    print(header_title + "─" * border_len + "┐")
+    if not agents_dir.exists():
+        print("│  (agents directory does not exist)")
+    else:
+        context = {
+            "root_path": str(root_path.resolve()),
+            "agents_dir": str(agents_dir),
+            "skills_dir": str(skills_dir),
+        }
+        for name, source_tpl in settings.get("global_symlinks", {}).items():
+            item_path = agents_dir / name
+            if item_path.is_symlink():
+                try:
+                    resolved_target = Path(os.readlink(item_path))
+                    exists = item_path.exists()
+                    status_icon = "✔" if exists else "✗ [BROKEN]"
+                except OSError:
+                    status_icon = "✗ [BROKEN]"
+                    resolved_target = "Unknown"
+                print(f"│  {status_icon} {name:20} ──▶ {str(resolved_target)}")
+            elif item_path.exists():
+                print(f"│  ! {name:20} ──▶ [NOT A SYMLINK]")
+            else:
+                print(f"│  ✗ {name:20} ──▶ [MISSING]")
+    print("└─────────────────────────────────────────────────────────────────┘")
 
 
-def main(config_path: Path | None = None, root_path: Path | None = None):
+def main(config_path: Path | None = None, root_path: Path | None = None, settings_path: Path | None = None):
     import sys
     cmd_name = Path(sys.argv[0]).name
     if cmd_name in ("sync", "library", "workspace", "status") and (len(sys.argv) < 2 or sys.argv[1] != cmd_name):
@@ -1059,6 +1224,7 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     parser = argparse.ArgumentParser(description="Skill Manager CLI")
     parser.add_argument("--config", help="Path to config file", default=None)
     parser.add_argument("--root", help="Path to project root", default=None)
+    parser.add_argument("--settings", help="Path to settings file", default=None)
     
     subparsers = parser.add_subparsers(dest="command", required=True)
     
@@ -1097,9 +1263,15 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
     
     cli_cfg = Path(args.config) if args.config else None
     cfg = cli_cfg or config_path or (root / DEFAULT_CONFIG_NAME)
+
+    cli_settings = Path(args.settings) if args.settings else None
+    stg = cli_settings or settings_path
     
     if args.command == "sync":
-        sync(cfg, root, check_remote=args.check_remote)
+        if stg is not None:
+            sync(cfg, root, check_remote=args.check_remote, settings_path=stg)
+        else:
+            sync(cfg, root, check_remote=args.check_remote)
     elif args.command == "library":
         if args.subcommand == "add":
             library_add(args.repoId, cfg, root)
@@ -1113,9 +1285,13 @@ def main(config_path: Path | None = None, root_path: Path | None = None):
         elif args.subcommand == "remove":
             workspace_remove(args.skill_name, cfg, root)
     elif args.command == "status":
-        status(cfg, root)
+        if stg is not None:
+            status(cfg, root, settings_path=stg)
+        else:
+            status(cfg, root)
 
 
 
 if __name__ == "__main__":
     main()
+
