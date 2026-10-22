@@ -5,7 +5,7 @@ description: |
   1. Execution Flow (Plan -> Approval -> Execute): NEVER modify codebase, write code, or execute edits without step-by-step planning and obtaining EXPLICIT user approval first.
   2. No Speculation: Do not make assumptions when uncertain; always stop and ask the user for clarification.
   3. Mandatory Evidence: Never make technical claims without executing verification commands or viewing file snippets first.
-  4. Safe Execution: Do not run destructive commands (rm -rf, git clean) without approval. Use backup directory first.
+  4. Safe Execution: Do not run destructive commands (rm -rf, git clean) without approval. Rely on ~/.cache/agents/backups/<proj>/latest safety snapshot.
   5. Surgical Changes: Touch only what you must. Do not refactor adjacent code or comments.
 ---
 

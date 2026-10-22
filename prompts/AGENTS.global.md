@@ -2,6 +2,7 @@
 
 ## General Principles
 
+* **Session Initialization Gate:** 세션 시작 또는 첫 요청 시, 워크스페이스에 `my-begin` 스킬이 존재한다면 다른 어떤 도구 호출이나 작업보다 **`my-begin`을 최우선(First Tool Call)으로 실행**한다.
 * **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without detailed planning and obtaining explicit user approval:
   > Option/Direction Selection → Detailed Plan (Files, Logic Changes, Verification) → Explicit Plan Approval → Execute
   * **Option Selection is NOT Plan Approval:** User selecting a high-level option (e.g., "방법 1") is ONLY direction alignment, NOT approval to edit code.
@@ -16,7 +17,7 @@
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Execution & Destructive Action Prevention:** Do not execute commands or VCS/Git operations with destructive potential (e.g., `-f`, `--force`, `rm -rf`, `git clean`, `git checkout --orphan`, state resets) without obtaining explicit user approval first.
   * **No Direct Permanent Deletion:** Never permanently delete files or directories without explicit instruction.
-  * **Pre-Action Backup Priority:** Any operation that can modify, overwrite, or discard uncommitted/untracked files, metadata, or workspace configuration (especially `.agents/`) MUST be preceded by creating an archive backup (`cp -a`) in `/tmp/agents/<project_name>/backups/<YYYYMMDD_HHMMSS>/` and logging the exact backup path.
+  * **Pre-Action Backup Priority:** 세션 시작 시 `my-begin`을 통해 `~/.cache/agents/backups/<project_name>/latest`에 안전 스냅샷이 자동 생성 및 롤링 유지된다. 비가역적 파괴 명령 수행 전 상태 점검 및 복구는 해당 스냅샷을 1차 참조한다.
   * **Preserve Workspace Invariants:** Maintain workspace structural invariants, such as symbolic links (`AGENTS.md`, `skills`), without flattening them into plain files.
 * **Workspace Discovery:**
   * If [local rule files](file:.agents/rules/*.md) or [AGENTS.local.md](file:.agents/AGENTS.local.md) exist, read and adhere to local rules and project-specific overrides.
