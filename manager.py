@@ -490,8 +490,13 @@ def _resolve_and_download_repos(config: dict, repos_dir: Path, library_dir: Path
         if stored_commit and stored_commit != "latest":
             commit_hash = stored_commit
 
+        seen_skills = set()
         for skill_item in repo.get("skills", []):
-            dest_skill_dir = library_dir / repo_id / skill_item["name"]
+            skill_name = skill_item["name"]
+            if skill_name in seen_skills:
+                continue
+            seen_skills.add(skill_name)
+            dest_skill_dir = library_dir / repo_id / skill_name
             active_libs.add(dest_skill_dir.resolve())
             _extract_skill_if_needed(zip_path, skill_item, repo_id, commit_hash, dest_skill_dir)
 
@@ -741,9 +746,42 @@ def _read_skill_name_from_zip(zf: zipfile.ZipFile, member: str) -> str:
         return ""
 
 
+def _skill_path_priority(path_str: str) -> int:
+    """Return priority score for skill path (lower is better).
+
+    0: Standard skills/ directory or root SKILL.md
+    1: Regular visible subdirectory (e.g., plugins/..., cli/...)
+    2: Hidden / tool-specific subdirectory (e.g., .openclaw/, .claude/)
+    """
+    p = path_str.replace("\\", "/").strip("/")
+    parts = p.split("/")
+    if any(part.startswith(".") for part in parts[:-1]):
+        return 2
+    if p.startswith("skills/") or p == SKILL_FILENAME:
+        return 0
+    return 1
+
+
+def _deduplicate_skills(skills: list[dict]) -> list[dict]:
+    """Deduplicate skills by name, preferring standard and non-hidden paths."""
+    best_by_name: dict[str, dict] = {}
+    for item in skills:
+        name = item.get("name")
+        if not name:
+            continue
+        if name not in best_by_name:
+            best_by_name[name] = item
+        else:
+            curr_priority = _skill_path_priority(best_by_name[name].get("path", ""))
+            new_priority = _skill_path_priority(item.get("path", ""))
+            if new_priority < curr_priority:
+                best_by_name[name] = item
+    return list(best_by_name.values())
+
+
 def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
     """Scan a zip file for SKILL.md entries. Returns (skills_found, commit_hash)."""
-    skills_found: list = []
+    raw_skills: list = []
     commit_hash = _get_zip_comment(zip_path)
     with zipfile.ZipFile(zip_path, "r") as zf:
         for m in zf.namelist():
@@ -755,11 +793,12 @@ def _scan_zip_for_skills(zip_path: Path, repo_id: str) -> tuple[list, str]:
                 # Fallback to parent folder name
                 if not skill_name:
                     skill_name = repo_id.split("/")[-1] if len(parts) == 2 else parts[-2]
-                skills_found.append({"name": skill_name, "path": skill_path})
+                raw_skills.append({"name": skill_name, "path": skill_path})
             elif m.endswith(SKILL_FILENAME) and "/" not in m:
                 # Skill at root
                 skill_name = _read_skill_name_from_zip(zf, m) or repo_id.split("/")[-1]
-                skills_found.append({"name": skill_name, "path": SKILL_FILENAME})
+                raw_skills.append({"name": skill_name, "path": SKILL_FILENAME})
+    skills_found = _deduplicate_skills(raw_skills)
     return skills_found, commit_hash
 
 
@@ -787,7 +826,7 @@ def _scan_local_dir_for_skills(dir_path: Path, root_path: Path) -> list:
                 "name": skill_name,
                 "path": rel_path_str
             })
-    return skills_found
+    return _deduplicate_skills(skills_found)
 
 
 def library_add(repo_id: str, config_path: Path, root_path: Path, _do_sync: bool = True):

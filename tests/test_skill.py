@@ -1777,6 +1777,24 @@ def test_cli_settings_override(temp_env):
             mock_sync.assert_called_once_with(yaml_path, temp_env, check_remote=False, settings_path=custom_settings)
 
 
+def test_scan_zip_deduplication(tmp_path):
+    zip_path = tmp_path / "test-repo.zip"
+    members = {
+        "repo-main/.openclaw/skills/my-tool/SKILL.md": "---\nname: my-tool\n---\nOpenClaw duplicate",
+        "repo-main/skills/my-tool/SKILL.md": "---\nname: my-tool\n---\nStandard skill",
+        "repo-main/skills/other-tool/SKILL.md": "---\nname: other-tool\n---\nOther skill",
+    }
+    make_dummy_zip(zip_path, members, comment=b"commit-123")
+
+    skills_found, commit_hash = skill._scan_zip_for_skills(zip_path, "owner/test-repo")
+
+    assert commit_hash == "commit-123"
+    assert len(skills_found) == 2
+    by_name = {s["name"]: s["path"] for s in skills_found}
+    assert by_name["my-tool"] == "skills/my-tool/SKILL.md"
+    assert by_name["other-tool"] == "skills/other-tool/SKILL.md"
+
+
 
 
 
