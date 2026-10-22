@@ -24,6 +24,17 @@ description: >
 
 ---
 
+## STEP 0.5: SAFETY SNAPSHOT BACKUP (SILENT)
+
+**Execute tool call silently. DO NOT output text until completed.**
+
+1. **Run Snapshot Helper**:
+   - Run `<root>/skills/my-begin/scripts/session-backup.sh` via `run_command`.
+   - Do not proceed to Step 1 until snapshot completes or returns exit code.
+   - Record returned snapshot path for the Step 2 summary.
+
+---
+
 ## STEP 1: RUNTIME DISCOVERY & LOCKING
 
 1. **Lockfile Introspection** (`<root>` and 1-depth subdirs: `backend/`, `frontend/`, `server/`):
@@ -43,7 +54,10 @@ description: >
 
 ## STEP 2: SUMMARY & HANDOFF
 
-1. **Status Briefing**: Output 1–2 lines reporting loaded directives and `Locked execution prefix: '<prefix>'`.
+1. **Status Briefing**: Output 1–2 lines reporting:
+   - Loaded directives
+   - `Safety Snapshot: ~/.cache/agents/backups/<project>/latest`
+   - `Locked execution prefix: '<prefix>'`
 2. **Handoff**:
    - Standalone: Prompt for task.
    - Caller skill (`my-new-session`): Return control with locked context.
