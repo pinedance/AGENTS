@@ -78,7 +78,7 @@ library:
     path: skills/xlsx/SKILL.md
   - name: template-skill
     path: template/SKILL.md
-  commit: dbd4588f9e1033efb41dad4bef2f7947c8993d44
+  commit: ca45fc496a3436251f191354091d557da31c15b5
 - repoId: bradautomates/claude-video
   repoType: github
   repoUrl: https://github.com/bradautomates/claude-video.git
@@ -89,14 +89,22 @@ library:
 - repoId: JuliusBrussee/caveman
   repoType: github
   repoUrl: https://github.com/JuliusBrussee/caveman.git
-  commit: bad48a0e1df55e05e3f52249afa35ecc1909ee76
+  commit: 2e068f735253cce28256744804785f01887d9646
   skills:
   - name: cavecrew
     path: skills/cavecrew/SKILL.md
-  - name: caveman-commit
-    path: skills/caveman-commit/SKILL.md
   - name: caveman-compress
     path: skills/caveman-compress/SKILL.md
+  - name: caveman-stats
+    path: skills/caveman-stats/SKILL.md
+  - name: caveman
+    path: skills/caveman/SKILL.md
+  - name: megacave
+    path: skills/megacave/SKILL.md
+  - name: ultracave
+    path: skills/ultracave/SKILL.md
+  - name: caveman-commit
+    path: skills/caveman-commit/SKILL.md
   - name: caveman-discover
     path: skills/caveman-discover/SKILL.md
   - name: caveman-evidence-review
@@ -115,24 +123,16 @@ library:
     path: skills/caveman-review/SKILL.md
   - name: caveman-setup
     path: skills/caveman-setup/SKILL.md
-  - name: caveman-stats
-    path: skills/caveman-stats/SKILL.md
-  - name: caveman
-    path: skills/caveman/SKILL.md
   - name: investigate-first
     path: skills/investigate-first/SKILL.md
   - name: lean-build
     path: skills/lean-build/SKILL.md
-  - name: megacave
-    path: skills/megacave/SKILL.md
   - name: migration
     path: skills/migration/SKILL.md
   - name: safe-refactor
     path: skills/safe-refactor/SKILL.md
   - name: surgical-patch
     path: skills/surgical-patch/SKILL.md
-  - name: ultracave
-    path: skills/ultracave/SKILL.md
   - name: verify-and-stop
     path: skills/verify-and-stop/SKILL.md
 - repoId: tykimos/cheliped-browser
@@ -147,7 +147,7 @@ library:
 - repoId: K-Dense-AI/scientific-agent-skills
   repoType: github
   repoUrl: https://github.com/K-Dense-AI/scientific-agent-skills.git
-  commit: 593377bb048752abb0152deab9fbb1083a6087df
+  commit: a25cf9ec00e2745d03f8704acf6f6919694ccd9a
   skills:
   - name: 13c-metabolic-flux
     path: skills/13c-metabolic-flux/SKILL.md
@@ -506,7 +506,7 @@ library:
 - repoId: blader/humanizer
   repoType: github
   repoUrl: https://github.com/blader/humanizer.git
-  commit: 8c307f367c91bd974002f10f2be2965d642c13df
+  commit: 0ef9fe5bc3572734fd3ae6c448fe00a30cd5dcf0
   skills:
   - name: humanizer
     path: SKILL.md
@@ -557,10 +557,8 @@ library:
 - repoId: nextlevelbuilder/ui-ux-pro-max-skill
   repoType: github
   repoUrl: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
-  commit: 076a2b3a31394ad788afaa71f55d0bf789e7b3ec
+  commit: 3a13158ff1f32156cbe144108de48eda2ecaed9a
   skills:
-  - name: ui-ux-pro-max
-    path: .claude/skills/ui-ux-pro-max/SKILL.md
   - name: banner-design
     path: cli/assets/skills/banner-design/SKILL.md
   - name: brand
@@ -573,15 +571,17 @@ library:
     path: cli/assets/skills/slides/SKILL.md
   - name: ui-styling
     path: cli/assets/skills/ui-styling/SKILL.md
+  - name: ui-ux-pro-max
+    path: .claude/skills/ui-ux-pro-max/SKILL.md
 - repoId: epoko77-ai/im-not-ai
   repoType: github
   repoUrl: https://github.com/epoko77-ai/im-not-ai.git
   commit: b37e0206d31fffd9149bf57168d4d62eb2086bee
   skills:
-  - name: commit-ko
-    path: extras/skills/commit-ko/SKILL.md
   - name: humanize-korean
     path: skills/humanize-korean/SKILL.md
+  - name: commit-ko
+    path: extras/skills/commit-ko/SKILL.md
   - name: humanize-redo
     path: skills/humanize-redo/SKILL.md
   - name: humanize-scan
@@ -591,7 +591,7 @@ library:
 - repoId: coreyhaines31/marketingskills
   repoType: github
   repoUrl: https://github.com/coreyhaines31/marketingskills.git
-  commit: e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b
+  commit: 88c79f6528a9347420e57ceb1fff9a60de651768
   skills:
   - name: ab-testing
     path: skills/ab-testing/SKILL.md
@@ -679,6 +679,8 @@ library:
     path: skills/public-relations/SKILL.md
   - name: referrals
     path: skills/referrals/SKILL.md
+  - name: reverse-engineer-marketing
+    path: skills/reverse-engineer-marketing/SKILL.md
   - name: revops
     path: skills/revops/SKILL.md
   - name: sales-enablement
@@ -700,7 +702,7 @@ library:
 - repoId: Egonex-AI/Understand-Anything
   repoType: github
   repoUrl: https://github.com/Egonex-AI/Understand-Anything.git
-  commit: e24fcf6d371bcfa529bc110bacb1bb43de1b8d33
+  commit: 4e6d3299017a7432da15957874992837a315c5b4
   skills:
   - name: understand-chat
     path: understand-anything-plugin/skills/understand-chat/SKILL.md
@@ -723,7 +725,7 @@ library:
 - repoId: NomaDamas/k-skill
   repoType: github
   repoUrl: https://github.com/NomaDamas/k-skill.git
-  commit: 8139c689a850ca940138deba4f928d4689ac67f0
+  commit: a63290d56c00e91dccadf29ddd6fe5d484ce2377
   skills:
   - name: animal-pharmacy-search
     path: animal-pharmacy-search/SKILL.md
@@ -733,6 +735,8 @@ library:
     path: bccard-eatpl-search/SKILL.md
   - name: biz-health-check
     path: biz-health-check/SKILL.md
+  - name: boim-business-search
+    path: boim-business-search/SKILL.md
   - name: bok-ecos-stats
     path: bok-ecos-stats/SKILL.md
   - name: building-register-search
@@ -807,6 +811,8 @@ library:
     path: han-river-water-level/SKILL.md
   - name: hankookilbo-news
     path: hankookilbo-news/SKILL.md
+  - name: heyyumi
+    path: heyyumi/SKILL.md
   - name: highway-traffic-status
     path: highway-traffic-status/SKILL.md
   - name: hola-poke-yeoksam
@@ -815,6 +821,8 @@ library:
     path: household-waste-info/SKILL.md
   - name: housing-official-price
     path: housing-official-price/SKILL.md
+  - name: housing-subscription-reference
+    path: housing-subscription-reference/SKILL.md
   - name: hwp
     path: hwp/SKILL.md
   - name: intercity-bus-booking
@@ -893,6 +901,8 @@ library:
     path: korean-transit-route/SKILL.md
   - name: kosis-stats
     path: kosis-stats/SKILL.md
+  - name: kpic-drug-search
+    path: kpic-drug-search/SKILL.md
   - name: kr-whois-lookup
     path: kr-whois-lookup/SKILL.md
   - name: kstartup-search
@@ -990,7 +1000,7 @@ library:
 - repoId: mattpocock/skills
   repoType: github
   repoUrl: https://github.com/mattpocock/skills.git
-  commit: 5beb35b040e3de97e54fa9e386d7e42d15c295c2
+  commit: 4ae2317ddb22b046e26455e4f9c9b3aaaf62212d
   skills:
   - name: ask-matt
     path: skills/engineering/ask-matt/SKILL.md
@@ -1040,6 +1050,8 @@ library:
     path: skills/in-progress/loop-me/SKILL.md
   - name: setup-ts-deep-modules
     path: skills/in-progress/setup-ts-deep-modules/SKILL.md
+  - name: software-factory
+    path: skills/in-progress/software-factory/SKILL.md
   - name: writing-beats
     path: skills/in-progress/writing-beats/SKILL.md
   - name: writing-fragments
@@ -1071,7 +1083,7 @@ library:
 - repoId: DietrichGebert/ponytail
   repoType: github
   repoUrl: https://github.com/DietrichGebert/ponytail.git
-  commit: 09c434ab73ca43761c5d8b0c5d341926c2fba710
+  commit: 96608e078b2d5ea607c5c3b8b5a54d1c1fba6846
   skills:
   - name: ponytail-audit
     path: skills/ponytail-audit/SKILL.md
