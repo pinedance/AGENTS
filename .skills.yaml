@@ -1139,9 +1139,6 @@ workspace:
   - name: my-project-rules
     source: skills/my-project-rules
     target: my-project-rules
-  - name: my-skill-creator
-    source: skills/my-skill-creator
-    target: my-skill-creator
   - name: my-skill-updater
     source: skills/my-skill-updater
     target: my-skill-updater
@@ -1168,6 +1165,9 @@ workspace:
   - name: pdf
     source: anthropics/skills/pdf
     target: anthropics-pdf
+  - name: skill-creator
+    source: anthropics/skills/skill-creator
+    target: skill-creator
 - repoId: JuliusBrussee/caveman
   skills:
   - name: caveman
