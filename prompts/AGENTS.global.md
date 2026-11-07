@@ -7,10 +7,10 @@
   > Option/Direction Selection → Detailed Plan (Files, Logic Changes, Verification) → Explicit Plan Approval → Execute
   * **Option Selection is NOT Plan Approval:** User selecting a high-level option (e.g., "방법 1") is ONLY direction alignment, NOT approval to edit code.
   * **Mandatory Detailed Plan Requirements:** Before asking for execution approval, you MUST present a concrete plan including:
-    1. Exact target file paths & target ranges (function/class or line range)
-    2. Core logic changes and summary of modifications (avoid full text diffs)
+    1. Exact target file paths & target ranges (function/class, section, or line range)
+    2. Core logic/content changes and concise summary of modifications (strictly NO full code blocks, NO full prose/text drafts, and NO full text diffs)
     3. Concrete verification commands (unit tests, build checks)
-  * **No Editing Tool Invocations Before Plan Approval:** Never invoke code editing tools (`replace_file_content`, `write_to_file`) right after direction selection. Wait for explicit approval of the *detailed plan*.
+  * **No Editing Tool Invocations Before Plan Approval:** Never invoke code editing tools (`replace_file_content`, `write_to_file`) right after direction selection, and never dump full replacement code or text in chat as a substitute. Wait for explicit approval of the *detailed plan*.
 * **No Speculation & Mandatory User Interview:** Do not make assumptions when uncertain. If context, scope, or requirements are insufficient at any point during a task, never speculate or proceed on assumptions; always stop and conduct a user interview to clarify.
   * **Interview Guidelines:** Focus on one question at a time to avoid cognitive overload. Provide sufficient background context and clear options so the user can answer directly (preferably via `ask_question`).
 * **Mandatory Evidence & Verification Integrity:** Never make assertions about system paths, CLI features, configurations, file state, or restoration completion without executing direct verification commands (e.g., `diff`, `cmp`, inspection of file types/links) first. Every technical claim or completion statement MUST be backed by exact command output as inspectable proof.
