@@ -1,6 +1,7 @@
 from pathlib import Path
 import argparse
 import filecmp
+import json
 import os
 import re
 import shutil
@@ -17,9 +18,11 @@ DEFAULT_SETTINGS_DEFAULT_NAME = "settings.default.yaml"
 DEFAULT_SETTINGS_NAME = "settings.yaml"
 DEFAULT_AGENTS_DIR = "~/.agents"
 DEFAULT_SKILLS_DIR = "~/.agents/skills"
+DEFAULT_GEMINI_CONFIG_DIR = "~/.gemini/config"
 DEFAULT_CONFIG_NAME = ".skills.yaml"
 SKILL_FILENAME = "SKILL.md"
 COMMIT_FILENAME = ".commit"
+SKILLS_JSON_FILENAME = "skills.json"
 REPOS_DIR_NAME = ".skills-repos"
 LIBRARY_DIR_NAME = "skills-library"
 SKILLS_DIR_ENV_VAR = "SKILLS_DIR"
@@ -66,6 +69,12 @@ def load_settings(root_path: Path, settings_path: Path | None = None) -> dict:
         "filenames": {
             "skill": SKILL_FILENAME,
             "commit": COMMIT_FILENAME,
+        },
+        "vendor": {
+            "antigravity": {
+                "config_dir": DEFAULT_GEMINI_CONFIG_DIR,
+                "skills": SKILLS_JSON_FILENAME,
+            },
         },
         "network": {
             "user_agent": USER_AGENT,
@@ -272,6 +281,94 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
                 os.symlink(source_abs, link_path)
             except OSError as e:
                 raise OSError(f"Failed to create symlink '{target}' -> {source_abs}: {e}") from e
+
+
+def _extract_skill_entry_pair(repo_id: str, source: str, root_path: Path, library_dir: Path) -> tuple[str, str] | None:
+    """Resolve base directory path and relative include_only path for a workspace skill."""
+    source_parts = Path(source).parts
+    if not source_parts:
+        return None
+    if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
+        if len(source_parts) < 2:
+            return None
+        base_dir = str((root_path / source_parts[0]).resolve())
+        rel_path = Path(*source_parts[1:]).as_posix()
+        return base_dir, rel_path
+    base_dir = str(library_dir.resolve())
+    rel_path = Path(source).as_posix()
+    return base_dir, rel_path
+
+
+def _build_skills_json_entries(config: dict, root_path: Path, library_dir: Path) -> list[dict]:
+    """Build grouped skills.json entries from active workspace skills."""
+    grouped: dict[str, set[str]] = {}
+    for repo in config.get("workspace", []):
+        repo_id = str(repo.get("repoId", ""))
+        for skill_item in repo.get("skills", []):
+            pair = _extract_skill_entry_pair(repo_id, skill_item.get("source", ""), root_path, library_dir)
+            if pair is not None:
+                grouped.setdefault(pair[0], set()).add(pair[1])
+    return [
+        {"path": base_path, "include_only": sorted(rel_paths)}
+        for base_path, rel_paths in grouped.items()
+    ]
+
+
+def _write_skills_json_file(skills_json_path: Path, entries: list[dict]) -> None:
+    """Atomically write skills.json file."""
+    skills_json_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = skills_json_path.with_suffix(skills_json_path.suffix + ".tmp")
+    try:
+        content = json.dumps({"entries": entries}, indent=2, ensure_ascii=False) + "\n"
+        tmp_path.write_text(content, encoding="utf-8")
+        tmp_path.replace(skills_json_path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
+def _link_gemini_skills_json(source_json_path: Path, gemini_json_path: Path) -> None:
+    """Ensure gemini_json_path is a soft symlink pointing to source_json_path."""
+    gemini_json_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_source = source_json_path.resolve()
+    if gemini_json_path.is_symlink():
+        curr_target = (gemini_json_path.parent / os.readlink(gemini_json_path)).resolve()
+        if curr_target == resolved_source and gemini_json_path.exists():
+            return
+        print(f"Recreating skills.json symlink: {gemini_json_path} -> {resolved_source}")
+        gemini_json_path.unlink()
+    elif gemini_json_path.exists():
+        if gemini_json_path.is_dir():
+            raise ValueError(f"Collision: Target '{gemini_json_path}' already exists and is a directory")
+        print(f"Replacing existing file with symlink: {gemini_json_path} -> {resolved_source}")
+        gemini_json_path.unlink()
+    else:
+        print(f"Creating skills.json symlink: {gemini_json_path} -> {resolved_source}")
+    os.symlink(resolved_source, gemini_json_path)
+
+
+def _sync_skills_json(config: dict, root_path: Path, library_dir: Path, settings: dict) -> None:
+    """Build skills.json in agents_dir and soft-link it into each configured vendor directory."""
+    paths_cfg = settings.get("paths", {})
+    vendor_cfg = settings.get("vendor", {})
+    skills_dir = Path(os.path.expanduser(paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR)))
+    agents_dir = Path(os.path.expanduser(paths_cfg.get("agents_dir", str(skills_dir.parent)))).resolve()
+
+    entries = _build_skills_json_entries(config, root_path, library_dir)
+    written_files: set[Path] = set()
+    for _, v_info in vendor_cfg.items():
+        if not isinstance(v_info, dict):
+            continue
+        config_dir_raw = v_info.get("config_dir")
+        skills_name = v_info.get("skills")
+        if not config_dir_raw or not skills_name:
+            continue
+        source_json_path = agents_dir / skills_name
+        if source_json_path not in written_files:
+            _write_skills_json_file(source_json_path, entries)
+            written_files.add(source_json_path)
+        vendor_json_path = Path(os.path.expanduser(config_dir_raw)) / skills_name
+        _link_gemini_skills_json(source_json_path, vendor_json_path)
 
 def prompt_selection(candidates, format_fn, title_label, prompt_label):
     if not candidates:
@@ -718,6 +815,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False, setting
             deduped_bases.append(b)
 
     _rebuild_symlinks(skills_dir, deduped_bases, target_links)
+    _sync_skills_json(config, root_path, library_dir, settings)
     print("Sync completed successfully.")
 
 
@@ -1251,6 +1349,28 @@ def status(config_path: Path, root_path: Path, settings_path: Path | None = None
                 print(f"│  ! {name:20} ──▶ [NOT A SYMLINK]")
             else:
                 print(f"│  ✗ {name:20} ──▶ [MISSING]")
+
+        for vendor_name, v_info in settings.get("vendor", {}).items():
+            if not isinstance(v_info, dict):
+                continue
+            config_dir_raw = v_info.get("config_dir")
+            skills_name = v_info.get("skills")
+            if not config_dir_raw or not skills_name:
+                continue
+            vendor_json_path = Path(os.path.expanduser(config_dir_raw)) / skills_name
+            label = f"{vendor_name}:{skills_name}"
+            if vendor_json_path.is_symlink():
+                try:
+                    resolved_target = Path(os.readlink(vendor_json_path))
+                    status_icon = "✔" if vendor_json_path.exists() else "✗ [BROKEN]"
+                except OSError:
+                    status_icon = "✗ [BROKEN]"
+                    resolved_target = "Unknown"
+                print(f"│  {status_icon} {label:20} ──▶ {str(resolved_target)} ({vendor_json_path})")
+            elif vendor_json_path.exists():
+                print(f"│  ! {label:20} ──▶ [NOT A SYMLINK] ({vendor_json_path})")
+            else:
+                print(f"│  ✗ {label:20} ──▶ [MISSING] ({vendor_json_path})")
     print("└─────────────────────────────────────────────────────────────────┘")
 
 
