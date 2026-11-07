@@ -536,8 +536,6 @@ library:
     path: skills/my-models/SKILL.md
   - name: my-new-session
     path: skills/my-new-session/SKILL.md
-  - name: my-project-rules
-    path: skills/my-project-rules/SKILL.md
   - name: my-skill-creator
     path: skills/my-skill-creator/SKILL.md
   - name: my-skill-updater
@@ -1136,9 +1134,6 @@ workspace:
   - name: my-coding-guidelines
     source: skills/my-coding-guidelines
     target: my-coding-guidelines
-  - name: my-project-rules
-    source: skills/my-project-rules
-    target: my-project-rules
   - name: my-skill-updater
     source: skills/my-skill-updater
     target: my-skill-updater
