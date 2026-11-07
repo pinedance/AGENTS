@@ -1795,6 +1795,114 @@ def test_scan_zip_deduplication(tmp_path):
     assert by_name["other-tool"] == "skills/other-tool/SKILL.md"
 
 
+def test_sync_builds_and_links_skills_json(temp_env):
+    import json
+    local_skill_dir = temp_env / "skills" / "my-local-skill"
+    local_skill_dir.mkdir(parents=True, exist_ok=True)
+    (local_skill_dir / "SKILL.md").write_text("---\nname: my-local-skill\n---\n")
+
+    remote_skill_dir = temp_env / "skills-library" / "owner" / "repo" / "remote-skill"
+    remote_skill_dir.mkdir(parents=True, exist_ok=True)
+    (remote_skill_dir / "SKILL.md").write_text("---\nname: remote-skill\n---\n")
+    (remote_skill_dir / ".commit").write_text("abc1234")
+
+    zip_path = temp_env / ".skills-repos" / "owner" / "repo.zip"
+    make_dummy_zip(zip_path, {"repo-main/skills/remote-skill/SKILL.md": "# Remote"}, comment=b"abc1234")
+
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text("""
+library:
+- repoId: LOCAL/skills
+  skills:
+  - name: my-local-skill
+    path: skills/my-local-skill/SKILL.md
+- repoId: owner/repo
+  commit: abc1234
+  skills:
+  - name: remote-skill
+    path: skills/remote-skill/SKILL.md
+workspace:
+- repoId: LOCAL/skills
+  skills:
+  - name: my-local-skill
+    source: skills/my-local-skill
+    target: my-local-skill
+- repoId: owner/repo
+  skills:
+  - name: remote-skill
+    source: owner/repo/remote-skill
+    target: remote-skill
+""")
+
+    agents_dir = temp_env / ".agents"
+    gemini_dir = temp_env / ".gemini" / "config"
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(
+        f"paths:\n"
+        f"  agents_dir: '{agents_dir}'\n"
+        f"  skills_dir: '{agents_dir / 'skills'}'\n"
+        f"vendor:\n"
+        f"  antigravity:\n"
+        f"    config_dir: '{gemini_dir}'\n"
+        f"    skills: 'skills.json'\n"
+    )
+
+    with patch.dict(os.environ, {skill.SKILLS_DIR_ENV_VAR: str(agents_dir / "skills")}):
+        skill.sync(yaml_path, temp_env, settings_path=settings_file)
+
+    skills_json_path = agents_dir / "skills.json"
+    gemini_json_path = gemini_dir / "skills.json"
+
+    assert skills_json_path.is_file()
+    assert not skills_json_path.is_symlink()
+    assert gemini_json_path.is_symlink()
+    assert gemini_json_path.resolve() == skills_json_path.resolve()
+
+    data = json.loads(skills_json_path.read_text(encoding="utf-8"))
+    assert data == {
+        "entries": [
+            {
+                "path": str((temp_env / "skills").resolve()),
+                "include_only": ["my-local-skill"],
+            },
+            {
+                "path": str((temp_env / "skills-library").resolve()),
+                "include_only": ["owner/repo/remote-skill"],
+            },
+        ]
+    }
+
+
+def test_sync_replaces_existing_regular_skills_json_with_symlink(temp_env):
+    yaml_path = temp_env / ".skills.yaml"
+    yaml_path.write_text("library: []\nworkspace: []\n")
+
+    agents_dir = temp_env / ".agents"
+    gemini_dir = temp_env / ".gemini" / "config"
+    gemini_dir.mkdir(parents=True, exist_ok=True)
+    gemini_json_path = gemini_dir / "skills.json"
+    gemini_json_path.write_text('{"entries": []}\n', encoding="utf-8")
+    assert gemini_json_path.is_file() and not gemini_json_path.is_symlink()
+
+    settings_file = temp_env / "settings.yaml"
+    settings_file.write_text(
+        f"paths:\n"
+        f"  agents_dir: '{agents_dir}'\n"
+        f"  skills_dir: '{agents_dir / 'skills'}'\n"
+        f"vendor:\n"
+        f"  antigravity:\n"
+        f"    config_dir: '{gemini_dir}'\n"
+        f"    skills: 'skills.json'\n"
+    )
+
+    with patch.dict(os.environ, {skill.SKILLS_DIR_ENV_VAR: str(agents_dir / "skills")}):
+        skill.sync(yaml_path, temp_env, settings_path=settings_file)
+
+    assert gemini_json_path.is_symlink()
+    assert gemini_json_path.resolve() == (agents_dir / "skills.json").resolve()
+
+
+
 
 
 
