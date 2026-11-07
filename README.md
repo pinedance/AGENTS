@@ -90,6 +90,9 @@ workspace
       │
       ▼
 [4] Symlink  ──→ ~/.agents/skills/<skill>       (collision check · safe prune · allowed_bases check)
+      │
+      ▼
+[5] Manifest ──→ ~/.agents/skills.json & ~/.gemini/config/skills.json (symlink)
 ```
 
 ---
