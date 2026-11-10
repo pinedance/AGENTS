@@ -21,18 +21,19 @@ description: "마크다운을 템플릿 없이 한글 .hwpx(표·한글 수식·
 
 | 마크다운                                        | 한글 결과                                                              |
 | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `## 제목` / `### 절` / `#### 소제목`            | 함초롬돋움 굵게 16 / 13 / 11pt, 다음 문단과 붙여 쪽 나눔               |
+| `# 대제목` / `## 제목` / `### 절` / `#### 소제목` | 함초롬돋움 굵게 18(가운데) / 16 / 13 / 11pt, 다음 문단과 붙여 쪽 나눔  |
 | 일반 문단                                       | 함초롬바탕 10pt, 양쪽 정렬, 줄간격 160%                                |
 | `**굵게**`, `` `코드` ``                        | 굵은 글자 / 백틱 제거                                                  |
 | `- 항목` (들여쓰기 4칸마다 한 단계, 최대 3단계) | 내어쓰기 목록, 글머리표 • / - / ㆍ                                     |
 | `1. 항목`                                       | 굵은 번호 문단                                                         |
 | 문단·목록 안의 `<br>`                           | 같은 문단 안 줄바꿈(lineBreak)                                         |
+| 본문 `[^id]` + 말미 `[^id]: 내용`               | **한글 고유 각주(`<hp:footNote>`)** 삽입 (말미 빈 `참고문헌` 제목 제거) |
 | 마크다운 표 (첫 행 = 머리글)                    | 테두리 표, 머리글 회색 음영·가운데 정렬, 열 너비는 글자 수로 자동 배분 |
 | 표 칸 안의 `<br>`                               | 칸 안에서 새 문단                                                      |
 | 표 칸에서 `$...\frac{..}{..}...$`만 있는 줄     | **한글 수식 개체**(더블클릭하면 수식 편집기)                           |
 | 그 밖의 `$...$` (예: `$\ge 85\%$`)              | 일반 글자로 변환(≥ 85%)                                                |
 | `![설명](그림.png)`                             | 본문 폭 95% 그림(경로는 md 기준 상대경로, PNG)                         |
-| `---`                                           | 무시                                                                   |
+| `---`, `<!-- 주석 -->`                          | 무시 (단일·다중 행 HTML 주석 자동 제거)                                |
 
 쪽번호는 자동으로 아래 가운데 "- 1 -" 형식. 용지는 A4 세로, 여백 좌우 30mm·위 20mm·아래 15mm.
 
@@ -100,16 +101,24 @@ python3 -I render_png.py page.html 그림.png "body > div" 800 1180
 
 ```python
 """Markdown -> standalone .hwpx (OWPML 2011), no template needed.
-Usage: python3 md2hwpx.py input.md output.hwpx
-Supports: #~#### headings, paragraphs, **bold**, `code`, - lists (3 levels, 4-space indent), 1. lines,
-| tables | (<br> = new paragraph in a cell, $\frac{..}{..}$-only lines -> Hangul equations),
-<br> inside paragraphs (line break), ![alt](image.png) (path relative to the .md), bottom-centre page number.
+Usage: uv run --with lxml python md2hwpx.py input.md output.hwpx
+Supports:
+- # ~ #### headings
+- paragraphs, **bold**, `code`, <br> line breaks
+- - bullet lists (3 levels, 4-space indent), 1. numbered lines
+- | tables | (<br> = new paragraph in a cell, $\\frac{..}{..}$-only lines -> Hangul equations)
+- ![alt](image.png) (path relative to the .md)
+- HTML comment stripping (<!-- ... -->)
+- Markdown footnotes: inline [^id] + [^id]: definition -> native HWP <hp:footNote> controls
+- Bottom-centre page number (- 1 -), A4 portrait (margins: top 20mm, bottom 15mm, left/right 30mm)
 """
 import os, re, sys, zipfile
 from xml.sax.saxutils import escape
 
 SRC, DST = sys.argv[1], sys.argv[2]
-IMAGES = []  # (zip name, source path)
+IMAGES = []     # (zip name, source path)
+FOOTNOTES = {}  # {id_str: definition_text}
+_fn_seq = [0]
 
 NS = ('xmlns:ha="http://www.hancom.co.kr/hwpml/2011/app" '
       'xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph" '
@@ -157,7 +166,7 @@ def border_fill(i, line, fill=None):
 BORDERFILLS = [border_fill(1, "NONE"), border_fill(2, "NONE", "none"),
                border_fill(3, "SOLID"), border_fill(4, "SOLID", "#F2F2F2")]
 
-def char_pr(i, height, bold=False, font=0, color="#000000"):
+def char_pr(i, height, bold=False, font=0, supscript=False, color="#000000"):
     ref = " ".join(f'{k}="{font}"' for k in ["hangul", "latin", "hanja", "japanese", "other", "symbol", "user"])
     same = lambda v: " ".join(f'{k}="{v}"' for k in ["hangul", "latin", "hanja", "japanese", "other", "symbol", "user"])
     return (f'<hh:charPr id="{i}" height="{height}" textColor="{color}" shadeColor="none" useFontSpace="0" '
@@ -166,12 +175,21 @@ def char_pr(i, height, bold=False, font=0, color="#000000"):
             f'<hh:relSz {same(100)}/><hh:offset {same(0)}/>' + ('<hh:bold/>' if bold else '') +
             '<hh:underline type="NONE" shape="SOLID" color="#000000"/>'
             '<hh:strikeout shape="NONE" color="#000000"/><hh:outline type="NONE"/>'
-            '<hh:shadow type="NONE" color="#B2B2B2" offsetX="10" offsetY="10"/></hh:charPr>')
+            '<hh:shadow type="NONE" color="#B2B2B2" offsetX="10" offsetY="10"/>' +
+            ('<hh:supscript/>' if supscript else '') + '</hh:charPr>')
 
-# id: (height, bold, font)
-CHARS = {0: (1000, False, 0), 1: (1000, True, 0), 2: (1600, True, 1), 3: (1300, True, 1),
-         4: (1100, True, 1), 5: (900, False, 0), 6: (900, True, 0)}
-C_BODY, C_BOLD, C_H2, C_H3, C_H4, C_TBL, C_TBLB = range(7)
+# id: (height, bold, font, supscript)
+CHARS = {
+    0: (1000, False, 0, False),  # C_BODY (10pt)
+    1: (1000, True, 0, False),   # C_BOLD (10pt bold)
+    2: (1600, True, 1, False),   # C_H2   (16pt bold)
+    3: (1300, True, 1, False),   # C_H3   (13pt bold)
+    4: (1100, True, 1, False),   # C_H4   (11pt bold)
+    5: (900, False, 0, False),   # C_TBL  (9pt, also used for footnotes)
+    6: (900, True, 0, False),    # C_TBLB (9pt bold)
+    7: (1800, True, 1, False),   # C_H1   (18pt bold)
+}
+C_BODY, C_BOLD, C_H2, C_H3, C_H4, C_TBL, C_TBLB, C_H1 = range(8)
 
 def para_pr(i, align="JUSTIFY", left=0, indent=0, prev=0, nxt=0, line=160, keep_next=0):
     return (f'<hh:paraPr id="{i}" tabPrIDRef="0" condense="0" fontLineHeight="0" snapToGrid="1" '
@@ -188,16 +206,18 @@ def para_pr(i, align="JUSTIFY", left=0, indent=0, prev=0, nxt=0, line=160, keep_
             '<hh:border borderFillIDRef="2" offsetLeft="0" offsetRight="0" offsetTop="0" offsetBottom="0" '
             'connect="0" ignoreMargin="0"/></hh:paraPr>')
 
-PARAS = [para_pr(0, prev=200),                                   # body
-         para_pr(1, align="LEFT", prev=0, nxt=600, keep_next=1),  # h2
-         para_pr(2, align="LEFT", prev=1400, nxt=400, keep_next=1),  # h3
-         para_pr(3, align="LEFT", prev=1000, nxt=200, keep_next=1),  # h4
-         para_pr(4, left=1400, indent=-1400, prev=100),          # list level 0
-         para_pr(5, left=2800, indent=-1400, prev=60),           # list level 1
-         para_pr(6, left=4200, indent=-1400, prev=60),           # list level 2
-         para_pr(7, align="LEFT", line=130),                     # table cell
-         para_pr(8, align="CENTER", line=130)]                   # table header cell
-P_BODY, P_H2, P_H3, P_H4, P_L0, P_L1, P_L2, P_CELL, P_HCELL = range(9)
+PARAS = [para_pr(0, prev=200),                                      # P_BODY
+         para_pr(1, align="LEFT", prev=1600, nxt=600, keep_next=1), # P_H2
+         para_pr(2, align="LEFT", prev=1400, nxt=400, keep_next=1), # P_H3
+         para_pr(3, align="LEFT", prev=1000, nxt=200, keep_next=1), # P_H4
+         para_pr(4, left=1400, indent=-1400, prev=100),             # P_L0
+         para_pr(5, left=2800, indent=-1400, prev=60),              # P_L1
+         para_pr(6, left=4200, indent=-1400, prev=60),              # P_L2
+         para_pr(7, align="LEFT", line=130),                        # P_CELL
+         para_pr(8, align="CENTER", line=130),                      # P_HCELL
+         para_pr(9, align="CENTER", prev=0, nxt=1000, keep_next=1), # P_H1
+         para_pr(10, align="JUSTIFY", left=1300, indent=-1300, line=130)]  # P_FN
+P_BODY, P_H2, P_H3, P_H4, P_L0, P_L1, P_L2, P_CELL, P_HCELL, P_H1, P_FN = range(11)
 
 def numbering():
     heads = "".join(
@@ -211,7 +231,7 @@ HEADER = (DECL + f'<hh:head {NS} version="1.4" secCnt="1">'
           '<hh:refList>' + fontfaces() +
           f'<hh:borderFills itemCnt="{len(BORDERFILLS)}">' + "".join(BORDERFILLS) + '</hh:borderFills>' +
           f'<hh:charProperties itemCnt="{len(CHARS)}">' +
-          "".join(char_pr(i, h, b, f) for i, (h, b, f) in CHARS.items()) + '</hh:charProperties>'
+          "".join(char_pr(i, h, b, f, sup) for i, (h, b, f, sup) in CHARS.items()) + '</hh:charProperties>'
           '<hh:tabProperties itemCnt="1"><hh:tabPr id="0" autoTabLeft="0" autoTabRight="0"/></hh:tabProperties>' +
           numbering() +
           f'<hh:paraProperties itemCnt="{len(PARAS)}">' + "".join(PARAS) + '</hh:paraProperties>'
@@ -262,16 +282,48 @@ def clean_inline(s):
     s = s.replace("`", "")
     return s
 
+def footnote_ctrl(fn_id):
+    """Build a native OWPML <hp:ctrl><hp:footNote .../></hp:ctrl> element."""
+    _fn_seq[0] += 1
+    num = _fn_seq[0]
+    raw_note = clean_inline(FOOTNOTES.get(fn_id, f"[{fn_id}]")).replace("**", "")
+    note_escaped = escape(raw_note)
+    return (f'<hp:ctrl><hp:footNote number="{num}" suffixChar="41" instId="{pid()}">'
+            '<hp:subList id="" textDirection="HORIZONTAL" lineWrap="BREAK" vertAlign="TOP" '
+            'linkListIDRef="0" linkListNextIDRef="0" textWidth="0" textHeight="0" '
+            'hasTextRef="0" hasNumRef="0">'
+            f'<hp:p id="{pid()}" paraPrIDRef="{P_FN}" styleIDRef="0" pageBreak="0" columnBreak="0" merged="0">'
+            f'<hp:run charPrIDRef="{C_TBL}">'
+            f'<hp:ctrl><hp:autoNum num="{num}" numType="FOOTNOTE">'
+            '<hp:autoNumFormat type="DIGIT" userChar="" prefixChar="" suffixChar=")" supscript="0"/>'
+            '</hp:autoNum></hp:ctrl>'
+            f'<hp:t> {note_escaped}</hp:t></hp:run></hp:p>'
+            '</hp:subList></hp:footNote></hp:ctrl>')
+
+def _emit_segment(seg, char_id):
+    """Split inline [^id] footnote markers into native <hp:footNote> controls."""
+    out = []
+    tokens = re.split(r"(\[\^[^\]]+\])", seg)
+    for tok in tokens:
+        if not tok:
+            continue
+        m = re.fullmatch(r"\[\^([^\]]+)\]", tok)
+        if m and m.group(1) in FOOTNOTES:
+            out.append(f'<hp:run charPrIDRef="{char_id}">{footnote_ctrl(m.group(1))}</hp:run>')
+        else:
+            body = "<hp:lineBreak/>".join(escape(x) for x in re.split(r"<br\s*/?>", tok))
+            out.append(f'<hp:run charPrIDRef="{char_id}"><hp:t>{body}</hp:t></hp:run>')
+    return "".join(out)
+
 def runs(text, base_char, bold_char):
-    """Split **bold** markers into runs."""
+    """Split **bold** markers and [^id] footnote references into runs."""
     text = clean_inline(text)
     parts = text.split("**")
     out = []
     for k, part in enumerate(parts):
         if part:
             c = bold_char if k % 2 else base_char
-            body = "<hp:lineBreak/>".join(escape(x) for x in re.split(r"<br\s*/?>", part))
-            out.append(f'<hp:run charPrIDRef="{c}"><hp:t>{body}</hp:t></hp:run>')
+            out.append(_emit_segment(part, c))
     return "".join(out) or f'<hp:run charPrIDRef="{base_char}"/>'
 
 def para(text, ppr, cchar=C_BODY, bchar=C_BOLD):
@@ -385,7 +437,6 @@ def auto_ratios(rows):
         longest = max((len(clean_inline(x)) for cell in cells for x in re.split(r"<br\s*/?>", cell)), default=4)
         weight = min(max(longest, 6), 40)
         ratios.append(weight)
-    # a column holding fraction equations gets ~45% of the width (equations cannot wrap)
     for c in range(ncol):
         if any(c < len(r) and "\\frac" in r[c] for r in rows[1:]):
             others = sum(w for k, w in enumerate(ratios) if k != c)
@@ -463,7 +514,28 @@ def picture(path, alt=""):
             f'<hp:run charPrIDRef="0">{pic}</hp:run><hp:run charPrIDRef="0"/></hp:p>')
 
 def build_body(md):
-    lines = md.splitlines()
+    # 1. Strip HTML comments (single-line and multi-line)
+    md = re.sub(r"<!--.*?-->", "", md, flags=re.DOTALL)
+
+    # 2. Extract footnote definitions [^id]: text and filter body lines
+    raw_lines = md.splitlines()
+    lines = []
+    for line in raw_lines:
+        s = line.strip()
+        ref_m = re.match(r"^\[\^([^\]]+)\]:\s*(.+)$", s)
+        if ref_m:
+            FOOTNOTES[ref_m.group(1)] = ref_m.group(2).strip()
+        else:
+            lines.append(line)
+
+    # Remove trailing empty lines/dividers and trailing empty '참고문헌' heading if footnotes were extracted
+    while lines and (not lines[-1].strip() or lines[-1].strip() == "---"):
+        lines.pop()
+    if FOOTNOTES and lines and re.match(r"^#{1,4}\s*참고\s*문헌\s*$", lines[-1].strip()):
+        lines.pop()
+        while lines and (not lines[-1].strip() or lines[-1].strip() == "---"):
+            lines.pop()
+
     out, i = [], 0
     bullets = ["•", "-", "ㆍ"]
     while i < len(lines):
@@ -490,6 +562,8 @@ def build_body(md):
             out.append(para(s[4:], P_H3, C_H3, C_H3))
         elif s.startswith("## "):
             out.append(para(s[3:], P_H2, C_H2, C_H2))
+        elif s.startswith("# "):
+            out.append(para(s[2:], P_H1, C_H1, C_H1))
         elif re.match(r"\s*- ", line):
             level = min((len(line) - len(line.lstrip(" "))) // 4, 2)
             text = re.sub(r"^\s*- ", "", line)
@@ -548,28 +622,39 @@ with zipfile.ZipFile(DST, "w") as z:
         z.writestr(name, data.encode("utf-8"), compress_type=zipfile.ZIP_DEFLATED)
     for name, path in IMAGES:
         z.write(path, name, compress_type=zipfile.ZIP_STORED)
-print("paragraphs:", len(body))
+print(f"paragraphs: {len(body)}, footnotes: {_fn_seq[0]}")
 ```
 
 ### hwpx_dump.py
 
 ```python
-"""Dump the text of an .hwpx in reading order (paragraphs, tables, equations, pictures).
-Usage: python3 hwpx_dump.py file.hwpx > dump.txt"""
+"""Dump the text of an .hwpx in reading order (paragraphs, tables, equations, pictures, footnotes).
+Usage: uv run --with lxml python hwpx_dump.py file.hwpx > dump.txt"""
 import sys, zipfile
 from lxml import etree
 L = lambda e: etree.QName(e.tag).localname
 
-def ptext(p):
+def ptext(p, include_fn=True):
     out = []
-    for e in p.iter():
-        n = L(e)
-        if n == 't':
-            out.append((e.text or '') + ''.join((c.tail or '') for c in e))
-        elif n == 'script':
-            out.append('[EQ:' + (e.text or '') + ']')
-        elif n == 'pic':
-            out.append('[PIC]')
+    for run in p:
+        if L(run) != 'run':
+            continue
+        for c in run:
+            n = L(c)
+            if n == 't':
+                out.append((c.text or '') + ''.join((sub.tail or '') for sub in c))
+            elif n == 'equation':
+                scr = next((s for s in c.iter() if L(s) == 'script'), None)
+                out.append('[EQ:' + (scr.text if scr is not None and scr.text else '') + ']')
+            elif n == 'pic':
+                out.append('[PIC]')
+            elif n == 'ctrl' and include_fn:
+                for fn in c:
+                    if L(fn) == 'footNote':
+                        num = fn.get('number', '?')
+                        sub = next((s for s in fn if L(s) == 'subList'), None)
+                        fn_txt = ' / '.join(ptext(fp, False).strip() for fp in (sub if sub is not None else []) if L(fp) == 'p')
+                        out.append(f'[FN#{num}: {fn_txt}]')
     return ''.join(out)
 
 z = zipfile.ZipFile(sys.argv[1])
