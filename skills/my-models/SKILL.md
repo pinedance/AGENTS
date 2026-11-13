@@ -3,13 +3,13 @@ name: my-models
 description: >
   Handles model selection and switching for any skill that needs to offer the user a model change.
   Use this skill whenever a workflow step requires asking the user to select or change the active LLM model.
-  Triggered by: my-new-session (Step 3), brainstorming (pre-execution model check), or any skill needing a model selection gate.
+  Triggered by: my-sess-open (Step 3), brainstorming (pre-execution model check), or any skill needing a model selection gate.
 ---
 
 # My Models — Model Selection Gate
 
 This skill provides a standardized model selection step for use inside other skills.
-It is NOT a standalone session skill — it is invoked as a sub-step from `my-new-session`, `brainstorming`, and any workflow that needs a model selection gate.
+It is NOT a standalone session skill — it is invoked as a sub-step from `my-sess-open`, `brainstorming`, and any workflow that needs a model selection gate.
 
 ---
 

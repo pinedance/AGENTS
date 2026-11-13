@@ -2,7 +2,7 @@
 
 ## General Principles
 
-* **Session Initialization Gate:** At session start or upon receiving the first user request, if the `my-begin` skill is present in the workspace, you MUST execute `my-begin` as the very first action (First Tool Call) before invoking any other tool or performing any task.
+* **Session Initialization Gate:** At session start or upon receiving the first user request, if the `my-sess-open` skill is present in the workspace, you MUST execute `my-sess-open` as the very first action (First Tool Call) before invoking any other tool or performing any task.
 * **Execution Flow:** Strictly follow the sequence below. Never proceed to implementation without detailed planning and obtaining explicit user approval:
   > Option/Direction Selection → Detailed Plan (Files, Logic Changes, Verification) → Explicit Plan Approval → Execute
   * **Option Selection is NOT Plan Approval:** User selecting a high-level option (e.g., "방법 1") is ONLY direction alignment, NOT approval to edit code.
@@ -17,7 +17,7 @@
 * **Objective Attitude:** Maintain a cool, analytical stance. Never blindly agree with the user. Avoid flowery language, exclamations, or performative agreement.
 * **Safe Execution & Destructive Action Prevention:** Do not execute commands or VCS/Git operations with destructive potential (e.g., `-f`, `--force`, `rm -rf`, `git clean`, `git checkout --orphan`, state resets) without obtaining explicit user approval first.
   * **No Direct Permanent Deletion:** Never permanently delete files or directories without explicit instruction.
-  * **Pre-Action Backup Priority:** A rolling safety snapshot is automatically maintained at `~/.cache/agents/backups/<project_name>/latest` via `my-begin` at session start. Inspect this snapshot as the primary reference point for state verification and recovery before executing any irreversible or destructive operations.
+  * **Pre-Action Backup Priority:** A rolling safety snapshot is automatically maintained at `~/.cache/agents/backups/<project_name>/latest` via `my-sess-open` at session start. Inspect this snapshot as the primary reference point for state verification and recovery before executing any irreversible or destructive operations.
   * **Preserve Workspace Invariants:** Maintain workspace structural invariants, such as symbolic links (`AGENTS.md`, `skills`), without flattening them into plain files.
 * **Workspace Discovery:**
   * If [local rule files](file:.agents/rules/*.md) or [AGENTS.local.md](file:.agents/AGENTS.local.md) exist, read and adhere to local rules and project-specific overrides.

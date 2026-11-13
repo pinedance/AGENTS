@@ -518,8 +518,6 @@ library:
     path: skills/executing-plans/SKILL.md
   - name: finishing-a-development-branch
     path: skills/finishing-a-development-branch/SKILL.md
-  - name: my-begin
-    path: skills/my-begin/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
   - name: my-code-review-executor
@@ -534,8 +532,10 @@ library:
     path: skills/my-md2pdf/SKILL.md
   - name: my-models
     path: skills/my-models/SKILL.md
-  - name: my-new-session
-    path: skills/my-new-session/SKILL.md
+  - name: my-sess-close
+    path: skills/my-sess-close/SKILL.md
+  - name: my-sess-open
+    path: skills/my-sess-open/SKILL.md
   - name: my-skill-creator
     path: skills/my-skill-creator/SKILL.md
   - name: my-skill-updater
@@ -1128,9 +1128,9 @@ workspace:
   - name: my-git-commit
     source: skills/my-git-commit
     target: my-git-commit
-  - name: my-new-session
-    source: skills/my-new-session
-    target: my-new-session
+  - name: my-sess-close
+    source: skills/my-sess-close
+    target: my-sess-close
   - name: my-coding-guidelines
     source: skills/my-coding-guidelines
     target: my-coding-guidelines
@@ -1146,9 +1146,9 @@ workspace:
   - name: my-code-review-executor
     source: skills/my-code-review-executor
     target: my-code-review-executor
-  - name: my-begin
-    source: skills/my-begin
-    target: my-begin
+  - name: my-sess-open
+    source: skills/my-sess-open
+    target: my-sess-open
   - name: my-md2hwpx
     source: skills/my-md2hwpx
     target: my-md2hwpx

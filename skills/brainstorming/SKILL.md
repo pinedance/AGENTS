@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: "Use when designing new features, multi-component systems, or architectural changes that require collaborative design exploration and a written design spec before implementation planning. For straightforward bug fixes, config tweaks, or single-file tasks already covered by my-sess-open's User Interview and AGENTS.md's Detailed Plan flow, use the standard Detailed Plan flow unless the user requests brainstorming."
 ---
 
 # Brainstorming Ideas Into Designs
@@ -10,29 +10,30 @@ Help turn ideas into fully formed designs and specs through natural collaborativ
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
 
 <HARD-GATE>
-Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
+When this skill is active, do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it.
 </HARD-GATE>
 
-## Anti-Pattern: "This Is Too Simple To Need A Design"
+## Scope & Alignment with `my-sess-open` / `AGENTS.md`
 
-Every project goes through this process. A todo list, a single-function utility, a config change — all of them. "Simple" projects are where unexamined assumptions cause the most wasted work. The design can be short (a few sentences for truly simple projects), but you MUST present it and get approval.
+- **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/docs/user/YYYY-MM-DD-<topic>-design.md`) add clarity.
+- **When standard `AGENTS.md` flow suffices**: Routine bug fixes, config updates, or localized changes already clarified via `my-sess-open` Step 4 (User Interview) can proceed directly to `Option/Direction Selection → Detailed Plan → Explicit Plan Approval → Execute` without generating separate spec and plan markdown files.
 
 ## Checklist
 
 You MUST create a task for each of these items and complete them in order:
 
-1. **Model selection check** — invoke **my-models** skill: ask if user wants to change model; if yes, instruct user to run `/model` and wait for reply
-2. **Branch safety check** — verify active git branch (`git branch --show-current`). If on `main` or `master`, automatically create and switch to a task branch (`git checkout -b <task-name>`) before creating specs or modifying files.
-3. **Explore project context** — check files, docs, recent commits
+1. **Model selection check** — if `my-sess-open` already ran in this session, skip this step; otherwise invoke **my-models** skill: ask if user wants to change model; if yes, instruct user to run `/model` and wait for reply
+2. **Explore project context** — check files, docs, recent commits
 3. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
 4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 5. **Propose 2-3 approaches** — with trade-offs and your recommendation
 6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Write design doc** — save to `.agents/docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-8. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-9. **User reviews written spec** — ask user to review the spec file before proceeding
-10. **Transition to implementation** — invoke writing-plans skill to create implementation plan
-11. **Post-plan execution model check** — invoke **my-models** skill: ask if user wants to change model for execution phase; wait for reply before starting
+7. **Branch safety check** — if already on a non-`main`/`master` task branch, skip this step; otherwise, before writing spec files or modifying repository files on `main` or `master`, prompt to create and switch to a task branch (`git checkout -b <task-name>`).
+8. **Write design doc** — save to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md` (in accordance with `AGENTS.md` Guideline 6)
+9. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+10. **User reviews written spec** — ask user to review the spec file before proceeding
+11. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+12. **Post-plan execution model check** — invoke **my-models** skill: ask if user wants to change model for execution phase; wait for reply before starting
 
 ## Process Flow
 
@@ -46,6 +47,7 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
+    "Branch safety check" [shape=box];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
     "User reviews spec?" [shape=diamond];
@@ -62,7 +64,8 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
+    "User approves design?" -> "Branch safety check" [label="yes"];
+    "Branch safety check" -> "Write design doc";
     "Write design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
@@ -78,7 +81,7 @@ digraph brainstorming {
 
 **Understanding the idea:**
 
-- **Model Selection Check**: Invoke **my-models** skill — ask if user wants to change model before brainstorming. If yes, instruct user to run `/model` and wait for reply before continuing.
+- **Model Selection Check**: If `my-sess-open` already ran in this session, skip this check. Otherwise invoke **my-models** skill — ask if user wants to change model before brainstorming. If yes, instruct user to run `/model` and wait for reply before continuing.
 - Check out the current project state first (files, docs, recent commits)
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
@@ -118,7 +121,7 @@ digraph brainstorming {
 
 **Documentation:**
 
-- Write the validated design (spec) to `.agents/docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design (spec) to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 
