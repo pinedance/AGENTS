@@ -60,14 +60,15 @@ This skill is the mandatory entry gate for every session. It initializes directi
      - Modified, staged, or untracked files
 
 2. **Handle Uncommitted Changes (Only If Dirty)**:
-   - If the working tree is clean, proceed silently to Step 2.3.
-   - If uncommitted modifications exist, prompt the user via `ask_question`:
+   - Check dirty state excluding ephemeral `.agents/docs/` and `.agents/scratch/` artifacts (per `my-git-commit` SSoT). If the working tree has no committable changes, proceed silently to Step 2.3.
+   - If uncommitted modifications exist, output a brief `git status --short` summary first, then prompt via `ask_question`:
      - **Question**: "작업 시작 전 커밋되지 않은 변경사항이 발견되었습니다. 어떻게 처리할까요?"
      - **Options**:
-       - `(Recommended) Commit changes first (invoke my-git-commit or direct commit)`
+       - `(Recommended) Logical group commits first (my-git-commit)`
+       - `Single commit first (my-git-commit Single-Unit Mode)`
        - `Stash changes (git stash)`
-       - `Proceed without committing`
-   - Execute the chosen action before proceeding.
+       - `Proceed with current uncommitted changes`
+   - Execute the selected action before proceeding (for Option 1 or Option 2, read and follow [my-git-commit](../my-git-commit/SKILL.md) in `Interactive Logical-Split Mode` or `Single-Unit Mode` respectively).
 
 3. **Handle Remote Synchronization (`pull` / `push`, Only If Out-of-Sync)**:
    - **If up-to-date (`ahead 0, behind 0`) or no remote exists**: Proceed silently to Step 2.4.
@@ -77,7 +78,7 @@ This skill is the mandatory entry gate for every session. It initializes directi
 
 4. **Branch Setup (Explicit / Resume vs. Deferred to Post-Interview)**:
    - **Explicit branch in prompt**: If the user specified a target branch name in their initial prompt, create/switch to it immediately (`git checkout -b <branch-name>` or `git checkout <branch-name>`).
-   - **Resuming `STATE.md` branch**: If resuming unfinished work from `STATE.md` and current branch differs from `STATE.md`'s `Active Branch`, confirm via `ask_question` whether to switch to `Active Branch`.
+   - **Resuming `STATE.md` branch**: If resuming unfinished work from `STATE.md` and current branch differs from `STATE.md`'s `Active Branch`, verify `Active Branch` still exists locally or on remote before prompting via `ask_question` to switch; if `Active Branch` was already merged/deleted, stay on the current branch silently.
    - **Topic-only on `main`/`master` (Defer branch creation)**: Do NOT prompt to create a new branch before the User Interview. Keep the current branch and defer new branch creation until the User Interview confirms that file/code changes are needed.
 
 ---

@@ -98,7 +98,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 
-> Design and planning documents (specs, plans, and other `.md` files) are not subject to git add/commit and must be excluded from commits.
+> Delegate commits to `my-git-commit` (`Pre-Approved Plan Execution Mode`), which enforces Conventional Commits and excludes ephemeral `.agents/docs/` and `.agents/scratch/` artifacts.
 
 ```bash
 git add tests/path/test.py src/path/file.py

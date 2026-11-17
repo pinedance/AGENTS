@@ -1,9 +1,9 @@
 ---
 name: my-git-commit
 description: >
-  Analyze modified files, split them into logical groups, and commit them sequentially with descriptive commit messages.
-  Must be triggered when user requests "git commit", "commit", "commit changes", etc.
-  If a simple git commit is requested, use this skill to split changes logically.
+  Analyze modified files, split them into logical groups, and commit them sequentially with descriptive Conventional Commit messages.
+  Use when the user directly requests committing changes ("git commit", "commit changes", "커밋해줘"),
+  or when delegated as the commit strategy by a session or plan workflow (my-sess-open, my-sess-close, executing-plans, subagent-driven-development).
 ---
 
 # Git Smart Commit
@@ -47,11 +47,12 @@ Determine the **purpose and domain** of each change, then group files accordingl
 
 If a file contains changes for multiple purposes, categorize it under the primary purpose.
 
-### Step 3: Establish Commit Plan & User Approval
+### Step 3: Establish Commit Plan & Execution Modes
 
-> **Always obtain explicit user approval before executing any commits. Never commit without approval.**
+Select the execution mode matching the caller context:
 
-Present the plan in the following format and ask for confirmation:
+- **Interactive Logical-Split Mode (default — direct user request, or `Logical group commits` selected in `my-sess-open` or `my-sess-close`)**:
+  Present the grouped commit plan in the format below and obtain explicit user approval before Step 4. If adjustments are requested, revise the grouping or messages and re-confirm.
 
 ```
 I will proceed with the following commits. Do you approve?
@@ -66,8 +67,11 @@ Commit 3: docs: revamp README
   → README.md
 ```
 
-If the user requests adjustments, update the grouping/messages and present the plan again.
-Once approved, proceed to Step 4.
+- **Single-Unit Mode (when `Single commit` is explicitly selected in `my-sess-open` or `my-sess-close`)**:
+  Apply `Exclusions` and `Commit Message Rules`, stage all eligible modified/untracked files as a single unit, and execute one Conventional Commit directly (the user's explicit menu choice authorizes the single commit).
+
+- **Pre-Approved Plan Execution Mode (`executing-plans`, `subagent-driven-development`)**:
+  When committing a task whose scope was already approved in an implementation plan (whether executed inline via `executing-plans` or inside an isolated task subagent via `subagent-driven-development`), apply `Exclusions` and `Commit Message Rules` to stage and commit only task-scoped logical groups directly without a second interactive approval gate, and report resulting commit SHAs and titles.
 
 ### Step 4: Sequential Execution
 
@@ -98,9 +102,9 @@ Show a summary of the resulting commits to the user.
 
 - **No Changes**: If `git status` is clean, notify the user: "No changes to commit."
 - **Pre-existing Staged Files**: Respect current staged state, but notify the user.
-- **Single Logical Group**: If all changes belong to a single logical group, perform a single commit (notify the user of the single group).
+- **Single Logical Group**: If all changes belong to a single logical group, perform a single commit (following the active Step 3 approval mode and notifying the user).
 - **Merge Conflicts / Unresolved Files**: Halt execution, notify the user, and request manual resolution.
 
 ## Exclusions
 
-- **Design & Planning Documents**: Design and planning documents (specs, plans, and other `.md` files) are not subject to git add/commit and must be excluded from commits.
+- **Ephemeral Design, Plan & Scratch Artifacts**: Working design specs, implementation plans, and temporary files under `.agents/docs/` and `.agents/scratch/` are excluded from commits unless explicitly requested by the user. Persistent project markdown files (`README.md`, `SKILL.md`, `STATE.md`, `rules/*.md`, `memory/*.md`) remain normal commit targets.
