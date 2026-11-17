@@ -34,9 +34,8 @@ For each task:
 ### Step 3: Complete Development
 
 After all tasks complete and verified:
-- Announce: "I'm using the finishing-a-development-branch skill to complete this work."
-- **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch
-- Follow that skill to verify tests, present options, execute choice
+- Announce: "I'm using the my-sess-close skill to wrap up this work."
+- **REQUIRED SUB-SKILL:** Read and follow [my-sess-close](../my-sess-close/SKILL.md) to synchronize `STATE.md`/`README.md`, run the closing test gate, and wrap up commits and branch integration.
 
 ## When to Stop and Ask for Help
 
@@ -69,5 +68,5 @@ After all tasks complete and verified:
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after all tasks
 - **my-git-commit** - Use when a git commit is required during execution

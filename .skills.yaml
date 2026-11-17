@@ -516,8 +516,6 @@ library:
     path: skills/brainstorming/SKILL.md
   - name: executing-plans
     path: skills/executing-plans/SKILL.md
-  - name: finishing-a-development-branch
-    path: skills/finishing-a-development-branch/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
   - name: my-code-review-executor
@@ -1137,9 +1135,6 @@ workspace:
   - name: my-skill-updater
     source: skills/my-skill-updater
     target: my-skill-updater
-  - name: finishing-a-development-branch
-    source: skills/finishing-a-development-branch
-    target: finishing-a-development-branch
   - name: my-models
     source: skills/my-models
     target: my-models
