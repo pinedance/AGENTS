@@ -11,7 +11,7 @@ description: >
 
 Analyze changes, group them logically, and commit sequentially.
 Do not squash all changes into a single `git add -A && git commit` unless it represents a single logical unit.
-When full change context is already present in active conversation (normal Phase completion, task execution, `my-sess-close`), agents commit logical Conventional Commit groups directly without loading this skill; invoke this skill when conversation context is insufficient, when cleaning pre-existing dirty state (`my-sess-open`), or upon explicit user commit requests.
+Commit **timing** is governed by `AGENTS.md` SSoT (never commit before user completion declaration, except pre-existing dirty cleanup in `my-sess-open`, session wrap-up in `my-sess-close`, or explicit user commit commands). When full change context is in active conversation, agents apply this skill's `Commit Message Rules` and `Exclusions` SSoT directly without loading this skill; load this skill when conversation context is insufficient, when cleaning pre-existing dirty state (`my-sess-open`), or upon explicit user commit requests.
 
 ## Process
 
@@ -107,6 +107,6 @@ Show a summary of the resulting commits to the user.
 - **Single Logical Group**: If all changes belong to a single logical group, perform a single commit (following the active Step 3 approval mode and notifying the user).
 - **Merge Conflicts / Unresolved Files**: Halt execution, notify the user, and request manual resolution.
 
-## Exclusions
+## Exclusions (SSoT)
 
 - **Ephemeral Design, Plan & Scratch Artifacts**: Working design specs, implementation plans, and temporary files under `.agents/docs/` and `.agents/scratch/` are excluded from commits unless explicitly requested by the user. Persistent project markdown files (`README.md`, `SKILL.md`, `STATE.md`, `rules/*.md`, `memory/*.md`) remain normal commit targets.

@@ -48,7 +48,8 @@ This skill is the mandatory entry gate for every session. It initializes directi
    - If no lockfile is found, lock `None` (no runtime prefix needed) silently without asking.
    - Prompt via `ask_question` ONLY when multiple conflicting lockfiles exist in the same scope, offering the primary candidate as `(Recommended)`.
 3. **Fail-Fast Health Check & Prefix Enforcement**:
-   - Verify tool availability (`<prefix> --version` or base binary `--version`). On failure, halt and prompt user.
+   - Skip Step 1.3 if locked runtime is `None`.
+   - Otherwise verify tool availability (`<prefix> --version` or base binary `--version`). On failure, halt and prompt user.
    - All subsequent toolchain commands MUST use the locked prefix (e.g., `uv run pytest`). Bare runtime execution (`python`, `pytest`, `npm`) is prohibited.
 
 ---
@@ -79,10 +80,9 @@ This skill is the mandatory entry gate for every session. It initializes directi
    - **If local is ahead of remote**: Prompt via `ask_question` with `(Recommended) Push local changes to remote (git push)` vs `Skip sync and proceed`.
    - **If diverged (ahead and behind)**: Prompt via `ask_question` to `Pull with rebase (git pull --rebase)`, `Merge pull (git pull)`, or `Skip sync`.
 
-4. **Branch Setup (Explicit / Resume / Auto-Branch Default)**:
+4. **Pre-Interview Branch Check (Explicit Branch Only)**:
    - **Explicit branch in prompt**: If the user specified a target branch name in their initial prompt, create/switch to it immediately (`git checkout -b <branch-name>` or `git checkout <branch-name>`).
-   - **Resuming `STATE.md` branch**: If resuming unfinished work from `STATE.md` and current branch differs from `STATE.md`'s `Active Branch`, verify `Active Branch` still exists locally or on remote; if it exists and the working tree is clean/compatible, switch to it automatically (`git checkout <Active Branch>`) without prompting. If already merged/deleted, stay on the current branch silently.
-   - **New session task on `main`/`master` (Auto-Branch Default)**: Do NOT ask user approval for branch creation or branch name. Once the task involves file, plan, or code modifications (immediately if clear from initial prompt, or at Step 4.3 right after User Interview before persisting `macro-plan.md` or modifying files), automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`, e.g., `feat/...`, `fix/...`, `refactor/...`). Keep the current branch silently for purely read-only Q&A sessions.
+   - **Otherwise (Defer to Step 4)**: Keep the current branch through Step 3 Briefing so topic vs. `STATE.md` alignment (Step 4.1) is evaluated before switching or creating branches.
 
 ---
 
@@ -94,19 +94,19 @@ This skill is the mandatory entry gate for every session. It initializes directi
    - **Locked Runtime**: `<prefix>`
    - **Git State**: `<branch>` (sync status: clean / pulled / pushed)
 2. **Execution Safety Gate**:
-   - Follow `AGENTS.md`'s Two-Tier Execution Flow: require Tier 1 Macro Plan approval for multi-phase tasks and explicit active-Phase Detailed Plan approval before modifying codebase files.
+   - Enforce `AGENTS.md` SSoT: follow Two-Tier Planning approvals before codebase edits and wait for User Completion Declaration before committing.
 
 ---
 
-## STEP 4: TOPIC ALIGNMENT & USER INTERVIEW HANDOFF
+## STEP 4: TOPIC ALIGNMENT, INTERVIEW & TASK BRANCH HANDOFF
 
-1. **Topic vs. `STATE.md` & Macro Plan Check**:
-   - Compare the user's stated session topic/goal against `STATE.md`'s `Current Goal` and `Next Action`. If `STATE.md` has unfinished work that differs from the new topic, clarify whether to resume the existing goal or pivot to the new topic.
-   - When resuming an active `.agents/docs/user/*-macro-plan.md` with pending `[ ]` phases, skip Macro Plan regeneration and hand off directly to the next pending Phase's JIT Detailed Plan.
+1. **Topic vs. `STATE.md` & Macro Plan Alignment**:
+   - Compare the user's stated session topic/goal against `STATE.md`'s `Current Goal` and `Next Action`. If `STATE.md` has unfinished work that differs from the new topic, clarify via `ask_question` whether to resume the existing goal or pivot to the new topic.
+   - **If resuming `STATE.md` work**: When current branch differs from `STATE.md`'s `Active Branch` and `Active Branch` still exists locally or on remote (with a clean/compatible tree), switch to it automatically (`git checkout <Active Branch>`) and apply `Step 2.3` remote sync check; if an active `.agents/docs/user/*-macro-plan.md` has pending `[ ]` phases, hand off directly to the next pending Phase's JIT User Interview & Detailed Plan per `AGENTS.md` Tier 2.
 2. **Mandatory User Interview & Planning Handoff**:
-   - Do NOT jump directly to a Detailed Plan or code edits. Inspect only the minimum files needed to understand the stated topic, then initiate a 1-question-at-a-time User Interview (preferring `ask_question`) to concretize scope, requirements, and constraints.
-   - Once requirements are concrete, classify scope per `AGENTS.md`:
-     - **Multi-phase task (2+ phases)**: Propose a **Macro Plan** (Phase boundaries, objectives, and deliverables only; strictly defer per-phase detailed plans), obtain explicit user approval, enforce `Step 4.3` Auto-Branch Check if still on `main`/`master`, persist `.agents/docs/user/YYYY-MM-DD-<topic>-macro-plan.md`, and enter Phase 1 JIT Detailed Planning.
-     - **Single-phase task**: Enforce `Step 4.3` Auto-Branch Check (if modifying files on `main`/`master`) and proceed directly to the Detailed Plan.
-3. **Auto-Branch Check (If Still on `main`/`master`)**:
-   - Once the task requires repository/plan files or codebase modifications and the workspace is still on `main` or `master`, automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking user approval before persisting `macro-plan.md` or modifying any files.
+   - Do NOT jump directly to a Detailed Plan or code edits. Inspect only the minimum files needed to understand the stated topic, then initiate a 1-question-at-a-time User Interview (preferring `ask_question`) scoped strictly to entry classification:
+     - **Multi-phase task (2+ phases)**: Concretize ONLY overall goals, global constraints, and Phase boundaries (`Macro User Interview`), deferring Phase-specific detail questions to each Phase's Tier 2 JIT User Interview.
+     - **Single-phase task**: Concretize task requirements directly before proposing the Detailed Plan.
+   - Once concrete, apply `Step 4.3` Task Branch Setup (when changes are needed) and hand off directly to `AGENTS.md`'s Two-Tier Execution Flow (`Single-Phase Fast Path` vs. `Tier 1 Macro Plan`).
+3. **Task Branch Setup (SSoT)**:
+   - For a new session task requiring repository, plan, or codebase modifications (when no explicit branch was given in Step 2.4): do NOT ask user approval for branch creation or branch name. Whether currently on `<base-branch>` (`main`/`master`) or lingering on a prior unrelated branch, automatically create and switch to a new AI-named branch off `<base-branch>` (`git checkout -b <prefix>/<slug> <base-branch>`, or from `HEAD` if uncommitted changes were intentionally retained in Step 2.2) before persisting `macro-plan.md` or modifying any files. Keep the current branch silently for purely read-only Q&A sessions.

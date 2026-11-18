@@ -36,7 +36,7 @@ This skill ensures every session ends cleanly with an up-to-date state snapshot 
 
 ## STEP 2: INTERACTIVE CLOSING DECISIONS
 
-Ask applicable closing questions one at a time via `ask_question` and wait for each response before proceeding (falling back to numbered plain-text options if `ask_question` is unavailable). By default (unless the user explicitly requested `stash` or leaving changes uncommitted), committable session changes (`STATE.md`, `README.md`, promoted knowledge, and code) are automatically committed in logical Conventional Commit groups using conversation context (invoking `my-git-commit` in `Autonomous Logical-Split Mode` only if conversation context is insufficient).
+Ask applicable closing questions one at a time via `ask_question` and wait for each response before proceeding (falling back to numbered plain-text options if `ask_question` is unavailable). Working-tree commits run automatically in `Step 3.5` unless the user explicitly requested `stash` or leaving changes uncommitted.
 
 1. **Permanent Knowledge Promotion (Only If Candidates Exist)**:
    - Skip silently to Step 2.2 when no candidates exist.
@@ -87,7 +87,7 @@ Invoking `/my-sess-close` authorizes updating `STATE.md`, `README.md`, and confi
 
 4. **Persist Promoted Knowledge, `README.md` & `STATE.md` Once**:
    - Write or update the approved `memory/` or `rules/` file (Step 2.1) and `<root>/README.md` (if Step 1 identified drift).
-   - Overwrite `STATE.md` as a concise current-point-in-time snapshot (no history accumulation; historical logs belong in `git log`):
+   - Overwrite `STATE.md` here UNLESS `Merge locally` is selected in an owned worktree AND `STATE.md` is gitignored (in which case, defer writing `STATE.md` until after `cd "$MAIN_ROOT"`, merge verification, and `git worktree remove "$WORKTREE_PATH"` in Step 3.5 so `STATE.md` persists in `$MAIN_ROOT` rather than being deleted with the worktree). Use a concise current-point-in-time snapshot (no history accumulation; historical logs belong in `git log`):
      - `Merge locally` (pre-merge tests passed): `Active Branch: <base-branch>`, `Next Action: None (task completed)` (or next planned task).
      - `Stash`: `Active Branch: <branch>`, noting in `Next Action` that WIP code is stored in `git stash`.
      - `Keep` / `Push` / `Push & create Pull Request`: `Active Branch: <branch>` and immediate next step.
@@ -117,15 +117,16 @@ Invoking `/my-sess-close` authorizes updating `STATE.md`, `README.md`, and confi
 5. **Dispatch Working Tree & Branch Actions**:
    - **Working Tree**:
      - If user explicitly requested `Stash` or `Leave uncommitted`, or `has_committable_changes` is `false`: working tree already matches target state.
-     - Default (`has_committable_changes` is `true`): Commit committable changes in logical Conventional Commit groups directly from active conversation context (applying `my-git-commit` exclusions for `.agents/docs/` and `.agents/scratch/`), invoking [my-git-commit](../my-git-commit/SKILL.md) (`Autonomous Logical-Split Mode`) only if conversation context is insufficient.
+     - Default (`has_committable_changes` is `true`): Execute `Autonomous Context-Driven Multi-Commit` per `AGENTS.md` and [my-git-commit](../my-git-commit/SKILL.md) SSoT (falling back to `my-git-commit` `Autonomous Logical-Split Mode` only if conversation context is insufficient).
    - **Branch & Remote (from Step 2.2)**:
      - `Keep as-is` / skipped: No further Git action (preserve any worktree).
      - `Push`: Run `git push` (or `git push -u origin <branch>` if no upstream is set; preserve any worktree).
      - `Merge locally`:
        - If in a worktree (`GIT_DIR != GIT_COMMON`), capture `WORKTREE_PATH=$(git rev-parse --show-toplevel)` and `cd` to `MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)` first.
        - Run `git checkout <base-branch>`, `git pull` (if a remote exists), and `git merge <branch>`.
-       - Re-verify the project test suite on the merged `<base-branch>` result using the locked runtime `<prefix>`. If merge conflicts or post-merge tests fail, halt before removing any worktree or branch and report the failure.
+       - Re-verify the project test suite on the merged `<base-branch>` result using the locked runtime `<prefix>`. If merge conflicts or post-merge tests fail, halt before removing any worktree or branch and report the failure (and write `STATE.md` with `Blockers` recording the failure if deferred).
        - Once verified: if `WORKTREE_PATH` is an owned worktree (`.worktrees/` or `worktrees/`), run `git worktree remove "$WORKTREE_PATH"` and `git worktree prune`; then delete `<branch>` (`git branch -d <branch>`).
+       - If writing gitignored `STATE.md` was deferred in Step 3.4 (owned worktree), persist `STATE.md` now in `$MAIN_ROOT`.
      - `Push & create Pull Request`:
        - Run `git push -u origin <branch>` (or `git push origin HEAD:refs/heads/<new-branch>` on detached HEAD) and create the Pull Request, preserving any worktree for PR feedback iteration.
 

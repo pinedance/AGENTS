@@ -2,18 +2,19 @@
 
 ## General Principles
 
-* **Session Initialization Gate:** At session start or upon receiving the first user request, if the `my-sess-open` skill is present in the workspace, you MUST execute `my-sess-open` as the very first action (First Tool Call) before invoking any other tool or performing any task. For new session tasks involving file, plan, or code changes, automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking user approval for branch creation or branch name.
-* **Execution Flow (Two-Tier Planning & Execution):** Strictly enforce separation between Macro Planning (Coordinator) and JIT Phase Execution (Implementer). Never proceed to codebase edits without explicit approval of the active Phase's Detailed Plan:
+* **Session Initialization Gate:** At session start or upon receiving the first user request, if the `my-sess-open` skill is present in the workspace, you MUST execute `my-sess-open` as the very first action (First Tool Call) before invoking any other tool or performing any task. Session initialization, runtime locking, and automatic AI-named task branch setup (`git checkout -b <prefix>/<slug>` without asking user approval for non-read-only tasks) follow the `my-sess-open` SSoT.
+* **Execution Flow (Two-Tier Planning & User-Gated Completion):** Strictly enforce separation between Macro Planning (Coordinator) and JIT Phase Execution (Implementer). Never proceed to codebase edits without explicit approval of the active Phase's Detailed Plan. **Passing verification is evidence, NOT completion — never commit or close a Phase/task until the user inspects verification results and declares completion.**
   * **Single-Phase Fast Path** (localized single-unit tasks): Bypass Macro Plan overhead and proceed directly via:
-    > Option/Direction Alignment (if needed) → Detailed Plan → Explicit Plan Approval → Execute & Verify → Autonomous Context-Driven Multi-Commit
+    > Context Inspection & User Interview (clarify requirements/options via `ask_question` when needed) → Detailed Plan → Explicit Plan Approval → Execute & Verify → Report Verification Evidence & Wait for User Completion Declaration → (Upon User Completion Declaration) Autonomous Context-Driven Multi-Commit
   * **Multi-Phase Workflow** (tasks spanning 2+ logical stages or subsystems):
-    1. **Tier 1 — Macro Plan (Coordinator Role):** `Session Objective & User Interview → Macro Plan (Phase Breakdown Only) → Explicit Macro Plan Approval → Persist checklist to .agents/docs/user/YYYY-MM-DD-<topic>-macro-plan.md → Enter Phase 1`
-       * **Strict SoC:** Tier 1 defines ONLY Phase boundaries, per-phase objectives, dependencies, and verifiable deliverables (`- [ ] Phase k: ...`). Writing file/line-level modifications, detailed implementation logic, or future-phase detailed plans upfront is strictly prohibited; delegate detailed planning to each Phase's entry gate.
-    2. **Tier 2 — Phase Execution Loop (Implementer Role, per Phase `k`):** `Read macro-plan.md → Phase k JIT Detailed Plan (invoke intra-phase skills like brainstorming / writing-plans when warranted) → Explicit Phase k Plan Approval → Execute & Verify → Autonomous Context-Driven Multi-Commit & Mark [x] in macro-plan.md → Phase Boundary Gate`
-    3. **Phase Boundary Gate:**
-       * **Intermediate Phase (`k < N`, pending `[ ]` phases remain):** Report commit SHA(s), recommend running `/compact` to clear Phase `k` context before starting Phase `k+1`, and halt/wait for user confirmation before initiating Phase `k+1` JIT Detailed Plan.
-       * **Final Phase (`k == N`, all `[x]`):** Skip `/compact`; report roadmap completion and guide toward `/my-sess-close` (or next objective).
-  * **Autonomous Context-Driven Multi-Commit:** Upon passing verification, split modified/created files into logical Conventional Commit groups directly from active conversation context (excluding `.agents/docs/` and `.agents/scratch/`) and commit sequentially without user approval or loading `my-git-commit`. Invoke `my-git-commit` (`Autonomous Logical-Split Mode`, no user approval) only when conversation context is insufficient (e.g., post-`/compact` history loss, pre-existing dirty files, or external edits).
+    1. **Tier 1 — Macro Plan (Coordinator Role):** `Session Objective & Macro User Interview → Macro Plan (Phase Breakdown Only) → Explicit Macro Plan Approval → Persist checklist to .agents/docs/user/YYYY-MM-DD-<topic>-macro-plan.md → Enter Phase 1`
+       * **Strict SoC:** Tier 1's Macro User Interview and Macro Plan define ONLY overall session objectives, global constraints, Phase boundaries, dependencies, and verifiable deliverables (`- [ ] Phase k: ...`). Asking Phase-internal implementation questions or writing file/line-level modifications, detailed implementation logic, or future-phase detailed plans upfront is strictly prohibited; delegate both detailed interviewing and detailed planning to each Phase's Tier 2 entry gate.
+    2. **Tier 2 — Phase Execution Loop (Implementer Role, per Phase `k`):** `Read macro-plan.md → Inspect Phase k Context & Conduct Phase k JIT User Interview (concretize Phase-specific requirements/options via ask_question, or invoke my-plan-design when warranted) → Phase k JIT Detailed Plan (invoke my-plan-write when warranted) → Explicit Phase k Plan Approval → Execute & Verify → Report Verification Evidence & Wait for User Phase Completion Declaration`
+    3. **Phase Boundary Gate (Triggered ONLY upon User Phase Completion Declaration):**
+       * Execute `Autonomous Context-Driven Multi-Commit` and mark `[x] Phase k` in `macro-plan.md`.
+       * **Intermediate Phase (`k < N`, pending `[ ]` phases remain):** Report commit SHA(s), recommend running `/compact` to clear Phase `k` context before starting Phase `k+1`, and wait (or proceed directly into Phase `k+1` JIT User Interview & Detailed Plan if the user already instructed advancing without `/compact`).
+       * **Final Phase (`k == N`, all `[x]`):** Skip `/compact`; report roadmap completion and commit SHA(s), and guide toward `/my-sess-close` (if the user invokes `/my-sess-close` directly as their completion declaration, delegate commit + wrap-up to `my-sess-close`).
+  * **Autonomous Context-Driven Multi-Commit:** Triggered only after user completion declaration (or during `/my-sess-close`). Split modified/created files into logical Conventional Commit groups directly from active conversation context (following `my-git-commit` SSoT for message rules and `.agents/docs/` / `.agents/scratch/` exclusions) without a separate commit-approval prompt; invoke `my-git-commit` (`Autonomous Logical-Split Mode`) only when conversation context is insufficient (e.g., post-`/compact` history loss, pre-existing dirty files, or external edits).
   * **Option Selection is NOT Plan Approval:** Selecting a high-level option (e.g., "방법 1") or approving a Tier 1 Macro Plan authorizes ONLY direction/roadmap alignment (and persisting `.agents/docs/user/*-macro-plan.md`), NOT codebase edits; each active Phase still requires explicit Detailed Plan approval.
   * **Mandatory Detailed Plan Requirements:** Scoped strictly to the active Phase (or single-phase task). Before asking for execution approval, you MUST present a concrete plan including:
     1. Exact target file paths & target ranges (function/class, section, or line range)
@@ -28,9 +29,9 @@
   * **No Direct Permanent Deletion:** Never permanently delete files or directories without explicit instruction.
   * **Pre-Action Backup Priority:** A rolling safety snapshot is automatically maintained at `~/.cache/agents/backups/<project_name>/latest` via `my-sess-open` at session start. Inspect this snapshot as the primary reference point for state verification and recovery before executing any irreversible or destructive operations.
   * **Preserve Workspace Invariants:** Maintain workspace structural invariants, such as symbolic links (`AGENTS.md`, `skills`), without flattening them into plain files.
-* **Workspace Discovery:**
-  * If [local rule files](file:.agents/rules/*.md) or [AGENTS.local.md](file:.agents/AGENTS.local.md) exist, read and adhere to local rules and project-specific overrides.
-  * If [local memory files](file:.agents/memory/*.md) exist, read and adhere to its local memory.
+* **Workspace Discovery (Fallback when `my-sess-open` is absent):**
+  * If [local rule files](file:.agents/rules/*.md), `rules/*.md`, or [AGENTS.local.md](file:.agents/AGENTS.local.md) exist, read and adhere to local rules and project-specific overrides.
+  * If [local memory files](file:.agents/memory/*.md) or `memory/*.md` exist, read and adhere to local memory.
   * Read [README.md](file:README.md) to comprehend the project's nature, scope, and technical details.
 
 ## Guidelines
@@ -58,7 +59,7 @@
 ### 5. Temporary Scratch Directories
 * **Scratch Paths:** When creating temporary scratch scripts or debug files within the project, prefer using `<proj root>/.agents/scratch/` instead of `<proj root>/scratch/`.
 
-### 6. Document Generation Directory
-* **Document Paths:** When generating documents (e.g., md files) during tasks, use the path `<proj root>/.agents/docs/user/`.
+### 6. Document Generation Directory (SSoT)
+* **Document Paths:** `<proj root>/.agents/docs/user/` is the single SSoT directory for all generated task documents (design specs, implementation plans, macro-plans, and user markdown outputs).
 
 
