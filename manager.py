@@ -283,37 +283,6 @@ def _rebuild_symlinks(skills_dir: Path, allowed_bases: list[Path], target_links:
                 raise OSError(f"Failed to create symlink '{target}' -> {source_abs}: {e}") from e
 
 
-def _extract_skill_entry_pair(repo_id: str, source: str, root_path: Path, library_dir: Path) -> tuple[str, str] | None:
-    """Resolve base directory path and relative include_only path for a workspace skill."""
-    source_parts = Path(source).parts
-    if not source_parts:
-        return None
-    if repo_id == "LOCAL" or repo_id.startswith("LOCAL/"):
-        if len(source_parts) < 2:
-            return None
-        base_dir = str((root_path / source_parts[0]).resolve())
-        rel_path = Path(*source_parts[1:]).as_posix()
-        return base_dir, rel_path
-    base_dir = str(library_dir.resolve())
-    rel_path = Path(source).as_posix()
-    return base_dir, rel_path
-
-
-def _build_skills_json_entries(config: dict, root_path: Path, library_dir: Path) -> list[dict]:
-    """Build grouped skills.json entries from active workspace skills."""
-    grouped: dict[str, set[str]] = {}
-    for repo in config.get("workspace", []):
-        repo_id = str(repo.get("repoId", ""))
-        for skill_item in repo.get("skills", []):
-            pair = _extract_skill_entry_pair(repo_id, skill_item.get("source", ""), root_path, library_dir)
-            if pair is not None:
-                grouped.setdefault(pair[0], set()).add(pair[1])
-    return [
-        {"path": base_path, "include_only": sorted(rel_paths)}
-        for base_path, rel_paths in grouped.items()
-    ]
-
-
 def _write_skills_json_file(skills_json_path: Path, entries: list[dict]) -> None:
     """Atomically write skills.json file."""
     skills_json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -347,14 +316,15 @@ def _link_gemini_skills_json(source_json_path: Path, gemini_json_path: Path) -> 
     os.symlink(resolved_source, gemini_json_path)
 
 
-def _sync_skills_json(config: dict, root_path: Path, library_dir: Path, settings: dict) -> None:
-    """Build skills.json in agents_dir and soft-link it into each configured vendor directory."""
+def _sync_skills_json(settings: dict) -> None:
+    """Build skills.json in agents_dir pointing to skills_dir SSoT and soft-link vendor configs."""
     paths_cfg = settings.get("paths", {})
     vendor_cfg = settings.get("vendor", {})
-    skills_dir = Path(os.path.expanduser(paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR)))
+    skills_dir = Path(os.path.expanduser(paths_cfg.get("skills_dir", DEFAULT_SKILLS_DIR))).resolve()
     agents_dir = Path(os.path.expanduser(paths_cfg.get("agents_dir", str(skills_dir.parent)))).resolve()
 
-    entries = _build_skills_json_entries(config, root_path, library_dir)
+    # Point only at the 1-level symlink hub (skills_dir); active filtering lives in its symlinks.
+    entries = [{"path": str(skills_dir)}]
     written_files: set[Path] = set()
     for _, v_info in vendor_cfg.items():
         if not isinstance(v_info, dict):
@@ -815,7 +785,7 @@ def sync(config_path: Path, root_path: Path, check_remote: bool = False, setting
             deduped_bases.append(b)
 
     _rebuild_symlinks(skills_dir, deduped_bases, target_links)
-    _sync_skills_json(config, root_path, library_dir, settings)
+    _sync_skills_json(settings)
     print("Sync completed successfully.")
 
 

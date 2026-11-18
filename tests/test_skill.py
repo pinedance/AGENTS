@@ -28,6 +28,15 @@ def make_dummy_zip(
             zf.writestr(name, content)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_host_home(tmp_path_factory, monkeypatch):
+    isolated_home = tmp_path_factory.mktemp("isolated_home")
+    monkeypatch.setenv("HOME", str(isolated_home))
+    monkeypatch.setenv("USERPROFILE", str(isolated_home))
+    monkeypatch.delenv(skill.SKILLS_DIR_ENV_VAR, raising=False)
+    return isolated_home
+
+
 @pytest.fixture
 def temp_env(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -1858,19 +1867,11 @@ workspace:
     assert gemini_json_path.is_symlink()
     assert gemini_json_path.resolve() == skills_json_path.resolve()
 
-    data = json.loads(skills_json_path.read_text(encoding="utf-8"))
-    assert data == {
-        "entries": [
-            {
-                "path": str((temp_env / "skills").resolve()),
-                "include_only": ["my-local-skill"],
-            },
-            {
-                "path": str((temp_env / "skills-library").resolve()),
-                "include_only": ["owner/repo/remote-skill"],
-            },
-        ]
-    }
+    raw_json = skills_json_path.read_text(encoding="utf-8")
+    data = json.loads(raw_json)
+    assert data == {"entries": [{"path": str((agents_dir / "skills").resolve())}]}
+    assert str((temp_env / "skills").resolve()) not in raw_json
+    assert "skills-library" not in raw_json
 
 
 def test_sync_replaces_existing_regular_skills_json_with_symlink(temp_env):
@@ -1900,6 +1901,24 @@ def test_sync_replaces_existing_regular_skills_json_with_symlink(temp_env):
 
     assert gemini_json_path.is_symlink()
     assert gemini_json_path.resolve() == (agents_dir / "skills.json").resolve()
+
+
+def test_sync_without_temp_env_isolated_by_autouse_home(tmp_path, _isolate_host_home):
+    import json
+
+    yaml_path = tmp_path / ".skills.yaml"
+    yaml_path.write_text("library: []\nworkspace: []\n", encoding="utf-8")
+
+    skill.sync(yaml_path, tmp_path, check_remote=False)
+
+    isolated_home = Path(os.environ["HOME"])
+    assert isolated_home == _isolate_host_home
+    assert isolated_home.is_relative_to(tmp_path.parent)
+    isolated_json = isolated_home / ".agents" / "skills.json"
+    assert isolated_json.is_file()
+    assert json.loads(isolated_json.read_text(encoding="utf-8")) == {
+        "entries": [{"path": str((isolated_home / ".agents" / "skills").resolve())}]
+    }
 
 
 
