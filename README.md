@@ -241,6 +241,15 @@ Manage which skills are active and symlinked in the global folder `~/.agents/ski
      rm -rf skills/<skill_name>
      uv run library add LOCAL/skills
      ```
+5. **Rename an Existing Local Skill**:
+   - Deactivate the old symlink, rename the directory, update `name:` in `SKILL.md`, refresh `LOCAL/skills`, and activate the new symlink:
+     ```bash
+     uv run workspace remove <old_name>
+     git mv skills/<old_name> skills/<new_name>
+     # Update 'name: <new_name>' in skills/<new_name>/SKILL.md frontmatter
+     uv run library add LOCAL/skills
+     uv run workspace add <new_name> --name <new_name>
+     ```
 
 ---
 
