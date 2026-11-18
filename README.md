@@ -124,7 +124,7 @@ library:
         path: skills/executing-plans/SKILL.md
   
   # Local repository configuration
-  - repoId: LOCAL
+  - repoId: LOCAL/skills
     skills:
       - name: my-code-review
         path: skills/my-code-review/SKILL.md
@@ -137,7 +137,7 @@ workspace:
         target: sp-brainstorming
   
   # Workspace mapping for local skills (resolves relative to PROJECT_ROOT)
-  - repoId: LOCAL
+  - repoId: LOCAL/skills
     skills:
       - name: my-code-review
         source: skills/my-code-review
@@ -151,14 +151,16 @@ workspace:
 Run the tool using the `uv run <command>` shortcut.
 
 ### 1. Sync (`sync`)
-Synchronizes the local filesystem with the `.skills.yaml` configuration. It downloads/extracts remote repository files and links/prunes workspace skills in `~/.agents/skills/`.
+Synchronizes the local filesystem with `.skills.yaml` and global settings (`settings.default.yaml` / optional `settings.yaml`). It downloads/extracts remote repository files, links/prunes workspace skills in `~/.agents/skills/`, and updates global symlinks (`~/.agents/{AGENTS.md,memory,prompts,rules}` and `~/.gemini/config/skills.json`).
 
 ```bash
 uv run sync
+# Check remote commits against cached zips and re-download outdated repos
+uv run sync --check-remote
 ```
-* **Optimized Sync**: Uses the Git Commit ID stored in the zip file's comment field. If the commit hash has not changed, it skips the extraction process. Skip completely for the `LOCAL` repository.
+* **Optimized Sync**: Uses the Git Commit ID stored in the zip file's comment field. If the commit hash has not changed, it skips the extraction process. Skip completely for `LOCAL/*` repositories.
 * **Safe Pruning**: Only unlinks stale symlinks created by *this* project in the global `~/.agents/skills/` directory. It does not touch files, directories, or symlinks belonging to other projects.
-* **Dynamic allowed_bases**: Restricts symlinking boundaries to `skills-library` and any local root folders (e.g., `skills/`) registered under the `LOCAL` repository configuration.
+* **Dynamic allowed_bases**: Restricts symlinking boundaries to `skills-library` and any local root folders (e.g., `skills/`) registered under `LOCAL/*` repository configurations.
 
 ---
 
@@ -216,20 +218,29 @@ Manage which skills are active and symlinked in the global folder `~/.agents/ski
 
 ---
 
-### 4. Local Custom Skill Workflow
+### 4. Local Custom Skill Lifecycle (`LOCAL/skills`)
 
-To add and activate a newly created local custom skill (e.g., `skills/my-project-rules/SKILL.md`):
-
-1. **Create Skill File**: Place your skill in a subdirectory with a `SKILL.md` file (e.g., `skills/<skill_name>/SKILL.md`).
-2. **Scan & Register to Library**:
-   ```bash
-   uv run library add LOCAL/skills
-   ```
-3. **Activate in Workspace & Create Symlink**:
-   ```bash
-   uv run workspace add <skill_name>
-   # Example: uv run workspace add my-project-rules
-   ```
+1. **Add & Activate a New Local Skill**:
+   - Create `skills/<skill_name>/SKILL.md` (frontmatter `name:` defines the skill name; defaults to directory name if omitted).
+   - Scan and register to library, then activate in workspace (pass `--name` for non-interactive automation):
+     ```bash
+     uv run library add LOCAL/skills
+     uv run workspace add <skill_name> --name <skill_name>
+     ```
+2. **Edit an Existing Local Skill**:
+   - Edit `skills/<skill_name>/SKILL.md` directly (live via symlink). Run `uv run sync` if frontmatter `name:` or `skills/` files changed to refresh `.skills.yaml` / `skills.json`.
+3. **Deactivate Only (Keep Source Files)**:
+   - Unlink from `~/.agents/skills/` and remove from `workspace:` while keeping `skills/<skill_name>/` and the `library:` entry:
+     ```bash
+     uv run workspace remove <skill_name>
+     ```
+4. **Permanently Delete an Individual Local Skill**:
+   - `library remove LOCAL/skills` removes the entire `LOCAL/skills` directory group. To delete a single skill inside `skills/`, deactivate it, delete its directory, and re-scan `LOCAL/skills` to prune its `library:` entry from `.skills.yaml` and sync manifests:
+     ```bash
+     uv run workspace remove <skill_name>
+     rm -rf skills/<skill_name>
+     uv run library add LOCAL/skills
+     ```
 
 ---
 
