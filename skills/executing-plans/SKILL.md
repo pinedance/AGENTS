@@ -17,7 +17,7 @@ Load plan, review critically, execute all tasks, report when complete.
 
 ### Step 1: Load and Review Plan
 1. Read plan file
-2. **Branch Safety Check**: Verify active git branch (`git branch --show-current`). If on `main` or `master`, automatically create and switch to a task branch (`git checkout -b <task-name>`) before executing plan tasks.
+2. **Branch Safety Check**: Verify active git branch (`git branch --show-current`). If on `main` or `master`, automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking before executing plan tasks.
 3. Review critically - identify any questions or concerns about the plan
 4. If concerns: Raise them with your human partner before starting
 5. If no concerns: Create TodoWrite and proceed
@@ -28,14 +28,18 @@ For each task:
 1. Mark as in_progress
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
-4. When executing a commit step, delegate the commit to a subagent configured with the `my-git-commit` skill.
+4. When executing a commit step, commit logical Conventional Commit groups directly from active conversation context (excluding `.agents/docs/` and `.agents/scratch/`); invoke `my-git-commit` (`Autonomous Logical-Split Mode`) only when conversation context is insufficient.
 5. Mark as completed
 
-### Step 3: Complete Development
+### Step 3: Phase Boundary Gate & Session Wrap-Up
 
-After all tasks complete and verified:
-- Announce: "I'm using the my-sess-close skill to wrap up this work."
-- **REQUIRED SUB-SKILL:** Read and follow [my-sess-close](../my-sess-close/SKILL.md) to synchronize `STATE.md`/`README.md`, run the closing test gate, and wrap up commits and branch integration.
+After all tasks in the current plan complete and pass verification:
+- **Intermediate Phase (active `.agents/docs/user/*-macro-plan.md` has remaining `[ ]` phases)**:
+  - Ensure all current Phase changes are committed in logical Conventional Commit groups from active conversation context (invoking `my-git-commit` in `Autonomous Logical-Split Mode` only if context is insufficient), and mark the completed Phase `[x]` in `macro-plan.md`.
+  - Report commit SHA(s), recommend running `/compact` to clear Phase context before advancing to the next Phase, and **stop and wait** for the user (do NOT invoke `my-sess-close`).
+- **Final Phase or Standalone Plan (no remaining `[ ]` phases)**:
+  - Announce: "I'm using the my-sess-close skill to wrap up this work."
+  - **REQUIRED SUB-SKILL:** Read and follow [my-sess-close](../my-sess-close/SKILL.md) to synchronize `STATE.md`/`README.md`, run the closing test gate, and wrap up commits and branch integration.
 
 ## When to Stop and Ask for Help
 
@@ -61,12 +65,12 @@ After all tasks complete and verified:
 - Don't skip verifications
 - Reference skills when plan says to
 - Stop when blocked, don't guess
-- Never start implementation on main/master branch without explicit user consent
+- Auto-create and switch to an AI-named task branch when starting on main/master (unless user explicitly instructed staying on main/master)
 
 ## Integration
 
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after all tasks
-- **my-git-commit** - Use when a git commit is required during execution
+- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after final Phase / standalone plan completion (intermediate phases halt for `/compact` after updating `macro-plan.md`)
+- **my-git-commit** - Fallback commit analyzer when conversation context is insufficient for direct logical grouping

@@ -32,7 +32,7 @@ Task tool (general-purpose):
     1. Implement exactly what the task specifies
     2. Write tests (following TDD if task says to)
     3. Verify implementation works
-    4. Commit your work using the `my-git-commit` skill
+    4. Commit your work in logical Conventional Commit groups from your task context (excluding `.agents/docs/` and `.agents/scratch/`; invoke `my-git-commit` in `Autonomous Logical-Split Mode` only if diff context is insufficient)
     5. Self-review (see below)
     6. Report back
 

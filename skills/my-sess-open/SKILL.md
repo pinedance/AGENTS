@@ -4,7 +4,7 @@ description: >
   Unified session initialization skill: loads and strictly enforces project directives
   (AGENTS.md, rules, memory) and session state snapshot (STATE.md), runs safety snapshot backup,
   locks runtime execution prefix (uv, poetry, pnpm, etc.), inspects and syncs Git repository state
-  (uncommitted changes, fetch/pull/push, branch setup), and configures session settings (caveman, model selection).
+  (uncommitted changes, fetch/pull/push, branch setup), and configures session settings (caveman).
   Trigger this skill at session start, when starting a new task or branch, or when the user invokes /my-sess-open.
 ---
 
@@ -27,6 +27,7 @@ This skill is the mandatory entry gate for every session. It initializes directi
 2. **Read Session State Snapshot (`STATE.md`)**:
    - Check in order of precedence: `<root>/.agents/memory/STATE.md` → `<root>/memory/STATE.md` → `<root>/STATE.md`.
    - If present, load `Current Goal`, `Active Branch`, `Blockers`, and `Next Action` to restore loop continuity.
+   - If `STATE.md` references an active `.agents/docs/user/*-macro-plan.md` with pending `[ ]` phases, read that macro-plan file as well to restore Phase roadmap continuity.
 3. **Strict Enforcement & Communication Mode**:
    - Actively enforce every loaded rule, memory, and coding guideline ([my-coding-guidelines](../my-coding-guidelines/SKILL.md)) throughout the session.
    - Activate Caveman Mode (`/caveman full`) immediately for all subsequent responses.
@@ -44,7 +45,8 @@ This skill is the mandatory entry gate for every session. It initializes directi
    - **Polyglot**: `Cargo.toml` (`cargo`), `go.mod` (`go`), etc.
 2. **Auto-Lock vs. User Confirmation**:
    - If a single runtime lockfile is unambiguously detected (or explicitly specified in the user prompt), lock it silently without asking.
-   - Only prompt via `ask_question` when ambiguous (multiple conflicting lockfiles or no lockfile found), offering the primary candidate as `(Recommended)` and `No execution environment needed`.
+   - If no lockfile is found, lock `None` (no runtime prefix needed) silently without asking.
+   - Prompt via `ask_question` ONLY when multiple conflicting lockfiles exist in the same scope, offering the primary candidate as `(Recommended)`.
 3. **Fail-Fast Health Check & Prefix Enforcement**:
    - Verify tool availability (`<prefix> --version` or base binary `--version`). On failure, halt and prompt user.
    - All subsequent toolchain commands MUST use the locked prefix (e.g., `uv run pytest`). Bare runtime execution (`python`, `pytest`, `npm`) is prohibited.
@@ -68,40 +70,43 @@ This skill is the mandatory entry gate for every session. It initializes directi
        - `Single commit first (my-git-commit Single-Unit Mode)`
        - `Stash changes (git stash)`
        - `Proceed with current uncommitted changes`
-   - Execute the selected action before proceeding (for Option 1 or Option 2, read and follow [my-git-commit](../my-git-commit/SKILL.md) in `Interactive Logical-Split Mode` or `Single-Unit Mode` respectively).
+   - Execute the selected action before proceeding (for Option 1 or Option 2, read and follow [my-git-commit](../my-git-commit/SKILL.md) in `Autonomous Logical-Split Mode` or `Single-Unit Mode` respectively, without a second confirmation prompt).
 
 3. **Handle Remote Synchronization (`pull` / `push`, Only If Out-of-Sync)**:
    - **If up-to-date (`ahead 0, behind 0`) or no remote exists**: Proceed silently to Step 2.4.
-   - **If local is behind remote**: Prompt via `ask_question` with `(Recommended) Pull remote changes to local (git pull)` vs `Skip sync and proceed`.
+   - **If working tree is clean and local is strictly behind remote (`ahead 0, behind M`)**: Automatically run `git pull --ff-only` silently (prompt via `ask_question` only if `--ff-only` fails).
+   - **If local is behind remote with a dirty tree**: Prompt via `ask_question` with `(Recommended) Pull remote changes to local (git pull)` vs `Skip sync and proceed`.
    - **If local is ahead of remote**: Prompt via `ask_question` with `(Recommended) Push local changes to remote (git push)` vs `Skip sync and proceed`.
    - **If diverged (ahead and behind)**: Prompt via `ask_question` to `Pull with rebase (git pull --rebase)`, `Merge pull (git pull)`, or `Skip sync`.
 
-4. **Branch Setup (Explicit / Resume vs. Deferred to Post-Interview)**:
+4. **Branch Setup (Explicit / Resume / Auto-Branch Default)**:
    - **Explicit branch in prompt**: If the user specified a target branch name in their initial prompt, create/switch to it immediately (`git checkout -b <branch-name>` or `git checkout <branch-name>`).
-   - **Resuming `STATE.md` branch**: If resuming unfinished work from `STATE.md` and current branch differs from `STATE.md`'s `Active Branch`, verify `Active Branch` still exists locally or on remote before prompting via `ask_question` to switch; if `Active Branch` was already merged/deleted, stay on the current branch silently.
-   - **Topic-only on `main`/`master` (Defer branch creation)**: Do NOT prompt to create a new branch before the User Interview. Keep the current branch and defer new branch creation until the User Interview confirms that file/code changes are needed.
+   - **Resuming `STATE.md` branch**: If resuming unfinished work from `STATE.md` and current branch differs from `STATE.md`'s `Active Branch`, verify `Active Branch` still exists locally or on remote; if it exists and the working tree is clean/compatible, switch to it automatically (`git checkout <Active Branch>`) without prompting. If already merged/deleted, stay on the current branch silently.
+   - **New session task on `main`/`master` (Auto-Branch Default)**: Do NOT ask user approval for branch creation or branch name. Once the task involves file, plan, or code modifications (immediately if clear from initial prompt, or at Step 4.3 right after User Interview before persisting `macro-plan.md` or modifying files), automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`, e.g., `feat/...`, `fix/...`, `refactor/...`). Keep the current branch silently for purely read-only Q&A sessions.
 
 ---
 
-## STEP 3: STATUS BRIEFING & MODEL SELECTION
+## STEP 3: STATUS BRIEFING & SAFETY GATE
 
-1. **Output Status Briefing** (concise 2–4 lines, output before model check so the user has full workspace context on the first turn):
+1. **Output Status Briefing** (concise 2–4 lines so the user has full workspace context on the first turn):
    - **Directives & State**: Loaded rules/memories + `STATE.md` summary (`Current Goal` & `Next Action`, or `No STATE.md`)
    - **Safety Snapshot**: `~/.cache/agents/backups/<project>/latest`
    - **Locked Runtime**: `<prefix>`
    - **Git State**: `<branch>` (sync status: clean / pulled / pushed)
-2. **Model Selection Gate**:
-   - Unless the user explicitly stated their model preference in the initial prompt (e.g., "모델 그대로"), invoke the [my-models](../my-models/SKILL.md) skill protocol to ask whether they want to switch models via `/model`, and wait for the user's response before proceeding to Step 4.
-3. **Execution Safety Gate**:
-   - Do not modify codebase files without presenting a Detailed Plan and receiving explicit user approval, in accordance with `AGENTS.md`.
+2. **Execution Safety Gate**:
+   - Follow `AGENTS.md`'s Two-Tier Execution Flow: require Tier 1 Macro Plan approval for multi-phase tasks and explicit active-Phase Detailed Plan approval before modifying codebase files.
 
 ---
 
 ## STEP 4: TOPIC ALIGNMENT & USER INTERVIEW HANDOFF
 
-1. **Topic vs. `STATE.md` Check**:
+1. **Topic vs. `STATE.md` & Macro Plan Check**:
    - Compare the user's stated session topic/goal against `STATE.md`'s `Current Goal` and `Next Action`. If `STATE.md` has unfinished work that differs from the new topic, clarify whether to resume the existing goal or pivot to the new topic.
-2. **Mandatory User Interview Gate (Context Concretization)**:
-   - Do NOT jump directly to a Detailed Plan or code edits. Inspect only the minimum files needed to understand the stated topic, then initiate a 1-question-at-a-time User Interview (preferring `ask_question`) to concretize scope, requirements, and constraints before proposing a Detailed Plan.
-3. **Post-Interview Branch Gate (If on `main`/`master`)**:
-   - Once the User Interview confirms the task requires file/code modifications and the workspace is still on `main` or `master`, prompt via `ask_question` (`(Recommended) Create and switch to '<task-name>' branch` vs `Keep working on current branch`) before modifying any files.
+   - When resuming an active `.agents/docs/user/*-macro-plan.md` with pending `[ ]` phases, skip Macro Plan regeneration and hand off directly to the next pending Phase's JIT Detailed Plan.
+2. **Mandatory User Interview & Planning Handoff**:
+   - Do NOT jump directly to a Detailed Plan or code edits. Inspect only the minimum files needed to understand the stated topic, then initiate a 1-question-at-a-time User Interview (preferring `ask_question`) to concretize scope, requirements, and constraints.
+   - Once requirements are concrete, classify scope per `AGENTS.md`:
+     - **Multi-phase task (2+ phases)**: Propose a **Macro Plan** (Phase boundaries, objectives, and deliverables only; strictly defer per-phase detailed plans), obtain explicit user approval, enforce `Step 4.3` Auto-Branch Check if still on `main`/`master`, persist `.agents/docs/user/YYYY-MM-DD-<topic>-macro-plan.md`, and enter Phase 1 JIT Detailed Planning.
+     - **Single-phase task**: Enforce `Step 4.3` Auto-Branch Check (if modifying files on `main`/`master`) and proceed directly to the Detailed Plan.
+3. **Auto-Branch Check (If Still on `main`/`master`)**:
+   - Once the task requires repository/plan files or codebase modifications and the workspace is still on `main` or `master`, automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking user approval before persisting `macro-plan.md` or modifying any files.

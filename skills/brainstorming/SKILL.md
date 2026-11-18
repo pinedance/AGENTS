@@ -15,76 +15,60 @@ When this skill is active, do NOT invoke any implementation skill, write any cod
 
 ## Scope & Alignment with `my-sess-open` / `AGENTS.md`
 
-- **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/docs/user/YYYY-MM-DD-<topic>-design.md`) add clarity.
-- **When standard `AGENTS.md` flow suffices**: Routine bug fixes, config updates, or localized changes already clarified via `my-sess-open` Step 4 (User Interview) can proceed directly to `Option/Direction Selection → Detailed Plan → Explicit Plan Approval → Execute` without generating separate spec and plan markdown files.
+- **Intra-Phase Scope Boundary**: In a multi-phase session (active `.agents/docs/user/*-macro-plan.md`), `brainstorming` operates strictly as an intra-phase design skill for the **current active Phase**. Never expand specs into subsequent deferred phases.
+- **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/docs/user/YYYY-MM-DD-<topic>-design.md`) add clarity within the active Phase (or standalone task).
+- **When standard `AGENTS.md` flow suffices**: Routine bug fixes, config updates, or localized changes already clarified via `my-sess-open` Step 4 (User Interview) can follow `AGENTS.md`'s Two-Tier Execution Flow (Single-Phase Fast Path or simple Phase JIT Detailed Plan) without generating separate spec and plan markdown files.
 
 ## Checklist
 
 You MUST create a task for each of these items and complete them in order:
 
-1. **Model selection check** — if `my-sess-open` already ran in this session, skip this step; otherwise invoke **my-models** skill: ask if user wants to change model; if yes, instruct user to run `/model` and wait for reply
-2. **Explore project context** — check files, docs, recent commits
-3. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
-4. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
-5. **Propose 2-3 approaches** — with trade-offs and your recommendation
-6. **Present design** — in sections scaled to their complexity, get user approval after each section
-7. **Branch safety check** — if already on a non-`main`/`master` task branch, skip this step; otherwise, before writing spec files or modifying repository files on `main` or `master`, prompt to create and switch to a task branch (`git checkout -b <task-name>`).
-8. **Write design doc** — save to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md` (in accordance with `AGENTS.md` Guideline 6)
-9. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-10. **User reviews written spec** — ask user to review the spec file before proceeding
-11. **Transition to implementation** — invoke writing-plans skill to create implementation plan
-12. **Post-plan execution model check** — invoke **my-models** skill: ask if user wants to change model for execution phase; wait for reply before starting
+1. **Explore project context** — check files, docs, recent commits
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Propose 2-3 approaches** — with trade-offs and your recommendation
+4. **Present design & obtain user approval** — scaled to complexity, single cohesive approval (or section-by-section only for multi-component designs)
+5. **Auto-branch check** — if already on a non-`main`/`master` task branch, skip; otherwise automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking
+6. **Write design doc** — save to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md` (in accordance with `AGENTS.md` Guideline 6)
+7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+8. **Transition to implementation** — invoke `writing-plans` skill immediately without a second spec-review wait
 
 ## Process Flow
 
 ```dot
 digraph brainstorming {
-    "Model selection check" [shape=box];
     "Explore project context" [shape=box];
-    "Visual questions ahead?" [shape=diamond];
-    "Offer Visual Companion\n(own message, no other content)" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
-    "Present design sections" [shape=box];
+    "Present design" [shape=box];
     "User approves design?" [shape=diamond];
-    "Branch safety check" [shape=box];
+    "Auto-branch check" [shape=box];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
-    "User reviews spec?" [shape=diamond];
     "Invoke writing-plans skill" [shape=box];
-    "Execution model check\n(after plan is complete)" [shape=box];
     "Done" [shape=doublecircle];
 
-    "Model selection check" -> "Explore project context";
-    "Explore project context" -> "Visual questions ahead?";
-    "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
-    "Visual questions ahead?" -> "Ask clarifying questions" [label="no"];
-    "Offer Visual Companion\n(own message, no other content)" -> "Ask clarifying questions";
+    "Explore project context" -> "Ask clarifying questions";
     "Ask clarifying questions" -> "Propose 2-3 approaches";
-    "Propose 2-3 approaches" -> "Present design sections";
-    "Present design sections" -> "User approves design?";
-    "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Branch safety check" [label="yes"];
-    "Branch safety check" -> "Write design doc";
+    "Propose 2-3 approaches" -> "Present design";
+    "Present design" -> "User approves design?";
+    "User approves design?" -> "Present design" [label="no, revise"];
+    "User approves design?" -> "Auto-branch check" [label="yes"];
+    "Auto-branch check" -> "Write design doc";
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "User reviews spec?";
-    "User reviews spec?" -> "Write design doc" [label="changes requested"];
-    "User reviews spec?" -> "Invoke writing-plans skill" [label="approved"];
-    "Invoke writing-plans skill" -> "Execution model check\n(after plan is complete)";
-    "Execution model check\n(after plan is complete)" -> "Done";
+    "Spec self-review\n(fix inline)" -> "Invoke writing-plans skill";
+    "Invoke writing-plans skill" -> "Done";
 }
 ```
 
-**The terminal state is invoking writing-plans, followed by the execution model check.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is `writing-plans`.
 
 ## The Process
 
 **Understanding the idea:**
 
-- **Model Selection Check**: If `my-sess-open` already ran in this session, skip this check. Otherwise invoke **my-models** skill — ask if user wants to change model before brainstorming. If yes, instruct user to run `/model` and wait for reply before continuing.
 - Check out the current project state first (files, docs, recent commits)
-- Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
-- If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
+- Before asking detailed questions, check if an active `.agents/docs/user/*-macro-plan.md` exists; if so, scope brainstorming strictly to the **current active Phase** rather than re-decomposing future phases. Otherwise, if a standalone request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
+- If a standalone project is too large for a single spec, help the user decompose into sub-projects (or Tier 1 Macro Phases): what are the independent pieces, how do they relate, what order should they be built? Then brainstorm only the first sub-project/Phase through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
@@ -98,9 +82,7 @@ digraph brainstorming {
 
 **Presenting the design:**
 
-- Once you believe you understand what you're building, present the design
-- Scale each section to its complexity: a few sentences if straightforward, up to 200-300 words if nuanced
-- Ask after each section whether it looks right so far
+- Once you believe you understand what you're building, present the design as a single cohesive proposal scaled to its complexity for one approval (break into section-by-section checkpoints only when multi-component complexity genuinely warrants it)
 - Cover: architecture, components, data flow, error handling, testing
 - Be ready to go back and clarify if something doesn't make sense
 
@@ -135,18 +117,10 @@ After writing the spec document, look at it with fresh eyes:
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
-**User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+**Implementation Handoff:**
 
-> "Spec written to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
-
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
-
-**Implementation & Execution Model Check:**
-
-- Invoke the writing-plans skill to create a detailed implementation plan.
-- **Execution Model Check**: After the plan is fully written and approved, and before executing any plan steps, invoke **my-models** skill — ask if user wants to change the model for the execution/coding phase. Wait for reply before proceeding.
-- Do NOT invoke any other skill directly. Order: writing-plans (plan) → my-models (model check) → execution.
+- Immediately invoke the `writing-plans` skill to create the active Phase (or standalone) detailed implementation plan, without pausing for a second spec-file review or model-selection gate.
+- Do NOT invoke any other implementation skill directly before `writing-plans`.
 
 ## Key Principles
 
@@ -159,12 +133,7 @@ Wait for the user's response. If they request changes, make them and re-run the 
 
 ## Visual Companion
 
-A browser-based companion for showing mockups, diagrams, and visual options during brainstorming. Available as a tool — not a mode. Accepting the companion means it's available for questions that benefit from visual treatment; it does NOT mean every question goes through the browser.
-
-**Offering the companion:** When you anticipate that upcoming questions will involve visual content (mockups, layouts, diagrams), offer it once for consent:
-> "Some of what we're working on might be easier to explain if I can show it to you in a web browser. I can put together mockups, diagrams, comparisons, and other visuals as we go. This feature is still new and can be token-intensive. Want to try it? (Requires opening a local URL)"
-
-**This offer MUST be its own message.** Do not combine it with clarifying questions, context summaries, or any other content. The message should contain ONLY the offer above and nothing else. Wait for the user's response before continuing. If they decline, proceed with text-only brainstorming.
+A browser-based companion for showing mockups, diagrams, and visual options during brainstorming. Available as a tool — not a mode. Activate ONLY when the user explicitly requests browser-based visuals; do NOT send a separate proactive offer message.
 
 **Per-question decision:** Even after the user accepts, decide FOR EACH QUESTION whether to use the browser or the terminal. The test: **would the user understand this better by seeing it than reading it?**
 

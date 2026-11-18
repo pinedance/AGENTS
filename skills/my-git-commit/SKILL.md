@@ -3,13 +3,15 @@ name: my-git-commit
 description: >
   Analyze modified files, split them into logical groups, and commit them sequentially with descriptive Conventional Commit messages.
   Use when the user directly requests committing changes ("git commit", "commit changes", "커밋해줘"),
-  or when delegated as the commit strategy by a session or plan workflow (my-sess-open, my-sess-close, executing-plans, subagent-driven-development).
+  when cleaning pre-existing dirty files in my-sess-open, or as the fallback commit analyzer when active conversation context is insufficient (e.g., post-/compact, resumed dirty state, external edits).
+  When full change context is already in active conversation, commit logical groups directly without loading this skill.
 ---
 
 # Git Smart Commit
 
 Analyze changes, group them logically, and commit sequentially.
 Do not squash all changes into a single `git add -A && git commit` unless it represents a single logical unit.
+When full change context is already present in active conversation (normal Phase completion, task execution, `my-sess-close`), agents commit logical Conventional Commit groups directly without loading this skill; invoke this skill when conversation context is insufficient, when cleaning pre-existing dirty state (`my-sess-open`), or upon explicit user commit requests.
 
 ## Process
 
@@ -51,7 +53,13 @@ If a file contains changes for multiple purposes, categorize it under the primar
 
 Select the execution mode matching the caller context:
 
-- **Interactive Logical-Split Mode (default — direct user request, or `Logical group commits` selected in `my-sess-open` or `my-sess-close`)**:
+- **Autonomous Logical-Split Mode (default — workflow callers, context-recovery fallbacks, and `my-sess-open` Option 1)**:
+  Analyze `git status`/`git diff`, apply `Exclusions` and `Commit Message Rules`, stage and commit logical groups sequentially without asking user approval, and report resulting commit SHAs and titles.
+
+- **Single-Unit Mode (when `Single commit` is explicitly selected in `my-sess-open` or requested by user)**:
+  Apply `Exclusions` and `Commit Message Rules`, stage all eligible modified/untracked files as a single unit, and execute one Conventional Commit directly without asking further approval.
+
+- **Interactive Logical-Split Mode (only when user explicitly requests preview/approval before committing)**:
   Present the grouped commit plan in the format below and obtain explicit user approval before Step 4. If adjustments are requested, revise the grouping or messages and re-confirm.
 
 ```
@@ -66,12 +74,6 @@ Commit 2: feat: add Amplify build config and on_post_build hook
 Commit 3: docs: revamp README
   → README.md
 ```
-
-- **Single-Unit Mode (when `Single commit` is explicitly selected in `my-sess-open` or `my-sess-close`)**:
-  Apply `Exclusions` and `Commit Message Rules`, stage all eligible modified/untracked files as a single unit, and execute one Conventional Commit directly (the user's explicit menu choice authorizes the single commit).
-
-- **Pre-Approved Plan Execution Mode (`executing-plans`, `subagent-driven-development`)**:
-  When committing a task whose scope was already approved in an implementation plan (whether executed inline via `executing-plans` or inside an isolated task subagent via `subagent-driven-development`), apply `Exclusions` and `Commit Message Rules` to stage and commit only task-scoped logical groups directly without a second interactive approval gate, and report resulting commit SHAs and titles.
 
 ### Step 4: Sequential Execution
 

@@ -63,6 +63,8 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Remaining phases in macro-plan.md?" [shape=diamond];
+    "Mark phase [x], report commits,\nrecommend /compact & wait" [shape=box style=filled fillcolor=lightyellow];
     "Use my-sess-close" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -82,9 +84,13 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use my-sess-close";
+    "Dispatch final code reviewer subagent for entire implementation" -> "Remaining phases in macro-plan.md?";
+    "Remaining phases in macro-plan.md?" -> "Mark phase [x], report commits,\nrecommend /compact & wait" [label="yes"];
+    "Remaining phases in macro-plan.md?" -> "Use my-sess-close" [label="no"];
 }
 ```
+
+**Phase Boundary Gate:** When an active `.agents/docs/user/*-macro-plan.md` still has pending `[ ]` phases after the final review, ensure Phase changes are committed in logical Conventional Commit groups from active conversation context (invoking `my-git-commit` in `Autonomous Logical-Split Mode` only if context is insufficient), mark the completed Phase `[x]` in `macro-plan.md`, report commit SHA(s), recommend running `/compact` before transitioning to the next Phase, and halt instead of invoking `my-sess-close`. Invoke `my-sess-close` only upon completing the final Phase or a standalone plan.
 
 ## Model Selection
 
@@ -236,7 +242,7 @@ Done!
 ## Red Flags
 
 **Never:**
-- Start implementation on main/master branch without explicit user consent
+- Implement directly on main/master without auto-switching to a task branch (unless user explicitly requested main/master)
 - Skip reviews (spec compliance OR code quality)
 - Proceed with unfixed issues
 - Dispatch multiple implementation subagents in parallel (conflicts)
@@ -270,8 +276,8 @@ Done!
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
 - **superpowers:writing-plans** - Creates the plan this skill executes
 - **superpowers:requesting-code-review** - Code review template for reviewer subagents
-- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after all tasks
-- **my-git-commit** - Use when a git commit is required during execution
+- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after final Phase / standalone plan completion (intermediate phases halt for `/compact` after updating `macro-plan.md`)
+- **my-git-commit** - Fallback commit analyzer when diff/conversation context is insufficient for direct logical grouping
 
 **Subagents should use:**
 - **superpowers:test-driven-development** - Subagents follow TDD for each task

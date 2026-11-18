@@ -20,7 +20,8 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 ## Scope Check
 
-If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
+- **Active Phase Boundary**: When an active `.agents/docs/user/*-macro-plan.md` exists, scope file mapping and bite-sized implementation tasks strictly to the **current active Phase**, leaving subsequent phases deferred in `macro-plan.md`.
+- **Standalone Multi-Subsystem Check**: If a standalone spec covers multiple independent subsystems, it should have been broken into sub-project specs (or Tier 1 Macro Phases) first. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
 
 ## File Structure
 
@@ -98,7 +99,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 
-> Delegate commits to `my-git-commit` (`Pre-Approved Plan Execution Mode`), which enforces Conventional Commits and excludes ephemeral `.agents/docs/` and `.agents/scratch/` artifacts.
+> Commit verified task changes directly in logical Conventional Commit groups from active task context (excluding `.agents/docs/` and `.agents/scratch/`). Invoke `my-git-commit` (`Autonomous Logical-Split Mode`) only when diff context is insufficient.
 
 ```bash
 git add tests/path/test.py src/path/file.py
@@ -136,20 +137,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After saving the plan to `.agents/docs/superpowers/plans/<filename>.md` and obtaining explicit plan approval per `AGENTS.md`, automatically select the execution strategy without prompting the user:
 
-**"Plan complete and saved to `.agents/docs/superpowers/plans/<filename>.md`. Two execution options:**
-
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
-
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?"**
-
-**If Subagent-Driven chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
-- Fresh subagent per task + two-stage review
-
-**If Inline Execution chosen:**
-- **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
-- Batch execution with checkpoints for review
+- **Subagent-Driven (`subagent-driven-development`)**: Automatically selected when the plan has multiple independent tasks and subagents are available (fresh subagent per task + two-stage review).
+- **Inline Execution (`executing-plans`)**: Automatically selected when tasks are tightly coupled, small (`<= 2` tasks), or subagents are unavailable.

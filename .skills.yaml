@@ -528,8 +528,6 @@ library:
     path: skills/my-md2hwpx/SKILL.md
   - name: my-md2pdf
     path: skills/my-md2pdf/SKILL.md
-  - name: my-models
-    path: skills/my-models/SKILL.md
   - name: my-sess-close
     path: skills/my-sess-close/SKILL.md
   - name: my-sess-open
@@ -1135,9 +1133,6 @@ workspace:
   - name: my-skill-updater
     source: skills/my-skill-updater
     target: my-skill-updater
-  - name: my-models
-    source: skills/my-models
-    target: my-models
   - name: my-code-review-executor
     source: skills/my-code-review-executor
     target: my-code-review-executor
