@@ -1,6 +1,6 @@
 ---
-name: brainstorming
-description: "Use when designing new features, multi-component systems, or architectural changes that require collaborative design exploration and a written design spec before implementation planning. For straightforward bug fixes, config tweaks, or single-file tasks already covered by my-sess-open's User Interview and AGENTS.md's Detailed Plan flow, use the standard Detailed Plan flow unless the user requests brainstorming."
+name: my-plan-design
+description: "Use when designing new features, multi-component systems, or architectural changes that require collaborative design exploration and a written design spec before implementation planning. For straightforward bug fixes, config tweaks, or single-file tasks already covered by my-sess-open's User Interview and AGENTS.md's Detailed Plan flow, use the standard Detailed Plan flow unless the user requests my-plan-design."
 ---
 
 # Brainstorming Ideas Into Designs
@@ -15,7 +15,7 @@ When this skill is active, do NOT invoke any implementation skill, write any cod
 
 ## Scope & Alignment with `my-sess-open` / `AGENTS.md`
 
-- **Intra-Phase Scope Boundary**: In a multi-phase session (active `.agents/docs/user/*-macro-plan.md`), `brainstorming` operates strictly as an intra-phase design skill for the **current active Phase**. Never expand specs into subsequent deferred phases.
+- **Intra-Phase Scope Boundary**: In a multi-phase session (active `.agents/docs/user/*-macro-plan.md`), `my-plan-design` operates strictly as an intra-phase design skill for the **current active Phase**. Never expand specs into subsequent deferred phases.
 - **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/docs/user/YYYY-MM-DD-<topic>-design.md`) add clarity within the active Phase (or standalone task).
 - **When standard `AGENTS.md` flow suffices**: Routine bug fixes, config updates, or localized changes already clarified via `my-sess-open` Step 4 (User Interview) can follow `AGENTS.md`'s Two-Tier Execution Flow (Single-Phase Fast Path or simple Phase JIT Detailed Plan) without generating separate spec and plan markdown files.
 
@@ -27,15 +27,15 @@ You MUST create a task for each of these items and complete them in order:
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design & obtain user approval** — scaled to complexity, single cohesive approval (or section-by-section only for multi-component designs)
-5. **Auto-branch check** — if already on a non-`main`/`master` task branch, skip; otherwise automatically create and switch to an AI-named task branch (`git checkout -b <prefix>/<slug>`) without asking
+5. **Auto-branch check** — ensure an active task branch per `my-sess-open` SSoT (if invoked standalone on `main`/`master` or an unrelated branch, automatically create `git checkout -b <prefix>/<slug> <base-branch>` without asking)
 6. **Write design doc** — save to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md` (in accordance with `AGENTS.md` Guideline 6)
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-8. **Transition to implementation** — invoke `writing-plans` skill immediately without a second spec-review wait
+8. **Transition to implementation** — invoke `my-plan-write` skill immediately without a second spec-review wait
 
 ## Process Flow
 
 ```dot
-digraph brainstorming {
+digraph my_plan_design {
     "Explore project context" [shape=box];
     "Ask clarifying questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
@@ -44,7 +44,7 @@ digraph brainstorming {
     "Auto-branch check" [shape=box];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
-    "Invoke writing-plans skill" [shape=box];
+    "Invoke my-plan-write skill" [shape=box];
     "Done" [shape=doublecircle];
 
     "Explore project context" -> "Ask clarifying questions";
@@ -55,19 +55,19 @@ digraph brainstorming {
     "User approves design?" -> "Auto-branch check" [label="yes"];
     "Auto-branch check" -> "Write design doc";
     "Write design doc" -> "Spec self-review\n(fix inline)";
-    "Spec self-review\n(fix inline)" -> "Invoke writing-plans skill";
-    "Invoke writing-plans skill" -> "Done";
+    "Spec self-review\n(fix inline)" -> "Invoke my-plan-write skill";
+    "Invoke my-plan-write skill" -> "Done";
 }
 ```
 
-**The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is `writing-plans`.
+**The terminal state is invoking my-plan-write.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after my-plan-design is `my-plan-write`.
 
 ## The Process
 
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
-- Before asking detailed questions, check if an active `.agents/docs/user/*-macro-plan.md` exists; if so, scope brainstorming strictly to the **current active Phase** rather than re-decomposing future phases. Otherwise, if a standalone request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
+- Before asking detailed questions, check if an active `.agents/docs/user/*-macro-plan.md` exists; if so, scope `my-plan-design` strictly to the **current active Phase** rather than re-decomposing future phases. Otherwise, if a standalone request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If a standalone project is too large for a single spec, help the user decompose into sub-projects (or Tier 1 Macro Phases): what are the independent pieces, how do they relate, what order should they be built? Then brainstorm only the first sub-project/Phase through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
@@ -119,8 +119,8 @@ Fix any issues inline. No need to re-review — just fix and move on.
 
 **Implementation Handoff:**
 
-- Immediately invoke the `writing-plans` skill to create the active Phase (or standalone) detailed implementation plan, without pausing for a second spec-file review or model-selection gate.
-- Do NOT invoke any other implementation skill directly before `writing-plans`.
+- Immediately invoke the `my-plan-write` skill to create the active Phase (or standalone) detailed implementation plan, without pausing for a second spec-file review or model-selection gate.
+- Do NOT invoke any other implementation skill directly before `my-plan-write`.
 
 ## Key Principles
 
@@ -133,7 +133,7 @@ Fix any issues inline. No need to re-review — just fix and move on.
 
 ## Visual Companion
 
-A browser-based companion for showing mockups, diagrams, and visual options during brainstorming. Available as a tool — not a mode. Activate ONLY when the user explicitly requests browser-based visuals; do NOT send a separate proactive offer message.
+A browser-based companion for showing mockups, diagrams, and visual options during `my-plan-design`. Available as a tool — not a mode. Activate ONLY when the user explicitly requests browser-based visuals; do NOT send a separate proactive offer message.
 
 **Per-question decision:** Even after the user accepts, decide FOR EACH QUESTION whether to use the browser or the terminal. The test: **would the user understand this better by seeing it than reading it?**
 
@@ -143,4 +143,4 @@ A browser-based companion for showing mockups, diagrams, and visual options duri
 A question about a UI topic is not automatically a visual question. "What does personality mean in this context?" is a conceptual question — use the terminal. "Which wizard layout works better?" is a visual question — use the browser.
 
 If they agree to the companion, read the detailed guide before proceeding:
-`skills/brainstorming/visual-companion.md`
+`skills/my-plan-design/visual-companion.md`

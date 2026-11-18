@@ -21,19 +21,19 @@ digraph when_to_use {
     "Tasks mostly independent?" [shape=diamond];
     "Stay in this session?" [shape=diamond];
     "subagent-driven-development" [shape=box];
-    "executing-plans" [shape=box];
-    "Manual execution or brainstorm first" [shape=box];
+    "my-plan-execute" [shape=box];
+    "Manual execution or my-plan-design first" [shape=box];
 
     "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
-    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
+    "Have implementation plan?" -> "Manual execution or my-plan-design first" [label="no"];
     "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
-    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
+    "Tasks mostly independent?" -> "Manual execution or my-plan-design first" [label="no - tightly coupled"];
     "Stay in this session?" -> "subagent-driven-development" [label="yes"];
-    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
+    "Stay in this session?" -> "my-plan-execute" [label="no - parallel session"];
 }
 ```
 
-**vs. Executing Plans (parallel session):**
+**vs. my-plan-execute (parallel session):**
 - Same session (no context switch)
 - Fresh subagent per task (no context pollution)
 - Two-stage review after each task: spec compliance first, then code quality
@@ -50,7 +50,7 @@ digraph process {
         "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
+        "Implementer subagent implements, tests, self-reviews" [shape=box];
         "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
         "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
         "Implementer subagent fixes spec gaps" [shape=box];
@@ -63,16 +63,15 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
-    "Remaining phases in macro-plan.md?" [shape=diamond];
-    "Mark phase [x], report commits,\nrecommend /compact & wait" [shape=box style=filled fillcolor=lightyellow];
-    "Use my-sess-close" [shape=box style=filled fillcolor=lightgreen];
+    "Report verification & review results;\nwait for user completion declaration" [shape=box style=filled fillcolor=lightyellow];
+    "Follow AGENTS.md Completion &\nPhase Boundary Gate" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
+    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, self-reviews" [label="no"];
+    "Implementer subagent implements, tests, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
     "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
     "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
     "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
@@ -84,13 +83,12 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Remaining phases in macro-plan.md?";
-    "Remaining phases in macro-plan.md?" -> "Mark phase [x], report commits,\nrecommend /compact & wait" [label="yes"];
-    "Remaining phases in macro-plan.md?" -> "Use my-sess-close" [label="no"];
+    "Dispatch final code reviewer subagent for entire implementation" -> "Report verification & review results;\nwait for user completion declaration";
+    "Report verification & review results;\nwait for user completion declaration" -> "Follow AGENTS.md Completion &\nPhase Boundary Gate";
 }
 ```
 
-**Phase Boundary Gate:** When an active `.agents/docs/user/*-macro-plan.md` still has pending `[ ]` phases after the final review, ensure Phase changes are committed in logical Conventional Commit groups from active conversation context (invoking `my-git-commit` in `Autonomous Logical-Split Mode` only if context is insufficient), mark the completed Phase `[x]` in `macro-plan.md`, report commit SHA(s), recommend running `/compact` before transitioning to the next Phase, and halt instead of invoking `my-sess-close`. Invoke `my-sess-close` only upon completing the final Phase or a standalone plan.
+**User Completion & Phase Boundary Gate:** After final code review passes, report verification and review results and **wait for user completion declaration** (never auto-commit or auto-invoke `my-sess-close` beforehand). Once the user declares completion, follow `AGENTS.md` SSoT (`Autonomous Context-Driven Multi-Commit`, plus `macro-plan.md` `[x]` + `/compact` recommendation when pending `[ ]` phases remain, or `/my-sess-close` guidance upon final/standalone completion).
 
 ## Model Selection
 
@@ -136,7 +134,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
-[Read plan file once: .agents/docs/superpowers/plans/feature-plan.md]
+[Read plan file once: .agents/docs/user/2026-11-18-feature-plan.md]
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
 
@@ -154,12 +152,11 @@ Implementer: "Got it. Implementing now..."
   - Implemented install-hook command
   - Added tests, 5/5 passing
   - Self-review: Found I missed --force flag, added it
-  - Committed
 
 [Dispatch spec compliance reviewer]
 Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
 
-[Get git SHAs, dispatch code quality reviewer]
+[Dispatch code quality reviewer on task diff]
 Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
 
 [Mark Task 1 complete]
@@ -174,7 +171,6 @@ Implementer:
   - Added verify/repair modes
   - 8/8 tests passing
   - Self-review: All good
-  - Committed
 
 [Dispatch spec compliance reviewer]
 Spec reviewer: ❌ Issues:
@@ -215,7 +211,7 @@ Done!
 - Parallel-safe (subagents don't interfere)
 - Subagent can ask questions (before AND during work)
 
-**vs. Executing Plans:**
+**vs. my-plan-execute:**
 - Same session (no handoff)
 - Continuous progress (no waiting)
 - Review checkpoints automatic
@@ -242,7 +238,7 @@ Done!
 ## Red Flags
 
 **Never:**
-- Implement directly on main/master without auto-switching to a task branch (unless user explicitly requested main/master)
+- Implement on main/master or an unrelated prior branch without switching to a task branch per `my-sess-open` SSoT (unless user explicitly requested staying on the current branch)
 - Skip reviews (spec compliance OR code quality)
 - Proceed with unfixed issues
 - Dispatch multiple implementation subagents in parallel (conflicts)
@@ -274,13 +270,13 @@ Done!
 
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - Ensures isolated workspace (creates one or verifies existing)
-- **superpowers:writing-plans** - Creates the plan this skill executes
+- **[my-plan-write](../my-plan-write/SKILL.md)** - Creates the plan this skill executes
 - **superpowers:requesting-code-review** - Code review template for reviewer subagents
-- **[my-sess-close](../my-sess-close/SKILL.md)** - Synchronize state/docs and complete branch integration after final Phase / standalone plan completion (intermediate phases halt for `/compact` after updating `macro-plan.md`)
-- **my-git-commit** - Fallback commit analyzer when diff/conversation context is insufficient for direct logical grouping
+- **[my-sess-close](../my-sess-close/SKILL.md)** - User-triggered (or user-guided) session wrap-up after final Phase / standalone completion per `AGENTS.md` SSoT
+- **my-git-commit** - Fallback commit analyzer (SSoT for message rules and exclusions) invoked after user completion declaration when conversation context is insufficient
 
 **Subagents should use:**
 - **superpowers:test-driven-development** - Subagents follow TDD for each task
 
 **Alternative workflow:**
-- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+- **[my-plan-execute](../my-plan-execute/SKILL.md)** - Use for parallel session instead of same-session execution

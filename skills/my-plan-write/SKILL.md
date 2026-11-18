@@ -1,5 +1,5 @@
 ---
-name: writing-plans
+name: my-plan-write
 description: Use when you have a spec or requirements for a multi-step task, before touching code
 ---
 
@@ -7,15 +7,15 @@ description: Use when you have a spec or requirements for a multi-step task, bef
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD.
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
-**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
+**Announce at start:** "I'm using the my-plan-write skill to create the implementation plan."
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `.agents/docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `.agents/docs/user/YYYY-MM-DD-<feature-name>-plan.md`
 - (User preferences for plan location override this default)
 
 ## Scope Check
@@ -42,7 +42,8 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
 - "Run the tests and make sure they pass" - step
-- "Commit" - step
+
+*(Commits are deferred until all verification passes and the user declares completion per `AGENTS.md` SSoT.)*
 
 ## Plan Document Header
 
@@ -51,7 +52,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or my-plan-execute to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -96,15 +97,6 @@ def function(input):
 
 Run: `pytest tests/path/test.py::test_name -v`
 Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-> Commit verified task changes directly in logical Conventional Commit groups from active task context (excluding `.agents/docs/` and `.agents/scratch/`). Invoke `my-git-commit` (`Autonomous Logical-Split Mode`) only when diff context is insufficient.
-
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
 ````
 
 ## No Placeholders
@@ -121,7 +113,7 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Exact file paths always
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
-- DRY, YAGNI, TDD, frequent commits
+- DRY, YAGNI, TDD; defer commits until user completion declaration per `AGENTS.md`
 
 ## Self-Review
 
@@ -137,7 +129,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan to `.agents/docs/superpowers/plans/<filename>.md` and obtaining explicit plan approval per `AGENTS.md`, automatically select the execution strategy without prompting the user:
+After saving the plan to `.agents/docs/user/<filename>.md` and obtaining explicit plan approval per `AGENTS.md`, automatically select the execution strategy without prompting the user:
 
 - **Subagent-Driven (`subagent-driven-development`)**: Automatically selected when the plan has multiple independent tasks and subagents are available (fresh subagent per task + two-stage review).
-- **Inline Execution (`executing-plans`)**: Automatically selected when tasks are tightly coupled, small (`<= 2` tasks), or subagents are unavailable.
+- **Inline Execution (`my-plan-execute`)**: Automatically selected when tasks are tightly coupled, small (`<= 2` tasks), or subagents are unavailable.

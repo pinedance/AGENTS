@@ -12,8 +12,9 @@ Task tool (general-purpose):
 
   DESCRIPTION: [task summary, from implementer's report]
   PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-  BASE_SHA: [commit before task]
-  HEAD_SHA: [current commit]
+  BASE_SHA: [commit or baseline before task]
+  HEAD_SHA: [WORKING_TREE or commit]
+  FILES_CHANGED: [paths modified/created in this task]
 ```
 
 **In addition to standard code quality concerns, the reviewer should check:**

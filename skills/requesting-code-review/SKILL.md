@@ -23,10 +23,10 @@ Dispatch a code reviewer subagent to catch issues before they cascade. The revie
 
 ## How to Request
 
-**1. Get git SHAs:**
+**1. Get git SHAs (or working-tree diff before user-gated commits):**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
-HEAD_SHA=$(git rev-parse HEAD)
+BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main / HEAD for working tree
+HEAD_SHA=$(git rev-parse HEAD)     # or WORKING_TREE prior to completion commit
 ```
 
 **2. Dispatch code reviewer subagent:**
@@ -57,7 +57,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 [Dispatch code reviewer subagent]
   DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
-  PLAN_OR_REQUIREMENTS: Task 2 from .agents/docs/superpowers/plans/deployment-plan.md
+  PLAN_OR_REQUIREMENTS: Task 2 from .agents/docs/user/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
 
@@ -79,7 +79,7 @@ You: [Fix progress indicators]
 - Catch issues before they compound
 - Fix before moving to next task
 
-**Executing Plans:**
+**Executing Plans (`my-plan-execute`):**
 - Review after each task or at natural checkpoints
 - Get feedback, apply, continue
 

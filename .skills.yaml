@@ -512,10 +512,6 @@ library:
     path: SKILL.md
 - repoId: LOCAL/skills
   skills:
-  - name: brainstorming
-    path: skills/brainstorming/SKILL.md
-  - name: executing-plans
-    path: skills/executing-plans/SKILL.md
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
   - name: my-code-review-executor
@@ -528,6 +524,12 @@ library:
     path: skills/my-md2hwpx/SKILL.md
   - name: my-md2pdf
     path: skills/my-md2pdf/SKILL.md
+  - name: my-plan-design
+    path: skills/my-plan-design/SKILL.md
+  - name: my-plan-execute
+    path: skills/my-plan-execute/SKILL.md
+  - name: my-plan-write
+    path: skills/my-plan-write/SKILL.md
   - name: my-sess-close
     path: skills/my-sess-close/SKILL.md
   - name: my-sess-open
@@ -546,8 +548,6 @@ library:
     path: skills/systematic-debugging/SKILL.md
   - name: test-driven-development
     path: skills/test-driven-development/SKILL.md
-  - name: writing-plans
-    path: skills/writing-plans/SKILL.md
 - repoId: nextlevelbuilder/ui-ux-pro-max-skill
   repoType: github
   repoUrl: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
@@ -1094,12 +1094,6 @@ library:
 workspace:
 - repoId: LOCAL/skills
   skills:
-  - name: brainstorming
-    source: skills/brainstorming
-    target: brainstorming
-  - name: executing-plans
-    source: skills/executing-plans
-    target: executing-plans
   - name: receiving-code-review
     source: skills/receiving-code-review
     target: receiving-code-review
@@ -1115,9 +1109,6 @@ workspace:
   - name: test-driven-development
     source: skills/test-driven-development
     target: test-driven-development
-  - name: writing-plans
-    source: skills/writing-plans
-    target: writing-plans
   - name: my-code-review
     source: skills/my-code-review
     target: my-code-review
@@ -1145,6 +1136,15 @@ workspace:
   - name: my-md2pdf
     source: skills/my-md2pdf
     target: my-md2pdf
+  - name: my-plan-design
+    source: skills/my-plan-design
+    target: my-plan-design
+  - name: my-plan-write
+    source: skills/my-plan-write
+    target: my-plan-write
+  - name: my-plan-execute
+    source: skills/my-plan-execute
+    target: my-plan-execute
 - repoId: anthropics/skills
   skills:
   - name: pdf
