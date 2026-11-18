@@ -27,7 +27,7 @@ This skill is the mandatory entry gate for every session. It initializes directi
 2. **Read Session State Snapshot (`STATE.md`)**:
    - Check in order of precedence: `<root>/.agents/memory/STATE.md` → `<root>/memory/STATE.md` → `<root>/STATE.md`.
    - If present, load `Current Goal`, `Active Branch`, `Blockers`, and `Next Action` to restore loop continuity.
-   - If `STATE.md` references an active `.agents/docs/user/*-macro-plan.md` with pending `[ ]` phases, read that macro-plan file as well to restore Phase roadmap continuity.
+   - If `STATE.md` references an active `.agents/plans/*/macro.md` with pending `[ ]` phases, read that `macro.md` file as well to restore Phase roadmap continuity.
 3. **Strict Enforcement & Communication Mode**:
    - Actively enforce every loaded rule, memory, and coding guideline ([my-coding-guidelines](../my-coding-guidelines/SKILL.md)) throughout the session.
    - Activate Caveman Mode (`/caveman full`) immediately for all subsequent responses.
@@ -63,7 +63,7 @@ This skill is the mandatory entry gate for every session. It initializes directi
      - Modified, staged, or untracked files
 
 2. **Handle Uncommitted Changes (Only If Dirty)**:
-   - Check dirty state excluding ephemeral `.agents/docs/` and `.agents/scratch/` artifacts (per `my-git-commit` SSoT). If the working tree has no committable changes, proceed silently to Step 2.3.
+   - Check dirty state excluding ephemeral `.agents/plans/`, `.agents/docs/`, and `.agents/scratch/` artifacts (per `my-git-commit` SSoT). If the working tree has no committable changes, proceed silently to Step 2.3.
    - If uncommitted modifications exist, output a brief `git status --short` summary first, then prompt via `ask_question`:
      - **Question**: "작업 시작 전 커밋되지 않은 변경사항이 발견되었습니다. 어떻게 처리할까요?"
      - **Options**:
@@ -102,11 +102,11 @@ This skill is the mandatory entry gate for every session. It initializes directi
 
 1. **Topic vs. `STATE.md` & Macro Plan Alignment**:
    - Compare the user's stated session topic/goal against `STATE.md`'s `Current Goal` and `Next Action`. If `STATE.md` has unfinished work that differs from the new topic, clarify via `ask_question` whether to resume the existing goal or pivot to the new topic.
-   - **If resuming `STATE.md` work**: When current branch differs from `STATE.md`'s `Active Branch` and `Active Branch` still exists locally or on remote (with a clean/compatible tree), switch to it automatically (`git checkout <Active Branch>`) and apply `Step 2.3` remote sync check; if an active `.agents/docs/user/*-macro-plan.md` has pending `[ ]` phases, hand off directly to the next pending Phase's JIT User Interview & Detailed Plan per `AGENTS.md` Tier 2.
+   - **If resuming `STATE.md` work**: When current branch differs from `STATE.md`'s `Active Branch` and `Active Branch` still exists locally or on remote (with a clean/compatible tree), switch to it automatically (`git checkout <Active Branch>`) and apply `Step 2.3` remote sync check; if an active `.agents/plans/*/macro.md` has pending `[ ]` phases, hand off directly to the next pending Phase's JIT User Interview & Detailed Plan per `AGENTS.md` Tier 2.
 2. **Mandatory User Interview & Planning Handoff**:
    - Do NOT jump directly to a Detailed Plan or code edits. Inspect only the minimum files needed to understand the stated topic, then initiate a 1-question-at-a-time User Interview (preferring `ask_question`) scoped strictly to entry classification:
      - **Multi-phase task (2+ phases)**: Concretize ONLY overall goals, global constraints, and Phase boundaries (`Macro User Interview`), deferring Phase-specific detail questions to each Phase's Tier 2 JIT User Interview.
      - **Single-phase task**: Concretize task requirements directly before proposing the Detailed Plan.
    - Once concrete, apply `Step 4.3` Task Branch Setup (when changes are needed) and hand off directly to `AGENTS.md`'s Two-Tier Execution Flow (`Single-Phase Fast Path` vs. `Tier 1 Macro Plan`).
 3. **Task Branch Setup (SSoT)**:
-   - For a new session task requiring repository, plan, or codebase modifications (when no explicit branch was given in Step 2.4): do NOT ask user approval for branch creation or branch name. Whether currently on `<base-branch>` (`main`/`master`) or lingering on a prior unrelated branch, automatically create and switch to a new AI-named branch off `<base-branch>` (`git checkout -b <prefix>/<slug> <base-branch>`, or from `HEAD` if uncommitted changes were intentionally retained in Step 2.2) before persisting `macro-plan.md` or modifying any files. Keep the current branch silently for purely read-only Q&A sessions.
+   - For a new session task requiring repository, plan, or codebase modifications (when no explicit branch was given in Step 2.4): do NOT ask user approval for branch creation or branch name. Whether currently on `<base-branch>` (`main`/`master`) or lingering on a prior unrelated branch, automatically create and switch to a new AI-named branch off `<base-branch>` (`git checkout -b <prefix>/<slug> <base-branch>`, or from `HEAD` if uncommitted changes were intentionally retained in Step 2.2) before persisting `macro.md` or modifying any files. Keep the current branch silently for purely read-only Q&A sessions.

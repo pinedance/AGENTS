@@ -88,7 +88,7 @@ digraph process {
 }
 ```
 
-**User Completion & Phase Boundary Gate:** After final code review passes, report verification and review results and **wait for user completion declaration** (never auto-commit or auto-invoke `my-sess-close` beforehand). Once the user declares completion, follow `AGENTS.md` SSoT (`Autonomous Context-Driven Multi-Commit`, plus `macro-plan.md` `[x]` + `/compact` recommendation when pending `[ ]` phases remain, or `/my-sess-close` guidance upon final/standalone completion).
+**User Completion & Phase Boundary Gate:** After final code review passes, report verification and review results and **wait for user completion declaration** (never auto-commit or auto-invoke `my-sess-close` beforehand). Once the user declares completion, follow `AGENTS.md` SSoT (`Autonomous Context-Driven Multi-Commit`, plus `macro.md` `[x]` + `/compact` recommendation when pending `[ ]` phases remain, or `/my-sess-close` guidance upon final/standalone completion).
 
 ## Model Selection
 
@@ -134,7 +134,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 ```
 You: I'm using Subagent-Driven Development to execute this plan.
 
-[Read plan file once: .agents/docs/user/2026-11-18-feature-plan.md]
+[Read plan file once: .agents/plans/2026-11-18-feature/plan.md]
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
 

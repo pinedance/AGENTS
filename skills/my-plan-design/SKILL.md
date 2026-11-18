@@ -15,8 +15,8 @@ When this skill is active, do NOT invoke any implementation skill, write any cod
 
 ## Scope & Alignment with `my-sess-open` / `AGENTS.md`
 
-- **Intra-Phase Scope Boundary**: In a multi-phase session (active `.agents/docs/user/*-macro-plan.md`), `my-plan-design` operates strictly as an intra-phase design skill for the **current active Phase**. Never expand specs into subsequent deferred phases.
-- **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/docs/user/YYYY-MM-DD-<topic>-design.md`) add clarity within the active Phase (or standalone task).
+- **Intra-Phase Scope Boundary**: In a multi-phase session (active `.agents/plans/*/macro.md`), `my-plan-design` operates strictly as an intra-phase design skill for the **current active Phase**. Never expand specs into subsequent deferred phases.
+- **When to use full Spec + Plan workflow**: New features, multi-module changes, or ambiguous requirements where architectural trade-offs and a persistent design spec (`.agents/plans/YYYY-MM-DD-<topic>/phase-XX.md`, `phase-XX-design.md` when paired with `my-plan-write`, or `design.md` for standalone single-phase tasks) add clarity within the active Phase (or standalone task).
 - **When standard `AGENTS.md` flow suffices**: Routine bug fixes, config updates, or localized changes already clarified via `my-sess-open` Step 4 (User Interview) can follow `AGENTS.md`'s Two-Tier Execution Flow (Single-Phase Fast Path or simple Phase JIT Detailed Plan) without generating separate spec and plan markdown files.
 
 ## Checklist
@@ -28,7 +28,7 @@ You MUST create a task for each of these items and complete them in order:
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design & obtain user approval** — scaled to complexity, single cohesive approval (or section-by-section only for multi-component designs)
 5. **Auto-branch check** — ensure an active task branch per `my-sess-open` SSoT (if invoked standalone on `main`/`master` or an unrelated branch, automatically create `git checkout -b <prefix>/<slug> <base-branch>` without asking)
-6. **Write design doc** — save to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md` (in accordance with `AGENTS.md` Guideline 6)
+6. **Write design doc** — save to `.agents/plans/YYYY-MM-DD-<topic>/phase-XX-design.md` (or `phase-XX.md` when standalone in Phase XX; `design.md` for single-phase tasks, per `AGENTS.md` Guideline 6)
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **Transition to implementation** — invoke `my-plan-write` skill immediately without a second spec-review wait
 
@@ -67,7 +67,7 @@ digraph my_plan_design {
 **Understanding the idea:**
 
 - Check out the current project state first (files, docs, recent commits)
-- Before asking detailed questions, check if an active `.agents/docs/user/*-macro-plan.md` exists; if so, scope `my-plan-design` strictly to the **current active Phase** rather than re-decomposing future phases. Otherwise, if a standalone request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
+- Before asking detailed questions, check if an active `.agents/plans/*/macro.md` exists; if so, scope `my-plan-design` strictly to the **current active Phase** rather than re-decomposing future phases. Otherwise, if a standalone request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If a standalone project is too large for a single spec, help the user decompose into sub-projects (or Tier 1 Macro Phases): what are the independent pieces, how do they relate, what order should they be built? Then brainstorm only the first sub-project/Phase through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
@@ -103,7 +103,7 @@ digraph my_plan_design {
 
 **Documentation:**
 
-- Write the validated design (spec) to `.agents/docs/user/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design (spec) to `.agents/plans/YYYY-MM-DD-<topic>/phase-XX-design.md` (or `phase-XX.md` when no separate plan file follows; `design.md` for standalone single-phase tasks)
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 

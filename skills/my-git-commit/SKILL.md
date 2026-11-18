@@ -109,4 +109,4 @@ Show a summary of the resulting commits to the user.
 
 ## Exclusions (SSoT)
 
-- **Ephemeral Design, Plan & Scratch Artifacts**: Working design specs, implementation plans, and temporary files under `.agents/docs/` and `.agents/scratch/` are excluded from commits unless explicitly requested by the user. Persistent project markdown files (`README.md`, `SKILL.md`, `STATE.md`, `rules/*.md`, `memory/*.md`) remain normal commit targets.
+- **Ephemeral Design, Plan & Scratch Artifacts**: Working design specs, implementation plans, and temporary files under `.agents/plans/`, `.agents/docs/`, and `.agents/scratch/` are excluded from commits unless explicitly requested by the user. Persistent project markdown files (`README.md`, `SKILL.md`, `STATE.md`, `rules/*.md`, `memory/*.md`) remain normal commit targets.

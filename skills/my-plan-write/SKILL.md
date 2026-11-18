@@ -15,12 +15,12 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated worktree, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `.agents/docs/user/YYYY-MM-DD-<feature-name>-plan.md`
+**Save plans to:** `.agents/plans/YYYY-MM-DD-<topic>/phase-XX.md` (`phase-XX-plan.md` when `phase-XX-design.md` exists in the same Phase; `plan.md` for standalone single-phase tasks)
 - (User preferences for plan location override this default)
 
 ## Scope Check
 
-- **Active Phase Boundary**: When an active `.agents/docs/user/*-macro-plan.md` exists, scope file mapping and bite-sized implementation tasks strictly to the **current active Phase**, leaving subsequent phases deferred in `macro-plan.md`.
+- **Active Phase Boundary**: When an active `.agents/plans/*/macro.md` exists, reuse its locked `.agents/plans/YYYY-MM-DD-<topic>/` directory and scope file mapping and bite-sized implementation tasks strictly to the **current active Phase**, leaving subsequent phases deferred in `macro.md`.
 - **Standalone Multi-Subsystem Check**: If a standalone spec covers multiple independent subsystems, it should have been broken into sub-project specs (or Tier 1 Macro Phases) first. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
 
 ## File Structure
@@ -129,7 +129,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
-After saving the plan to `.agents/docs/user/<filename>.md` and obtaining explicit plan approval per `AGENTS.md`, automatically select the execution strategy without prompting the user:
+After saving the plan under `.agents/plans/YYYY-MM-DD-<topic>/` and obtaining explicit plan approval per `AGENTS.md`, automatically select the execution strategy without prompting the user:
 
 - **Subagent-Driven (`subagent-driven-development`)**: Automatically selected when the plan has multiple independent tasks and subagents are available (fresh subagent per task + two-stage review).
 - **Inline Execution (`my-plan-execute`)**: Automatically selected when tasks are tightly coupled, small (`<= 2` tasks), or subagents are unavailable.

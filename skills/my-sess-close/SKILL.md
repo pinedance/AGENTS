@@ -16,13 +16,13 @@ This skill ensures every session ends cleanly with an up-to-date state snapshot 
 ## STEP 1: READ-ONLY INSPECTION & PRE-CLOSE BRIEFING
 
 1. **Inspect Git & Session Context**:
-   - Run `git status --porcelain -b` and `git diff --stat` to identify `<branch>` (or detached HEAD), `<base-branch>` (`git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null`), modified/untracked files (ignoring ephemeral `.agents/docs/` and `.agents/scratch/` artifacts per `my-git-commit`), and whether unpushed local commits exist (`ahead > 0` on tracked upstream, or local commits ahead of `<base-branch>` when `git rev-parse --abbrev-ref @{u}` confirms no upstream is configured).
+   - Run `git status --porcelain -b` and `git diff --stat` to identify `<branch>` (or detached HEAD), `<base-branch>` (`git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null`), modified/untracked files (ignoring ephemeral `.agents/plans/`, `.agents/docs/`, and `.agents/scratch/` artifacts per `my-git-commit`), and whether unpushed local commits exist (`ahead > 0` on tracked upstream, or local commits ahead of `<base-branch>` when `git rev-parse --abbrev-ref @{u}` confirms no upstream is configured).
    - Detect workspace layout via `GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)` and `GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)`:
      - `GIT_DIR == GIT_COMMON`: normal repository.
      - `GIT_DIR != GIT_COMMON` under `.worktrees/` or `worktrees/`: agent-owned worktree (eligible for cleanup on merge/discard).
      - `GIT_DIR != GIT_COMMON` elsewhere: harness-owned external worktree (preserve directory; never remove it).
    - Locate target `STATE.md` in precedence order: `<root>/.agents/memory/STATE.md` → `<root>/memory/STATE.md` → `<root>/STATE.md` (defaulting to `<root>/.agents/memory/STATE.md` when absent), and check via `git check-ignore -q <state-path>` whether `STATE.md` is gitignored or Git-committable.
-   - Check whether an active `.agents/docs/user/*-macro-plan.md` exists with pending `[ ]` phases so mid-roadmap session continuity can be preserved in `STATE.md`.
+   - Check whether an active `.agents/plans/*/macro.md` exists with pending `[ ]` phases so mid-roadmap session continuity can be preserved in `STATE.md`.
    - Check `<root>/README.md` (if present) for documentation drift against session changes, and evaluate whether reusable architectural invariants or recurring bug patterns warrant promotion to `<root>/.agents/memory/` (`memory/`) or `<root>/.agents/rules/` (`rules/`).
    - Compute **`has_committable_changes`**: `true` if committable working tree changes already exist, `README.md` requires an update, a non-gitignored knowledge file will be written, or target `STATE.md` is not gitignored; otherwise `false`.
 
@@ -91,7 +91,7 @@ Invoking `/my-sess-close` authorizes updating `STATE.md`, `README.md`, and confi
      - `Merge locally` (pre-merge tests passed): `Active Branch: <base-branch>`, `Next Action: None (task completed)` (or next planned task).
      - `Stash`: `Active Branch: <branch>`, noting in `Next Action` that WIP code is stored in `git stash`.
      - `Keep` / `Push` / `Push & create Pull Request`: `Active Branch: <branch>` and immediate next step.
-     - `Mid-roadmap pause` (active `.agents/docs/user/*-macro-plan.md` has remaining `[ ]` phases): Record the `macro-plan.md` path in `Progress & Checklist` and specify the next pending `Phase k` in `Next Action` so `my-sess-open` resumes directly at that Phase.
+     - `Mid-roadmap pause` (active `.agents/plans/*/macro.md` has remaining `[ ]` phases): Record the `macro.md` path in `Progress & Checklist` and specify the next pending `Phase k` in `Next Action` so `my-sess-open` resumes directly at that Phase.
    - Use the following structure:
      ```markdown
      # Session State

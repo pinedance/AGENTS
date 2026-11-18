@@ -34,7 +34,7 @@ For each task:
 
 After all tasks in the current plan pass verification:
 - **Do NOT auto-commit and do NOT auto-invoke `my-sess-close`.** Output a concise verification summary with command evidence and **wait for the user's completion declaration**.
-- Once the user declares completion (or next-phase transition / `/my-sess-close`), follow `AGENTS.md` SSoT (`Autonomous Context-Driven Multi-Commit` + `Phase Boundary Gate`: mark `[x]` in `macro-plan.md` and recommend `/compact` if `[ ]` phases remain, or guide toward [my-sess-close](../my-sess-close/SKILL.md) on final/standalone completion).
+- Once the user declares completion (or next-phase transition / `/my-sess-close`), follow `AGENTS.md` SSoT (`Autonomous Context-Driven Multi-Commit` + `Phase Boundary Gate`: mark `[x]` in `macro.md` and recommend `/compact` if `[ ]` phases remain, or guide toward [my-sess-close](../my-sess-close/SKILL.md) on final/standalone completion).
 
 ## When to Stop and Ask for Help
 
