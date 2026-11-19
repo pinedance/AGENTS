@@ -1,7 +1,7 @@
 ---
 name: my-goal-loop
 description: >
-  Domain-agnostic autonomous iterative convergence controller executing a repeating Work, Independent Audit, and Keep/Revert Ratchet cycle governed by an upfront Frozen Goal Contract. Make sure to trigger this skill whenever the user asks to iterate, refine, refactor, optimize, or reconcile targets repeatedly until a condition, quality/logic rubric, SSoT consistency rule, test/build gate, or quantitative benchmark/metric target is satisfied — including Korean and English requests such as "특정 목표/조건 달성까지 반복", "작업 후 감사/검증 루프", "수렴할 때까지 수정/개선", "조건 만족할 때까지 루프", "audit loop", "iterate until goal/condition/metric is met", or "/my-goal-loop", even when they do not explicitly mention "goal loop". Do NOT use for one-shot static reviews, single-pass interactive task edits, or linear forward execution of sequential plans.
+  Domain-agnostic autonomous iterative convergence controller executing a repeating Work, Independent Audit, and Keep/Revert Ratchet cycle governed by an upfront Frozen Goal Contract. Make sure to trigger on /my-goal-loop or any Korean/English request to repeatedly iterate, audit, refine, refactor, or optimize until a falsifiable condition, rubric, SSoT invariant, test gate, or metric target converges (even without saying "goal loop"). Do NOT use for one-shot static reviews, single-pass interactive edits, or linear execution of sequential plans.
 ---
 
 # My Goal Loop
@@ -48,7 +48,7 @@ Lock falsifiable pass/fail criteria before touching any file so neither evaluati
 
 ### Single Upfront Approval Gate
 
-Present the finalized `Frozen Goal Contract` in `.agents/AGENTS.md` Detailed Plan format for **one explicit user approval** prior to Round 1. Once approved, iterate autonomously without per-round confirmation until convergence or a circuit-breaker halt.
+Present the finalized `Frozen Goal Contract` in `AGENTS.md` Detailed Plan format for **one explicit user approval** prior to Round 1. Once approved, iterate autonomously without per-round confirmation until convergence or a circuit-breaker halt.
 
 ## 3. Universal 6-Step Loop Engine
 
@@ -119,7 +119,7 @@ If not yet converged, evaluate Section 4 circuit breakers. When none have trippe
 
 ### Zero-Commit Snapshot Rollback
 
-- Follow `.agents/AGENTS.md`: **never run `git commit` mid-loop** and **never execute destructive Git commands** (`git reset --hard`, `git checkout -f`, `git clean -f`).
+- Follow `AGENTS.md`: **never run `git commit` mid-loop** and **never execute destructive Git commands** (`git reset --hard`, `git checkout -f`, `git clean -f`).
 - On `REVERT`: overwrite modified `Mutable Scope` files using their exact copies in `.agents/scratch/goal-loop/<run-id>/last-good/`. Compare `Mutable Scope` against `last-good/` and `manifest.txt`, and remove only newly created in-scope files that were never promoted to `last-good/`. Never touch pre-existing out-of-scope files, git state, or symlinks.
 
 ### 3-Way Circuit Breakers (`HALTED`)

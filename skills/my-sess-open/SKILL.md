@@ -29,7 +29,7 @@ Run tool calls silently before any user-visible output.
    - **Python (precedence tier)**: explicit lockfiles (`uv.lock`→`uv run`, `poetry.lock`→`poetry run`, `Pipfile.lock`→`pipenv run`) outrank `.venv/` (`.venv/bin/python`), `environment.yml` (`conda run`), and bare `pyproject.toml`.
    - **Node / Polyglot**: `pnpm-lock.yaml` (`pnpm`), `yarn.lock` (`yarn`), `bun.lockb` (`bun`), `package-lock.json` (`npm`), `Cargo.toml` (`cargo`), `go.mod` (`go`).
 2. Lock a single highest-precedence runtime (or `None` if absent) silently. Prompt via `ask_question` only when conflicting lockfiles coexist at the same precedence tier (recommended candidate first).
-3. If locked runtime is not `None`, verify availability (`<prefix> --version`); halt and prompt on failure. Enforce `<prefix>` on all subsequent toolchain commands (no bare `python`, `pytest`, `npm`).
+3. If locked runtime is not `None`, verify executable availability (`<tool> --version`, e.g., `uv --version`, `.venv/bin/python --version`; `go version` for Go); halt and prompt on failure. Enforce `<prefix>` on all subsequent toolchain commands (no bare `python`, `pytest`, `npm`).
 
 ## STEP 2: Git Inspection & Remote Sync
 
@@ -57,11 +57,11 @@ Enforce `AGENTS.md` Plan-Before-Edit and User-Gated Completion SSoT.
 ## STEP 4: Topic Alignment, Interview & Task Branch Handoff
 
 1. **Stale `STATE.md` Check & Alignment**:
-   - Silently treat `STATE.md` as stale if it has zero pending `[ ]` items AND its `Active Branch` no longer exists (`git show-ref`) or is already merged into `<base-branch>` (`git branch --merged`).
+   - Resolve `<base-branch>` per [my-sess-close](../my-sess-close/SKILL.md) Step 1.1 SSoT (`main`/`master`). Silently treat `STATE.md` as stale if it has zero pending `[ ]` items AND its `Active Branch` no longer exists (`git show-ref --verify --quiet refs/heads/<branch>`) or is already merged into `<base-branch>` (`git branch --merged <base-branch>`).
    - Otherwise, if active unfinished `STATE.md` work differs from the user's topic, clarify via `ask_question` (resume vs pivot).
    - On resume: checkout `Active Branch` (if different, existing, and tree-compatible) + apply Step 2.3 sync; if an active `macro.md` has pending `[ ]` phases, enter `AGENTS.md` Tier 2 directly.
 2. **Interview & Planning Handoff**:
    - Skip interview for purely read-only Q&A or read-only audit workflows (e.g., `my-prompt-audit` Mode 1).
    - For change tasks: inspect minimal context, clarify gaps 1 question at a time (`ask_question` preferred) scoped to entry tier (`Macro` vs `Single-Phase`), then hand off to `AGENTS.md` Execution Flow.
 3. **Task Branch Setup (SSoT)**:
-   - For new tasks requiring repo, plan, or code edits (when no explicit branch was given in Step 2.4): right before the first repo/plan write, if currently on `<base-branch>` or lingering on an unrelated prior branch, automatically create and switch to an AI-named branch (`git checkout -b <prefix>/<slug> <base-branch>`, or from `HEAD` if uncommitted changes were retained in Step 2.2) without asking approval. Preserve a fresh task branch already matching this session, and keep the current branch silently for read-only sessions.
+   - For new tasks requiring repo, plan, or code edits (when no explicit branch was given in Step 2.4): right before the first repo/plan write, if currently on `<base-branch>` or lingering on an unrelated prior branch, automatically create and switch to an AI-named branch (`git checkout -b <type>/<slug> <base-branch>`, or from `HEAD` if uncommitted changes were retained in Step 2.2) without asking approval. Preserve a fresh task branch already matching this session, and keep the current branch silently for read-only sessions.

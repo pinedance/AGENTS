@@ -37,7 +37,7 @@ Invoking `/my-sess-close` authorizes updating `STATE.md`, `README.md`, and confi
 
 1. **Discard Path (only if `Discard` selected)**:
    - Skip committing on `<branch>`. Print permanent deletion summary (`<branch>`/detached, commits/files/owned worktree lost) and require 2-step typed confirmation: `'discard'` then `'yes'` (abort back to Step 2.2 on decline).
-   - Clean up by layout: normal (`git checkout -f <base-branch>`, `git clean -fd`, `git branch -D <branch>`), owned worktree (`cd "$MAIN_ROOT"`, `git worktree remove --force "$WORKTREE_PATH"`, `git worktree prune`, `git branch -D <branch>`), external worktree (`git checkout -f --detach <base-branch>`, `git clean -fd`, `git branch -D <branch>`).
+   - Clean up by layout (omit `git branch -D <branch>` if detached): normal (`git checkout -f <base-branch>`, `git clean -fd`, `git branch -D <branch>`), owned worktree (`cd "$MAIN_ROOT"`, `git worktree remove --force "$WORKTREE_PATH"`, `git worktree prune`, `git branch -D <branch>`), external worktree (`git checkout -f --detach <base-branch>`, `git clean -fd`, `git branch -D <branch>`).
    - On `<base-branch>`, write approved knowledge + `STATE.md` (`Active Branch: <base-branch>`), auto-commit if tracked (unless left uncommitted), and jump to Step 4.
 2. **Pre-Merge / Pre-PR Test Gate (Fail-Fast; only if `Merge locally` or `Push & create PR`)**:
    - Run the project test suite using the session's locked runtime `<prefix>`.
@@ -71,7 +71,7 @@ Invoking `/my-sess-close` authorizes updating `STATE.md`, `README.md`, and confi
      - `Keep`/skipped: no-op.
      - `Push`: `git push` (`-u origin <branch>` if no upstream).
      - `Push & create PR`: push (`git push origin HEAD:refs/heads/<new-branch>` if detached) and open PR; preserve worktree.
-     - `Merge locally`: `cd "$MAIN_ROOT"` if worktree → `git checkout <base-branch>` → `git pull` (if remote) → `git merge <branch>` → re-verify test suite with `<prefix>` (halt before cleanup on conflict/failure and record `Blockers` in `STATE.md` if deferred) → remove owned worktree (`git worktree remove` + `prune`) → `git branch -d <branch>` → persist deferred gitignored `STATE.md` in `$MAIN_ROOT`.
+     - `Merge locally`: `cd "$MAIN_ROOT"` if worktree → `git checkout <base-branch>` → `git pull` (if remote) → `git merge <branch>` → re-verify test suite with `<prefix>` (halt before cleanup on conflict/failure and update `STATE.md` with `Blockers`) → remove owned worktree (`git worktree remove` + `prune`) → `git branch -d <branch>` → persist deferred gitignored `STATE.md` in `$MAIN_ROOT`.
 
 ## STEP 4: Closing Summary
 
