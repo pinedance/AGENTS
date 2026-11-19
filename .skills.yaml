@@ -532,6 +532,8 @@ library:
     path: skills/my-plan-execute/SKILL.md
   - name: my-plan-write
     path: skills/my-plan-write/SKILL.md
+  - name: my-prompt-audit
+    path: skills/my-prompt-audit/SKILL.md
   - name: my-sess-close
     path: skills/my-sess-close/SKILL.md
   - name: my-sess-open
@@ -1150,6 +1152,9 @@ workspace:
   - name: my-goal-loop
     source: skills/my-goal-loop
     target: my-goal-loop
+  - name: my-prompt-audit
+    source: skills/my-prompt-audit
+    target: my-prompt-audit
 - repoId: anthropics/skills
   skills:
   - name: pdf
