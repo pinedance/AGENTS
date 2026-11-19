@@ -155,7 +155,7 @@ Synchronizes the local filesystem with `.skills.yaml` and global settings (`sett
 
 ```bash
 uv run sync
-# Check remote commits against cached zips and re-download outdated repos
+# Warn if pinned commits in .skills.yaml lag behind remote HEAD (informational; use 'library update' to re-download)
 uv run sync --check-remote
 ```
 * **Optimized Sync**: Uses the Git Commit ID stored in the zip file's comment field. If the commit hash has not changed, it skips the extraction process. Skip completely for `LOCAL/*` repositories.
@@ -228,7 +228,7 @@ Manage which skills are active and symlinked in the global folder `~/.agents/ski
      uv run workspace add <skill_name> --name <skill_name>
      ```
 2. **Edit an Existing Local Skill**:
-   - Edit `skills/<skill_name>/SKILL.md` directly (live via symlink). Run `uv run sync` if frontmatter `name:` or `skills/` files changed to refresh `.skills.yaml` / `skills.json`.
+   - Edit `skills/<skill_name>/SKILL.md` directly (live via symlink). Run `uv run library add LOCAL/skills` if frontmatter `name:` or `skills/` directory entries changed (re-scans into `.skills.yaml` and syncs); run `uv run sync` after direct `.skills.yaml` edits.
 3. **Deactivate Only (Keep Source Files)**:
    - Unlink from `~/.agents/skills/` and remove from `workspace:` while keeping `skills/<skill_name>/` and the `library:` entry:
      ```bash
