@@ -7,8 +7,7 @@ description: >
   for dated prompting patterns, stale repo references, cross-file contradictions, and architectural cruft.
   Trigger on requests for prompt or instruction auditing ("프롬프트 감사", "지침 점검", "스킬 감사",
   "/my-prompt-audit", "prompt audit", "audit AGENTS.md", "find prompt cruft").
-  Do NOT trigger for general source code review (use my-code-review), targeted rule insertion into a
-  single skill file (use my-skill-updater), or autonomous iterative convergence loops (use my-goal-loop).
+  Do NOT trigger for general source code review, authoring new skills from scratch (use skill-creator), or autonomous iterative convergence loops (use my-goal-loop).
 ---
 
 # My Prompt Audit
@@ -22,8 +21,8 @@ Audit agent configuration files and LLM application code for instructions that n
 - **Core Frame — Signal Over Brevity**: *"Every token earns its place"* is the goal; raw character reduction is not. Modern models follow instructions literally, so leftover workarounds cause over-triggering, rigid behavior, or wasted reasoning budget. Indiscriminate trimming deletes high-value context. A clean surface yields an empty diff.
 - **Provider & Model Neutrality**: Never hardcode a vendor or model baseline. Resolve the target provider/model from the request, repository, or active agent, and verify any provider-specific API claim against that provider's actual documentation or SDK.
 - **Separation of Concerns (SoC)**:
-  - `my-skill-updater`: Add or refine a single rule inside a target `SKILL.md`.
-  - `my-code-review` / `my-code-review-executor`: General 5-dimension source code review and refactoring execution.
+  - `skill-creator`: Author new skills from scratch or run skill evals/benchmarks.
+  - `my-coding-guidelines`: General source code quality standards (outside prompt/instruction auditing).
   - `my-goal-loop`: Autonomous iterative convergence controller; may reference `my-prompt-audit` criteria inside an `Audit Oracle` when iterative cleanup is requested.
   - `my-prompt-audit`: Two-phase workflow — **Mode 1** (default, non-interactive read-only audit) and **Mode 2** (explicitly requested interactive hunk application + verification).
 - **Untrusted Data & Secret Boundaries**:

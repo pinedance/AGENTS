@@ -1,7 +1,7 @@
 ---
 name: my-goal-loop
 description: >
-  Domain-agnostic autonomous iterative convergence controller executing a repeating Work, Independent Audit, and Keep/Revert Ratchet cycle governed by an upfront Frozen Goal Contract. Make sure to trigger this skill whenever the user asks to iterate, refine, refactor, optimize, or reconcile targets repeatedly until a condition, quality/logic rubric, SSoT consistency rule, test/build gate, or quantitative benchmark/metric target is satisfied — including Korean and English requests such as "특정 목표/조건 달성까지 반복", "작업 후 감사/검증 루프", "수렴할 때까지 수정/개선", "조건 만족할 때까지 루프", "audit loop", "iterate until goal/condition/metric is met", or "/my-goal-loop", even when they do not explicitly mention "goal loop". Do NOT use for one-shot static reviews (my-code-review), interactive confirmation of pre-listed review tasks (my-code-review-executor), or linear forward execution of pre-decomposed implementation plans (subagent-driven-development, my-plan-execute).
+  Domain-agnostic autonomous iterative convergence controller executing a repeating Work, Independent Audit, and Keep/Revert Ratchet cycle governed by an upfront Frozen Goal Contract. Make sure to trigger this skill whenever the user asks to iterate, refine, refactor, optimize, or reconcile targets repeatedly until a condition, quality/logic rubric, SSoT consistency rule, test/build gate, or quantitative benchmark/metric target is satisfied — including Korean and English requests such as "특정 목표/조건 달성까지 반복", "작업 후 감사/검증 루프", "수렴할 때까지 수정/개선", "조건 만족할 때까지 루프", "audit loop", "iterate until goal/condition/metric is met", or "/my-goal-loop", even when they do not explicitly mention "goal loop". Do NOT use for one-shot static reviews, single-pass interactive task edits, or linear forward execution of sequential plans.
 ---
 
 # My Goal Loop
@@ -14,9 +14,8 @@ Autonomously drive iterative `Work -> Independent Audit -> Keep/Revert Ratchet` 
 - **Single-File & Host-Agnostic Portability (YAGNI)**: Keep execution self-contained in this prompt protocol with zero auxiliary scripts, hooks, plugins, or background daemons. Use an isolated read-only subagent for qualitative audits when the host supports subagents; fall back seamlessly to structured inline verification tables when it does not.
 - **User Language Alignment**: Write internal contracts and reasoning consistently, while conducting all user-facing interviews, contract approvals, and exit reports in the user's language.
 - **Separation of Concerns (SoC)**:
-  - `my-code-review`: Produces a one-shot 5-dimension static review report. When a user's `Audit Oracle` requests code quality evaluation, reference `my-coding-guidelines` or `my-code-review` dimensions inside the contract while letting `my-goal-loop` control iteration and rollback.
-  - `my-code-review-executor`: Interactively applies pre-existing `tasks.md` or `task2.md` items with per-task confirmation. Use `my-goal-loop` instead when convergence requires autonomous trial-and-audit loops.
-  - `subagent-driven-development` / `my-plan-execute`: Execute pre-decomposed sequential task plans. `my-goal-loop` focuses strictly on goal-convergence judgment and ratchet rollback across rounds.
+  - `AGENTS.md` Two-Tier Flow: Governs linear Phase planning, execution, and completion commits; `my-goal-loop` focuses strictly on autonomous trial-and-audit convergence and ratchet rollback across rounds.
+  - `my-coding-guidelines` / `my-prompt-audit`: Provide evaluation standards an `Audit Oracle` may reference when iterative code or prompt cleanup is requested.
 
 ## 2. Entry Gate — JIT Interview & Frozen Goal Contract
 
@@ -57,7 +56,8 @@ Present the finalized `Frozen Goal Contract` in `.agents/AGENTS.md` Detailed Pla
 
 1. Run frozen `Invariants / Safety Guards` and `Audit Oracle` against the initial untouched state to establish `Baseline`.
 2. If both `Goal` and `Safety Guards` already pass cleanly, modify zero files and exit immediately with `ALREADY_SATISFIED`.
-3. Otherwise allocate `<run-id>` (e.g., `YYYYMMDD_HHMMSS-<slug>`) under `.agents/scratch/goal-loop/<run-id>/`: copy pre-existing `Mutable Scope` files into `last-good/` preserving relative paths, record all pre-existing relative paths in `manifest.txt`, and initialize `ledger.md`.
+3. **Task Branch Guard**: Before creating scratch state or modifying any file in Round 1, ensure an active task branch per [my-sess-open](../my-sess-open/SKILL.md) Step 4.3 SSoT (never mutate `Mutable Scope` on `<base-branch>` or an unrelated branch unless explicitly requested).
+4. Otherwise allocate `<run-id>` (e.g., `YYYYMMDD_HHMMSS-<slug>`) under `.agents/scratch/goal-loop/<run-id>/`: copy pre-existing `Mutable Scope` files into `last-good/` preserving relative paths, record all pre-existing relative paths in `manifest.txt`, and initialize `ledger.md`.
 
 ### Step 1 — Atomic Work
 
@@ -146,5 +146,5 @@ Upon exiting with `ALREADY_SATISFIED`, `CONVERGED`, or `HALTED`, report all thre
 
 ### User Completion Declaration Gate
 
-- Passing `Closing Verify` (`CONVERGED`) is **verification evidence, not task completion**. Never execute `git commit` until the user inspects the evidence and explicitly declares completion; preserve `.agents/scratch/goal-loop/<run-id>/` intact during user review.
+- Passing `Closing Verify` (`CONVERGED`) is **verification evidence, not task completion**. Never execute `git commit` until the user inspects the evidence and explicitly declares completion; preserve `.agents/scratch/goal-loop/<run-id>/` intact during user review. Once the user declares completion, follow `AGENTS.md` Completion & Phase Boundary Gate SSoT for commits and Phase transitions.
 - When exiting via `HALTED`, leave the verified `last-good` state intact and ask the user whether to: (1) adjust the contract or `Mutable Scope` and resume, (2) raise `max_iterations` and resume, or (3) accept/discard the current `last-good` changes.
