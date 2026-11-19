@@ -1098,24 +1098,6 @@ library:
 workspace:
 - repoId: LOCAL/skills
   skills:
-  - name: receiving-code-review
-    source: skills/receiving-code-review
-    target: receiving-code-review
-  - name: requesting-code-review
-    source: skills/requesting-code-review
-    target: requesting-code-review
-  - name: subagent-driven-development
-    source: skills/subagent-driven-development
-    target: subagent-driven-development
-  - name: systematic-debugging
-    source: skills/systematic-debugging
-    target: systematic-debugging
-  - name: test-driven-development
-    source: skills/test-driven-development
-    target: test-driven-development
-  - name: my-code-review
-    source: skills/my-code-review
-    target: my-code-review
   - name: my-git-commit
     source: skills/my-git-commit
     target: my-git-commit
@@ -1125,12 +1107,6 @@ workspace:
   - name: my-coding-guidelines
     source: skills/my-coding-guidelines
     target: my-coding-guidelines
-  - name: my-skill-updater
-    source: skills/my-skill-updater
-    target: my-skill-updater
-  - name: my-code-review-executor
-    source: skills/my-code-review-executor
-    target: my-code-review-executor
   - name: my-sess-open
     source: skills/my-sess-open
     target: my-sess-open
@@ -1140,15 +1116,6 @@ workspace:
   - name: my-md2pdf
     source: skills/my-md2pdf
     target: my-md2pdf
-  - name: my-plan-design
-    source: skills/my-plan-design
-    target: my-plan-design
-  - name: my-plan-write
-    source: skills/my-plan-write
-    target: my-plan-write
-  - name: my-plan-execute
-    source: skills/my-plan-execute
-    target: my-plan-execute
   - name: my-goal-loop
     source: skills/my-goal-loop
     target: my-goal-loop
@@ -1199,26 +1166,6 @@ workspace:
   - name: korean-humanizer
     source: NomaDamas/k-skill/korean-humanizer
     target: korean-humanizer
-- repoId: DietrichGebert/ponytail
-  skills:
-  - name: ponytail
-    source: DietrichGebert/ponytail/ponytail
-    target: ponytail
-  - name: ponytail-review
-    source: DietrichGebert/ponytail/ponytail-review
-    target: ponytail-review
-  - name: ponytail-audit
-    source: DietrichGebert/ponytail/ponytail-audit
-    target: ponytail-audit
-  - name: ponytail-debt
-    source: DietrichGebert/ponytail/ponytail-debt
-    target: ponytail-debt
-  - name: ponytail-gain
-    source: DietrichGebert/ponytail/ponytail-gain
-    target: ponytail-gain
-  - name: ponytail-help
-    source: DietrichGebert/ponytail/ponytail-help
-    target: ponytail-help
 - repoId: nextlevelbuilder/ui-ux-pro-max-skill
   skills:
   - name: slides
