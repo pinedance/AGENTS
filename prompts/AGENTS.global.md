@@ -2,7 +2,7 @@
 
 ## Governance & Workflow
 
-* **Session Initialization Gate (SSoT):** If `my-sess-open` is active in the workspace, run it as the first action; initialization, runtime lock, and task branch setup follow `my-sess-open` SSoT. *(Fallback when absent: read local `AGENTS.local.md`, `rules/*.md`, `memory/*.md`, and `README.md`.)*
+* **Session Initialization Gate (SSoT):** If `my-sess-open` is active in the workspace, run it as the first action; initialization and runtime lock follow `my-sess-open` SSoT (task branch rules follow `Shared Conventions` Task Branch Guard). *(Fallback when absent: read local `.agents/AGENTS.local.md`, `.agents/rules/*.md`, `.agents/memory/*.md`, and `README.md`.)*
 * **Plan-Before-Edit Gate:** Never invoke file edit/write tools on codebase files (or dump full replacement code/diffs in chat) without explicit approval of the active Detailed Plan. Selecting a high-level option or approving a Tier 1 Macro Plan authorizes direction and persisting `.agents/plans/*/macro.md` only — not codebase edits. *(Purely cosmetic one-liners like typos may skip plan overhead and verify directly.)*
 * **User-Gated Completion:** Passing verification is evidence, not completion. Never commit or close a Phase/task until the user inspects verification output and declares completion.
 * **Execution Flow (Two-Tier Lazy JIT):**
@@ -12,7 +12,7 @@
     2. **Tier 2 — Phase `k` Loop (Implementer):** Read `macro.md` (restoring metadata directly after `/compact` without re-running `my-sess-open`) → JIT inspect & interview Phase `k` if unclear → Detailed Plan → Explicit Approval → Execute & Verify → Report Evidence & Wait.
     3. **Phase Boundary Gate (on user completion declaration):** Run `Auto Multi-Commit` and check `[x] Phase k` in `macro.md`. Intermediate Phase (`k < N`): report commit SHA(s), recommend `/compact`, and wait (or advance directly if instructed). Final Phase (`k == N`): skip `/compact`, report completion and SHA(s), and guide to `/my-sess-close` (or delegate directly if `/my-sess-close` was invoked).
   * **Detailed Plan Contract** (active Phase/task only): (1) exact target file paths and ranges, (2) concise core changes (no full code blocks, prose drafts, or full diffs), (3) concrete verification commands.
-  * **Auto Multi-Commit:** On user completion declaration (or `/my-sess-close`), split changes into logical Conventional Commits directly from active context per `my-git-commit` SSoT without a separate commit prompt; load `my-git-commit` only when context is insufficient (post-`/compact`, pre-existing dirty files, external edits).
+  * **Auto Multi-Commit:** On user completion declaration (or `/my-sess-close`), partition cohesive changes directly without a commit prompt using Conventional Commits (`feat|fix|refactor|docs|test|chore|ci|style`; multi-purpose files by primary intent; title `< 50` chars matching repo language; bullet body for multiple changes; `Shared Conventions` exclusions) and verify with `git log --oneline -5`; load `my-git-commit` only when context is insufficient (post-`/compact`, pre-existing dirty files, external edits).
 
 ## Core Principles
 
@@ -20,10 +20,11 @@
 * **Evidence Integrity:** Back every assertion about paths, file state, CLI behavior, or completion with direct command output.
 * **Objective Stance:** Stay analytical; push back on unnecessary complexity, surface tradeoffs, and avoid performative agreement.
 * **Minimal Surgical Scope (YAGNI):** Touch only what the task requires and remove only orphans created by your changes. Lazy-load `my-coding-guidelines` when planning, writing, or reviewing code.
-* **Safety & Invariants (Fail-Fast):** Require explicit approval before destructive operations (`-f`, `--force`, `rm -rf`, `git clean`, hard resets, permanent deletion). Reference `~/.cache/agents/backups/<project>/latest` before irreversible actions. Preserve workspace symlinks (`AGENTS.md`, `skills`) without flattening.
+* **Safety & Invariants (Fail-Fast):** Require explicit approval before destructive operations (`-f`, `--force`, `rm -rf`, `git clean`, hard resets, permanent deletion). Reference `~/.cache/agents/backups/<project>/latest` before irreversible actions. Preserve workspace symlinks (`.agents/*`) without flattening.
 
-## Workspace Paths (SSoT)
+## Shared Conventions & Paths (SSoT)
 
-* **Plans:** `.agents/plans/YYYY-MM-DD-<topic>/` (`macro.md`, optional `phase-XX.md` / `plan.md`)
-* **User Deliverables:** `.agents/docs/user/` (standalone user-facing docs outside task plans)
-* **Scratch:** `.agents/scratch/` (temporary scripts and debug files)
+* **Workspace Paths & Commit Exclusions:** Plans `.agents/plans/YYYY-MM-DD-<topic>/` (`macro.md`, optional `phase-XX.md` / `plan.md`), User Deliverables `.agents/docs/user/`, Scratch `.agents/scratch/`. Exclude ephemeral paths (`.agents/plans/`, `.agents/docs/`, `.agents/scratch/`) from Git commits unless explicitly requested; persistent markdown (`README.md`, `SKILL.md`, `STATE.md`, `rules/*.md`, `memory/*.md`) remains committable.
+* **Session State (`STATE.md`) Precedence:** `<root>/.agents/memory/STATE.md` → `<root>/STATE.md`.
+* **Base Branch Resolution:** `git show-ref --verify --quiet refs/heads/main && echo main || (git show-ref --verify --quiet refs/heads/master && echo master)`.
+* **Task Branch Guard:** Before the first repo, plan, or code write (unless an explicit branch was requested), if on `<base-branch>` or an unrelated prior branch, auto-create `git checkout -b <type>/<slug> <base-branch>` (or from `HEAD` if uncommitted changes are retained) without asking approval; preserve a matching active task branch and keep the current branch on read-only runs.
