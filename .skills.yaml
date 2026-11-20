@@ -514,8 +514,8 @@ library:
   skills:
   - name: my-code-review
     path: skills/my-code-review/SKILL.md
-  - name: my-code-review-executor
-    path: skills/my-code-review-executor/SKILL.md
+  - name: my-code-revise
+    path: skills/my-code-revise/SKILL.md
   - name: my-coding-guidelines
     path: skills/my-coding-guidelines/SKILL.md
   - name: my-git-commit
