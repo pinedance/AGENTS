@@ -9,7 +9,7 @@ This document defines core engineering, computation, and time-series processing 
 Financial calculations require strict mathematical rigor. Default framework behaviors (such as Pandas' default `skipna=True` or `pct_change(fill_method='pad')`) silently mask anomalies, leading to distorted indicators, survivorship bias, and incorrect portfolio returns.
 
 ### Core Invariants
-* **Input NaN Must Yield Output NaN**: Missing data (`NaN`) must never be silently dropped or masked with default constants (e.g., `0.0`). It must propagate through all intermediate calculations to the final output.
+* **Input NaN Must Yield Output NaN**: Missing data (`NaN`) must never be silently dropped or masked with default constants (e.g., `0.0` or empty strings) unless it is a mathematically proven non-error state (e.g., unallocated portfolio weights). It must propagate through all intermediate calculations to the final output.
 * **Input with NaN but Non-NaN Output is a Violation**: Silent loss of `NaN` distorts downstream signals and weights.
 * **Input without NaN but NaN Output Indicates Logic Error**: Check for numerical instability (e.g., division by zero, empty arrays, invalid bounds).
 
@@ -50,6 +50,8 @@ Financial calculations require strict mathematical rigor. Default framework beha
   negative_sq = returns.where(returns < 0, 0).where(returns.notna(), np.nan) ** 2
   sum_sq = negative_sq.sum(axis=0, skipna=False)
   ```
+* **Correlation & Selection**:
+  Let `NaN`s in correlation metrics naturally propagate; if any asset in the selection universe contains `NaN` values, propagate `NaN` weights through portfolio allocation.
 
 ### Restricted `dropna` at Designated Checkpoints Only
 * **No Premature `dropna()`**: Do not drop NaNs midway through indicator or signal calculations.
