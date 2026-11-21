@@ -23,13 +23,13 @@ End every session with a verified point-in-time `STATE.md` snapshot, synced `REA
 Ask applicable questions 1 at a time via `ask_question` (numbered plain-text fallback). Working-tree commits run automatically in Step 3.5 unless the user explicitly requested stash or leaving changes uncommitted.
 
 1. **Knowledge Promotion (only if candidates exist)**:
-    - Prompt `"이번 세션에서 발견한 핵심 규칙/패턴을 영구 Memory 또는 Rule 파일로 분리 저장할까요?"` with `(Recommended) Save to .agents/memory/ or .agents/rules/ (<proposed-filename>.md)` vs `Skip promotion (record in STATE.md only)`. Set `has_committable_changes = true` if an approved file is tracked.
+    - Prompt `"규칙/패턴 영구 저장?"` with `(Recommended) .agents/{memory,rules}/<proposed-filename>.md 저장` vs `건너뛰기 (STATE.md만 기록)`. Set `has_committable_changes = true` if an approved file is tracked.
 2. **Branch & Remote Strategy** (present only options valid for current state):
-    - **On `<base-branch>`**: If remote exists and ahead (or `has_committable_changes` on default path), prompt `(Recommended) Keep <base-branch> local as-is` vs `Push <base-branch> to remote (git push)`; else skip.
-    - **On detached HEAD**: Prompt `(Recommended) Keep detached HEAD as-is` | `Push HEAD as new branch & create Pull Request` | `Discard detached work`.
+    - **On `<base-branch>`**: If remote exists and ahead (or `has_committable_changes` on default path), prompt `"<base-branch> 원격 push?"` with `(Recommended) Keep local` vs `Push (git push)`; else skip.
+    - **On detached HEAD**: Prompt `"Detached HEAD 처리?"` with `(Recommended) Keep` | `Push & create PR` | `Discard`.
     - **On non-base branch**:
-        - If user explicitly requested `Stash` or `Leave uncommitted`: `(Recommended) Keep current branch as-is (work in progress)` | `Push committed history to remote (git push)` _(if remote + unpushed)_ | `Discard current branch (<branch>)`.
-        - Default (clean or auto-committing): Prompt `"현재 브랜치(<branch>)의 후속 형상 관리를 어떻게 진행할까요?"` with `(Recommended) Merge into base branch (<base-branch>) locally and clean up branch` | `Keep current branch as-is (work in progress)` | `Push current branch to remote (git push)` | `Push & create Pull Request` | `Discard current branch (<branch>)`.
+        - If user explicitly requested `Stash` or `Leave uncommitted`: Prompt `"브랜치(<branch>) 처리?"` with `(Recommended) Keep (WIP)` | `Push (git push)` _(if remote + unpushed)_ | `Discard (<branch>)`.
+        - Default (clean or auto-committing): Prompt `"브랜치(<branch>) 마무리 방법?"` with `(Recommended) Merge locally (<base-branch>) & delete` | `Keep (WIP)` | `Push (git push)` | `Push & create PR` | `Discard (<branch>)`.
 
 ## STEP 3: Verified Execution & Single-Pass Persistence
 

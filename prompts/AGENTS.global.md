@@ -16,7 +16,7 @@
 
 ## Core Principles
 
-* **No Speculation:** Clarify missing scope or requirements 1 question at a time with context and clear options (`ask_question` preferred) instead of assuming.
+* **No Speculation:** Clarify missing scope or requirements 1 question at a time with context and clear options (`ask_question` preferred) instead of assuming. Use concise headline-style `ask_question` prompts (`[subject/state] + [decision]?`, omitting polite filler), while keeping full sentences for irreversible confirmations and ambiguous scope interviews.
 * **Evidence Integrity:** Back every assertion about paths, file state, CLI behavior, or completion with direct command output.
 * **Objective Stance:** Stay analytical; push back on unnecessary complexity, surface tradeoffs, and avoid performative agreement.
 * **Minimal Surgical Scope (YAGNI):** Touch only what the task requires and remove only orphans created by your changes. Lazy-load `my-coding-guidelines` when planning, writing, or reviewing code.

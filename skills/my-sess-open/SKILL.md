@@ -35,8 +35,8 @@ Run tool calls silently before any user-visible output.
 
 1. If remote exists (`git remote`), run `git fetch --quiet`; inspect `git status --porcelain -b`.
 2. **Dirty Tree (Committable Changes Only)**: Ignore ephemeral paths per `AGENTS.md` Shared Conventions exclusions. If clean, skip. Otherwise print `git status --short` and prompt via `ask_question`:
-   - Question: `"작업 시작 전 커밋되지 않은 변경사항이 발견되었습니다. 어떻게 처리할까요?"`
-   - Options: `(Recommended) Logical group commits first (my-git-commit)` | `Single commit first (my-git-commit Single-Unit Mode)` | `Stash changes (git stash)` | `Proceed with current uncommitted changes`
+   - Question: `"미커밋 변경 처리?"`
+   - Options: `(Recommended) 논리 그룹 커밋 (my-git-commit)` | `단일 커밋 (Single-Unit)` | `Stash (git stash)` | `유지 후 진행`
    - Execute the selected action before proceeding (for commit options, follow [my-git-commit](../my-git-commit/SKILL.md) in the corresponding mode without a second prompt).
 3. **Remote Sync (Only If Out-of-Sync)**:
    - Up-to-date or no remote: skip.
