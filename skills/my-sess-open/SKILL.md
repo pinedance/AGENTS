@@ -19,7 +19,7 @@ Run tool calls silently before any user-visible output.
    - **Lazy-Load Coding Guidelines**: Defer reading [my-coding-guidelines](../my-coding-guidelines/SKILL.md) until entering code planning, implementation, or review.
 2. **Session State (`STATE.md`)**:
    - Resolve `STATE.md` via `AGENTS.md` Shared Conventions precedence.
-   - Load `Current Goal`, `Active Branch`, `Blockers`, and `Next Action`. If `STATE.md` references an active `.agents/plans/*/macro.md` with pending `[ ]` phases, read that `macro.md`.
+   - Load `Current Goal`, `Active Branch`, `Blockers`, and `Next Action`. If `STATE.md` references an active `.agents/plans/*/00-roadmap.md` with pending `[ ]` phases, read that `00-roadmap.md`.
 3. **Voice Mode**: Activate Caveman Mode (`/caveman`) for all subsequent responses.
 4. **Safety Snapshot**: Run `~/.agents/skills/my-sess-open/scripts/session-backup.sh "<root>"` (fallback `<root>/.agents/skills/my-sess-open/scripts/session-backup.sh "<root>"`) and record `~/.cache/agents/backups/<project>/latest`.
 
@@ -59,9 +59,9 @@ Enforce `AGENTS.md` Plan-Before-Edit and User-Gated Completion SSoT.
 1. **Stale `STATE.md` Check & Alignment**:
    - Resolve `<base-branch>` per `AGENTS.md` Shared Conventions. Silently treat `STATE.md` as stale if it has zero pending `[ ]` items AND its `Active Branch` no longer exists (`git show-ref --verify --quiet refs/heads/<branch>`) or is already merged into `<base-branch>` (`git branch --merged <base-branch>`).
    - Otherwise, if active unfinished `STATE.md` work differs from the user's topic, clarify via `ask_question` (resume vs pivot).
-   - On resume: checkout `Active Branch` (if different, existing, and tree-compatible) + apply Step 2.3 sync; if an active `macro.md` has pending `[ ]` phases, enter `AGENTS.md` Tier 2 directly.
+   - On resume: checkout `Active Branch` (if different, existing, and tree-compatible) + apply Step 2.3 sync; if an active `00-roadmap.md` has pending `[ ]` phases, enter `AGENTS.md` Tier 2 directly.
 2. **Interview & Planning Handoff**:
    - Skip interview for purely read-only Q&A or read-only audit workflows (e.g., `my-prompt-audit` Mode 1).
-   - For change tasks: inspect minimal context, clarify gaps 1 question at a time (`ask_question` preferred) scoped to entry tier (`Macro` vs `Single-Phase`), then hand off to `AGENTS.md` Execution Flow.
+   - For change tasks: inspect minimal context, clarify gaps 1 question at a time (`ask_question` preferred) scoped to entry tier (`Roadmap` vs `Single-Phase`), then hand off to `AGENTS.md` Execution Flow.
 3. **Task Branch Setup**:
    - Apply `AGENTS.md` Shared Conventions Task Branch Guard unless an explicit branch was switched in Step 2.4 (branch from `HEAD` if uncommitted changes were retained in Step 2.2).
